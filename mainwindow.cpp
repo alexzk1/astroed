@@ -4,13 +4,16 @@
 #include <QDebug>
 #include <QApplication>
 #include <QItemSelectionModel>
+#include <QStatusBar>
+#include <QTimer>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
     dirsModel(nullptr),
     previewsModel(new PreviewsModel(this)),
-    previewsDelegate(new PreviewsDelegate(this))
+    previewsDelegate(new PreviewsDelegate(this)),
+    memoryLabel(new QLabel(this))
 {
     ui->setupUi(this);
     ui->previewsTable->setItemDelegate(previewsDelegate);
@@ -28,9 +31,33 @@ MainWindow::MainWindow(QWidget *parent) :
         }
     }, Qt::QueuedConnection);
 
+
+    connect(previewsModel, &QAbstractTableModel::dataChanged, this, [this](const auto& ind, const auto&, const auto&){
+        if (ui->previewsTable)
+        {
+            ui->previewsTable->resizeColumnToContents(ind.column());
+            ui->previewsTable->resizeRowToContents(ind.row());
+        }
+    }, Qt::QueuedConnection);
+
     setWindowTitle("");
     setupFsBrowsing();
     readSettings(this);
+    statusBar()->addPermanentWidget(memoryLabel);
+    memoryLabel->setToolTip(tr("The approximate size of memory used."));
+
+    QTimer *timer = new QTimer(this);
+    connect(timer, &QTimer::timeout, this, [this]()
+    {
+        QLabel *p = memoryLabel;
+        if (p)
+        {
+            IMAGE_LOADER.gc();
+            size_t mb = IMAGE_LOADER.getMemoryUsed() / (1024 * 1024);
+            p->setText(QString("%1 MB").arg(mb));
+        }
+    });
+    timer->start(5000);
 }
 
 MainWindow::~MainWindow()

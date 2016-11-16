@@ -6,6 +6,9 @@
 #include <QFileInfo>
 #include <QPixmap>
 #include <QPainter>
+#include <QVector>
+#include <QDebug>
+#include <QCollator>
 
 struct SectionDescr //just in case I will want some more static data later
 {
@@ -15,7 +18,7 @@ struct SectionDescr //just in case I will want some more static data later
 const static std::vector<SectionDescr> captions =
 {
     {QObject::tr("Preview")},
-    {QObject::tr("Use it")},
+    {QObject::tr("Use")},
     {QObject::tr("Name")}
 };
 
@@ -30,8 +33,31 @@ const static QStringList supportedExt =
 PreviewsModel::PreviewsModel(QObject *parent)
     : QAbstractTableModel(parent),
       listFiles(nullptr),
+      loadPreviews(nullptr),
       listMut()
 {
+    connect(this, &QAbstractTableModel::modelReset, this, [this]()
+    {
+        loadPreviews = utility::startNewRunner([this](auto stop)
+        {
+            using namespace std::literals;
+            int ind = 0;
+            const static QVector<int> roles = {Qt::DisplayRole};
+            for (auto& i : this->modelFiles)
+            {
+                if (*stop)
+                    break;
+                if (i.loadPreview(listMut))
+                {
+                    auto k = this->index(ind, 0);
+                    emit this->dataChanged(k, k, roles);
+                }
+                ++ind;
+                if ( ind % 30 == 0)
+                    std::this_thread::sleep_for(150ms);
+            }
+        });
+    }, Qt::QueuedConnection);
 }
 
 QVariant PreviewsModel::headerData(int section, Qt::Orientation orientation, int role) const
@@ -95,7 +121,9 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
                 res = itm.filePath;
 
             if (col == 0)
+            {
                 res = itm.getPreview();
+            }
         }
 
         if (role == Qt::CheckStateRole)
@@ -143,6 +171,7 @@ void PreviewsModel::setCurrentFolder(const QString &path, bool recursive)
         }
     }
 
+    loadPreviews.reset();
     listFiles = utility::startNewRunner([this, path, recursive](auto stop)
     {
         std::vector<QFileInfo> pathes; pathes.reserve(500);
@@ -166,6 +195,12 @@ void PreviewsModel::setCurrentFolder(const QString &path, bool recursive)
     });
 }
 
+PreviewsModel::~PreviewsModel()
+{
+    listFiles.reset();
+    loadPreviews.reset();
+}
+
 void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list)
 {
     std::lock_guard<decltype (listMut)> grd(listMut);
@@ -177,6 +212,16 @@ void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list)
     {
         modelFiles.emplace_back(fi.absoluteFilePath());
     }
+
+    QCollator collator;
+    collator.setNumericMode(true);
+    collator.setCaseSensitivity(Qt::CaseInsensitive);
+
+    std::sort(modelFiles.begin(), modelFiles.end(), [&collator](const auto& i1, const auto& i2)
+    {
+        return collator.compare(i1.filePath, i2.filePath) < 0;
+    });
+
     endResetModel();
 }
 

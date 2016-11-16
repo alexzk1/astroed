@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <QPointer>
 #include <QFileSystemModel>
+#include <QLabel>
 #include "utils/inst_once.h"
 #include "utils/saveable_widget.h"
 #include "previewsmodel.h"
@@ -32,7 +33,8 @@ private:
     Ui::MainWindow *ui;
     QPointer<QFileSystemModel> dirsModel;
     QPointer<PreviewsModel>    previewsModel;
-    QPointer<PreviewsDelegate>  previewsDelegate;
+    QPointer<PreviewsDelegate> previewsDelegate;
+    QPointer<QLabel>           memoryLabel;
     void setupFsBrowsing();
 };
 

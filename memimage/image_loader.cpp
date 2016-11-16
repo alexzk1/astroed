@@ -61,6 +61,7 @@ void image_loader::gc()
     //kinda "gc" loop - removing weak pointers which were deleted already
     if (lastSize > maxMemUsage)
     {
+        std::lock_guard<std::recursive_mutex> guard(mutex);
         //1 step, removing too old hard links to images (pretty dumb if here)
         auto t = nows();
         utility::erase_if(cache, [this, t](const auto& sp)

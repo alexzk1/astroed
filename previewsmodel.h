@@ -34,11 +34,13 @@ public:
     Qt::ItemFlags flags(const QModelIndex& index) const override;
 
     void setCurrentFolder(const QString& path, bool recursive = false);
+    virtual ~PreviewsModel();
 private:
     using files_t  = std::vector<QFileInfo>;
     using mfiles_t = std::vector<PreviewsModelData>;
 
     utility::runner_t listFiles;
+    utility::runner_t loadPreviews;
     std::recursive_mutex listMut;
     mfiles_t  modelFiles;
 

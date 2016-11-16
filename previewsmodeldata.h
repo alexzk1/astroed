@@ -1,6 +1,7 @@
 #pragma once
 #include <QString>
 #include <QImage>
+#include <mutex>
 #include "memimage/image_loader.h"
 
 class PreviewsModelData
@@ -16,16 +17,21 @@ public:
         filePath(path),
         selected(false)
     {
-        loadPreview();
     }
 
-    void loadPreview()
+    bool loadPreview(std::recursive_mutex& mut)
     {
-        auto src = IMAGE_LOADER.getImage(filePath);
-        if (!src->isNull())
+        bool res = preview.isNull();
+        if (res)
         {
-            preview = src->scaled(500, 500, Qt::KeepAspectRatio);
+            auto src = IMAGE_LOADER.getImage(filePath);
+            if (!src->isNull())
+            {
+                std::lock_guard<decltype (mut)> grd(mut);
+                preview = src->scaled(300, 300, Qt::KeepAspectRatio);
+            }
         }
+        return res;
     }
 
     const QImage& getPreview() const
