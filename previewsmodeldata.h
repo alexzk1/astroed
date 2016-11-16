@@ -7,35 +7,30 @@
 class PreviewsModelData
 {
 private:
-    QImage  preview;
+    imaging::image_buffer_ptr preview;
 public:
     QString filePath;
 
     bool    selected;
     PreviewsModelData(const QString& path):
-        preview(),
+        preview(new QImage()),
         filePath(path),
         selected(false)
     {
     }
 
-    bool loadPreview(std::recursive_mutex& mut)
+    bool loadPreview()
     {
-        bool res = preview.isNull();
+        bool res = preview->isNull();
         if (res)
         {
-            auto src = IMAGE_LOADER.getImage(filePath);
-            if (!src->isNull())
-            {
-                std::lock_guard<decltype (mut)> grd(mut);
-                preview = src->scaled(300, 300, Qt::KeepAspectRatio);
-            }
+            preview = PREVIEW_LOADER.getImage(filePath);
         }
         return res;
     }
 
     const QImage& getPreview() const
     {
-        return preview;
+        return *preview;
     }
 };

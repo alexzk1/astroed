@@ -16,7 +16,7 @@ static int64_t nows()
     return duration_cast<seconds>(steady_clock::now().time_since_epoch()).count();
 };
 
-image_loader::image_loader(): utility::ItCanBeOnlyOne<image_loader>(),
+image_cacher::image_cacher():
     cache(),
     wcache(),
     mutex(),
@@ -25,7 +25,7 @@ image_loader::image_loader(): utility::ItCanBeOnlyOne<image_loader>(),
 
 }
 
-image_buffer_ptr image_loader::getImage(const QString &fileName)
+image_buffer_ptr image_cacher::getImage(const QString &fileName)
 {
     image_buffer_ptr res;
     std::lock_guard<std::recursive_mutex> guard(mutex);
@@ -37,11 +37,7 @@ image_buffer_ptr image_loader::getImage(const QString &fileName)
 
     if (!res)
     {
-        //todo: need some kinda of "virtual filesystem" to dig into avi/mp4 and pick frames there
-        QImage img(fileName);
-        res = std::make_shared<QImage>();
-        *res = img.convertToFormat(QImage::Format_RGB888);
-
+        res = createImage(fileName);
         auto sz = static_cast<size_t>(res->byteCount());
         //idea is to keep images hard locked in RAM until we have sufficient memory, then we unlock it
         //but it will still be in RAM until processing algorithms use it
@@ -56,7 +52,7 @@ image_buffer_ptr image_loader::getImage(const QString &fileName)
     return res;
 }
 
-void image_loader::gc()
+void image_cacher::gc(bool no_wait)
 {
     //kinda "gc" loop - removing weak pointers which were deleted already
     if (lastSize > maxMemUsage)
@@ -64,10 +60,10 @@ void image_loader::gc()
         std::lock_guard<std::recursive_mutex> guard(mutex);
         //1 step, removing too old hard links to images (pretty dumb if here)
         auto t = nows();
-        utility::erase_if(cache, [this, t](const auto& sp)
+        utility::erase_if(cache, [this, t, no_wait](const auto& sp)
         {
             auto delay = t - sp.second.first;
-            return (sp.second.second.unique() && delay > 20) || delay > 120;
+            return (sp.second.second.unique() && (no_wait || delay > 20)) || delay > 120;
         });
 
         //2 step, if no hard links left anywhere - clearing weaks too, meaning memory is freed already
@@ -81,7 +77,26 @@ void image_loader::gc()
     }
 }
 
-size_t image_loader::getMemoryUsed() const
+size_t image_cacher::getMemoryUsed() const
 {
     return lastSize;
+}
+
+image_cacher::~image_cacher()
+{
+}
+
+image_buffer_ptr image_loader::createImage(const QString &key) const
+{
+    //todo: need some kinda of "virtual filesystem" to dig into avi/mp4 and pick frames there
+    QImage img(key);
+    auto res = std::make_shared<QImage>();
+    *res = img.convertToFormat(QImage::Format_RGB888);
+    return res;
+}
+
+image_buffer_ptr image_preview_loader::createImage(const QString &key) const
+{
+    auto src = IMAGE_LOADER.getImage(key);
+    return image_buffer_ptr(new QImage(src->scaled(300, 300, Qt::KeepAspectRatio)));
 }

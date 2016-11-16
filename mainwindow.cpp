@@ -32,11 +32,14 @@ MainWindow::MainWindow(QWidget *parent) :
     }, Qt::QueuedConnection);
 
 
-    connect(previewsModel, &QAbstractTableModel::dataChanged, this, [this](const auto& ind, const auto&, const auto&){
+    connect(previewsModel, &QAbstractTableModel::dataChanged, this, [this](const auto ind, const auto, const auto&){
         if (ui->previewsTable)
         {
-            ui->previewsTable->resizeColumnToContents(ind.column());
-            ui->previewsTable->resizeRowToContents(ind.row());
+            if (ind.isValid())
+            {
+                ui->previewsTable->resizeColumnToContents(ind.column());
+                ui->previewsTable->resizeRowToContents(ind.row());
+            }
         }
     }, Qt::QueuedConnection);
 
@@ -53,11 +56,12 @@ MainWindow::MainWindow(QWidget *parent) :
         if (p)
         {
             IMAGE_LOADER.gc();
-            size_t mb = IMAGE_LOADER.getMemoryUsed() / (1024 * 1024);
+            PREVIEW_LOADER.gc();
+            size_t mb = (IMAGE_LOADER.getMemoryUsed() + PREVIEW_LOADER.getMemoryUsed()) / (1024 * 1024);
             p->setText(QString("%1 MB").arg(mb));
         }
     });
-    timer->start(5000);
+    timer->start(2000);
 }
 
 MainWindow::~MainWindow()
@@ -92,7 +96,7 @@ void MainWindow::selectPath(const QString &path, bool collapse)
                 }
             }
             //qApp->processEvents();
-            qApp->flush();
+            //qApp->flush();
         }
     }
 }

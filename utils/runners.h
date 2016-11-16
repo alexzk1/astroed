@@ -18,7 +18,7 @@ namespace utility {
         auto stop = runnerint_t(new std::atomic<bool>(false));
         return runner_t(new std::thread(func, stop), [stop](auto p)
         {
-            *stop = true;
+            stop->store(true);
             if (p)
             {
                 if (p->joinable())

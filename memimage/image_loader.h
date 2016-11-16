@@ -8,10 +8,11 @@
 #include <atomic>
 #include <stdint.h>
 
+
 namespace imaging
 {
     using image_buffer_ptr = std::shared_ptr<QImage>;
-    class image_loader : public utility::ItCanBeOnlyOne<image_loader>
+    class image_cacher //: public utility::ItCanBeOnlyOne<image_loader>
     {
     private:
         using image_buffer_wptr = std::weak_ptr<QImage>;
@@ -27,15 +28,38 @@ namespace imaging
         weaks_t wcache;
         std::recursive_mutex mutex;
         std::atomic<size_t> lastSize;
+    protected:
+        virtual image_buffer_ptr createImage(const QString& key) const = 0;
     public:
-        image_loader();
+        image_cacher();
         image_buffer_ptr getImage(const QString& fileName);
-        void gc();
+        void gc(bool no_wait = false);
 
         size_t getMemoryUsed() const;
+        virtual ~image_cacher();
+    };
+
+    class image_loader : public utility::ItCanBeOnlyOne<image_loader>, public image_cacher
+    {
+    protected:
+        virtual image_buffer_ptr createImage(const QString& key) const override;
+    public:
+        image_loader() = default;
+    };
+
+    class image_preview_loader : public utility::ItCanBeOnlyOne<image_preview_loader>, public image_cacher
+    {
+    protected:
+        virtual image_buffer_ptr createImage(const QString& key) const override;
+    public:
+        image_preview_loader() = default;
     };
 }
 
 #ifndef IMAGE_LOADER
 #define IMAGE_LOADER utility::globalInstance<imaging::image_loader>()
+#endif
+
+#ifndef PREVIEW_LOADER
+#define PREVIEW_LOADER utility::globalInstance<imaging::image_preview_loader>()
 #endif

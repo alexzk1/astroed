@@ -1,5 +1,7 @@
 #include "previewsmodel.h"
 #include <vector>
+#include <algorithm>
+
 #include <QDirIterator>
 #include <QDir>
 #include <QStringList>
@@ -9,6 +11,7 @@
 #include <QVector>
 #include <QDebug>
 #include <QCollator>
+#include <QApplication>
 
 struct SectionDescr //just in case I will want some more static data later
 {
@@ -38,24 +41,46 @@ PreviewsModel::PreviewsModel(QObject *parent)
 {
     connect(this, &QAbstractTableModel::modelReset, this, [this]()
     {
+        qDebug() << "Previews model-reset";
+        qApp->flush();
         loadPreviews = utility::startNewRunner([this](auto stop)
         {
+            qDebug() << "Previews started load";
             using namespace std::literals;
-            int ind = 0;
             const static QVector<int> roles = {Qt::DisplayRole};
-            for (auto& i : this->modelFiles)
+
+            size_t sz = 0;
+            {
+               std::lock_guard<decltype (listMut)> grd(listMut);
+               sz = modelFiles.size();
+            }
+            for (size_t i = 0; i < sz; ++i)
             {
                 if (*stop)
                     break;
-                if (i.loadPreview(listMut))
+
+                bool loaded = false;
                 {
-                    auto k = this->index(ind, 0);
-                    emit this->dataChanged(k, k, roles);
+                    std::lock_guard<decltype (listMut)> grd(listMut);
+                    if (sz != modelFiles.size())
+                        break;
+                    loaded = modelFiles.at(i).loadPreview();
                 }
-                ++ind;
-                if ( ind % 30 == 0)
+
+                if (loaded)
+                {
+                    auto k = this->index(i, 0);
+                    emit this->dataChanged(k, k, roles);
+                    std::this_thread::sleep_for(10ms);
+                }
+
+                if ( i % 30 == 0)
+                {
+                    IMAGE_LOADER.gc(true); //because of the hard pressure of loading many files for preview, need to cleanse cache asap
                     std::this_thread::sleep_for(150ms);
+                }
             }
+            qDebug() << "Previews loaded" << modelFiles.size();
         });
     }, Qt::QueuedConnection);
 }
@@ -140,9 +165,11 @@ bool PreviewsModel::setData(const QModelIndex &index, const QVariant &value, int
     if (role == Qt::CheckStateRole && index.column() == 1)
     {
         size_t row = static_cast<decltype (row)>(index.row());
-        std::lock_guard<decltype (listMut)> grd(const_cast<PreviewsModel*>(this)->listMut);
-        auto& itm = modelFiles.at(row);
-        itm.selected = value == Qt::Checked;
+        {
+            std::lock_guard<decltype (listMut)> grd(const_cast<PreviewsModel*>(this)->listMut);
+            auto& itm = modelFiles.at(row);
+            itm.selected = value == Qt::Checked;
+        }
         emit dataChanged(index, index, QVector<int>() << role);
         return true;
     }
@@ -204,25 +231,40 @@ PreviewsModel::~PreviewsModel()
 void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list)
 {
     std::lock_guard<decltype (listMut)> grd(listMut);
+
+    const auto sort_files = [this]()
+    {
+        QCollator collator;
+        collator.setNumericMode(true);
+        collator.setCaseSensitivity(Qt::CaseInsensitive);
+
+        std::sort(modelFiles.begin(), modelFiles.end(), [&collator](const auto& i1, const auto& i2)
+        {
+            return collator.compare(i1.filePath, i2.filePath) < 0;
+        });
+
+    };
+
     beginResetModel();
     if (modelFiles.size())
         modelFiles.erase(std::remove_if(modelFiles.begin(), modelFiles.end(), [](const auto& v){return !v.selected;}), modelFiles.end());
     modelFiles.reserve(modelFiles.size() + list.size());
+
+    sort_files();
+
+    auto old = std::end(modelFiles);
+
     for (const auto& fi : list)
     {
-        modelFiles.emplace_back(fi.absoluteFilePath());
+        auto s = fi.absoluteFilePath();
+        if (std::find_if(modelFiles.begin(), old, [&s](const auto& v){return v.filePath == s;}) == old)
+            modelFiles.emplace_back(s);
     }
 
-    QCollator collator;
-    collator.setNumericMode(true);
-    collator.setCaseSensitivity(Qt::CaseInsensitive);
-
-    std::sort(modelFiles.begin(), modelFiles.end(), [&collator](const auto& i1, const auto& i2)
-    {
-        return collator.compare(i1.filePath, i2.filePath) < 0;
-    });
+    sort_files();
 
     endResetModel();
+    qDebug() << "Files listed "<<modelFiles.size();
 }
 
 void PreviewsDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
