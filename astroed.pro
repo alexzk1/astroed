@@ -44,9 +44,12 @@ include($$PWD/utils/utils.pri)
 include($$PWD/memimage/memimage.pri)
 
 SOURCES += main.cpp\
-        mainwindow.cpp
+        mainwindow.cpp \
+    previewsmodel.cpp
 
-HEADERS  += mainwindow.h
+HEADERS  += mainwindow.h \
+    previewsmodel.h \
+    previewsmodeldata.h
 
 FORMS    += mainwindow.ui
 

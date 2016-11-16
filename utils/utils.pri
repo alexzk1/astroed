@@ -5,7 +5,8 @@ HEADERS += \
     $$PWD/union_cast.h \
     $$PWD/inst_once.h \
     $$PWD/erase_if.h \
-    $$PWD/saveable_widget.h
+    $$PWD/saveable_widget.h \
+    $$PWD/runners.h
 
 SOURCES += \
     $$PWD/memsize.cpp

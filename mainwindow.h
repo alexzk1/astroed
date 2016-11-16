@@ -6,6 +6,7 @@
 #include <QFileSystemModel>
 #include "utils/inst_once.h"
 #include "utils/saveable_widget.h"
+#include "previewsmodel.h"
 
 namespace Ui {
     class MainWindow;
@@ -30,6 +31,8 @@ protected:
 private:
     Ui::MainWindow *ui;
     QPointer<QFileSystemModel> dirsModel;
+    QPointer<PreviewsModel>    previewsModel;
+    QPointer<PreviewsDelegate>  previewsDelegate;
     void setupFsBrowsing();
 };
 

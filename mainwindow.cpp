@@ -8,9 +8,26 @@
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
-    dirsModel(nullptr)
+    dirsModel(nullptr),
+    previewsModel(new PreviewsModel(this)),
+    previewsDelegate(new PreviewsDelegate(this))
 {
     ui->setupUi(this);
+    ui->previewsTable->setItemDelegate(previewsDelegate);
+    ui->previewsTable->setModel(previewsModel);
+
+    auto hdr = ui->previewsTable->horizontalHeader();
+    if (hdr)
+        hdr->setStretchLastSection(true);
+
+    connect(previewsModel, &QAbstractTableModel::modelReset, this, [this](){
+        if (ui->previewsTable)
+        {
+            ui->previewsTable->resizeColumnsToContents();
+            ui->previewsTable->resizeRowsToContents();
+        }
+    }, Qt::QueuedConnection);
+
     setWindowTitle("");
     setupFsBrowsing();
     readSettings(this);
@@ -81,7 +98,7 @@ void MainWindow::recurseRead(QSettings &settings, QObject *object)
 
 void MainWindow::currentDirChanged(const QString &dir)
 {
-
+    previewsModel->setCurrentFolder(dir, true);
 }
 
 void MainWindow::setupFsBrowsing()
