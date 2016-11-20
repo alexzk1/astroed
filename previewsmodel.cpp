@@ -12,6 +12,9 @@
 #include <QDebug>
 #include <QCollator>
 #include <QApplication>
+#include <QTimer>
+
+#include <queue>
 
 struct SectionDescr //just in case I will want some more static data later
 {
@@ -42,10 +45,9 @@ PreviewsModel::PreviewsModel(QObject *parent)
     connect(this, &QAbstractTableModel::modelReset, this, [this]()
     {
         qDebug() << "Previews model-reset";
-        qApp->flush();
         loadPreviews = utility::startNewRunner([this](auto stop)
         {
-            qDebug() << "Previews started load";
+           // qDebug() << "Previews started load";
             using namespace std::literals;
             const static QVector<int> roles = {Qt::DisplayRole};
 
@@ -54,11 +56,9 @@ PreviewsModel::PreviewsModel(QObject *parent)
                std::lock_guard<decltype (listMut)> grd(listMut);
                sz = modelFiles.size();
             }
-            for (size_t i = 0; i < sz; ++i)
-            {
-                if (*stop)
-                    break;
 
+            for (size_t i = 0; i < sz && !*stop; ++i)
+            {
                 bool loaded = false;
                 {
                     std::lock_guard<decltype (listMut)> grd(listMut);
@@ -67,20 +67,22 @@ PreviewsModel::PreviewsModel(QObject *parent)
                     loaded = modelFiles.at(i).loadPreview();
                 }
 
-                if (loaded)
+                if (loaded && !*stop) //stop check is important here, or GUI may stack if thread interrupted and signal is out
                 {
-                    auto k = this->index(i, 0);
+                    QModelIndex k = this->index(static_cast<int>(i), 0);
                     emit this->dataChanged(k, k, roles);
-                    std::this_thread::sleep_for(10ms);
+                    std::this_thread::sleep_for(20ms); //allowing gui to process items
                 }
 
                 if ( i % 30 == 0)
                 {
                     IMAGE_LOADER.gc(true); //because of the hard pressure of loading many files for preview, need to cleanse cache asap
-                    std::this_thread::sleep_for(150ms);
+
+                    if (!*stop)
+                        std::this_thread::sleep_for(150ms);
                 }
             }
-            qDebug() << "Previews loaded" << modelFiles.size();
+            //qDebug() << "Previews loaded" << modelFiles.size();
         });
     }, Qt::QueuedConnection);
 }
@@ -199,6 +201,10 @@ void PreviewsModel::setCurrentFolder(const QString &path, bool recursive)
     }
 
     loadPreviews.reset();
+    listFiles.reset();
+
+
+
     listFiles = utility::startNewRunner([this, path, recursive](auto stop)
     {
         std::vector<QFileInfo> pathes; pathes.reserve(500);
@@ -217,8 +223,12 @@ void PreviewsModel::setCurrentFolder(const QString &path, bool recursive)
 
         if (*stop)
             pathes.clear(); //forced interrupted
-
-        this->haveFilesList(pathes);
+        else
+        {
+            this->beginResetModel();
+            this->haveFilesList(pathes);
+            this->endResetModel();
+        }
     });
 }
 
@@ -245,7 +255,7 @@ void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list)
 
     };
 
-    beginResetModel();
+
     if (modelFiles.size())
         modelFiles.erase(std::remove_if(modelFiles.begin(), modelFiles.end(), [](const auto& v){return !v.selected;}), modelFiles.end());
     modelFiles.reserve(modelFiles.size() + list.size());
@@ -262,9 +272,7 @@ void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list)
     }
 
     sort_files();
-
-    endResetModel();
-    qDebug() << "Files listed "<<modelFiles.size();
+    //qDebug() << "Files listed "<<modelFiles.size();
 }
 
 void PreviewsDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const

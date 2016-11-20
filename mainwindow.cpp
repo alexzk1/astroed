@@ -24,6 +24,7 @@ MainWindow::MainWindow(QWidget *parent) :
         hdr->setStretchLastSection(true);
 
     connect(previewsModel, &QAbstractTableModel::modelReset, this, [this](){
+        qDebug() << "Views model-reset";
         if (ui->previewsTable)
         {
             ui->previewsTable->resizeColumnsToContents();
@@ -49,6 +50,8 @@ MainWindow::MainWindow(QWidget *parent) :
     statusBar()->addPermanentWidget(memoryLabel);
     memoryLabel->setToolTip(tr("The approximate size of memory used."));
 
+    //todo: add some doubleclick handler to the label which calls gc() (maybe even forced gc(true))
+
     QTimer *timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, [this]()
     {
@@ -62,6 +65,7 @@ MainWindow::MainWindow(QWidget *parent) :
         }
     });
     timer->start(2000);
+
 }
 
 MainWindow::~MainWindow()
