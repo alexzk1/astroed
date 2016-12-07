@@ -13,8 +13,11 @@
 #include <QCollator>
 #include <QApplication>
 #include <QTimer>
-
 #include <queue>
+
+//----------------------------------------------------------------------------------------------------------------------------
+//----------------------CONFIG------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------------------
 
 struct SectionDescr //just in case I will want some more static data later
 {
@@ -28,13 +31,23 @@ const static std::vector<SectionDescr> captions =
     {QObject::tr("Name")}
 };
 
+//todo: add more file formats (should be supported by Qt)
 const static QStringList supportedExt =
 {
     "jpeg",
     "jpg",
     "png",
-    "ppm"
+    "ppm",
+    "bmp",
+    "pbm",
+    "pgm",
+    "xbm",
+    "xpm"
 };
+
+//----------------------------------------------------------------------------------------------------------------------------
+//----------------------MODEL-------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------------------
 
 PreviewsModel::PreviewsModel(QObject *parent)
     : QAbstractTableModel(parent),
@@ -90,7 +103,6 @@ PreviewsModel::PreviewsModel(QObject *parent)
 QVariant PreviewsModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
     QVariant res;
-    // FIXME: Implement me!
     if (orientation == Qt::Horizontal)
     {
         if (section > -1)
@@ -110,8 +122,8 @@ QVariant PreviewsModel::headerData(int section, Qt::Orientation orientation, int
 
 bool PreviewsModel::setHeaderData(int section, Qt::Orientation orientation, const QVariant &value, int role)
 {
-    if (value != headerData(section, orientation, role)) {
-        // FIXME: Implement me!
+    if (value != headerData(section, orientation, role))
+    {
         emit headerDataChanged(orientation, section, section);
         return true;
     }
@@ -120,6 +132,7 @@ bool PreviewsModel::setHeaderData(int section, Qt::Orientation orientation, cons
 
 int PreviewsModel::rowCount(const QModelIndex &parent) const
 {
+    Q_UNUSED(parent);
     std::lock_guard<decltype (listMut)> grd(const_cast<PreviewsModel*>(this)->listMut);
     return static_cast<int>(modelFiles.size());
 }
@@ -275,6 +288,10 @@ void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list)
     //qDebug() << "Files listed "<<modelFiles.size();
 }
 
+//----------------------------------------------------------------------------------------------------------------------------
+//----------------------DELEGATE----------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------------------
+
 void PreviewsDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
     if (index.data().canConvert<QImage>())
@@ -285,7 +302,9 @@ void PreviewsDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
             painter->fillRect(option.rect, option.palette.highlight());
         painter->drawImage(option.rect, img);
 
-    } else {
+    }
+    else
+    {
         QStyledItemDelegate::paint(painter, option, index);
     }
 }

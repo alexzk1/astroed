@@ -56,7 +56,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(timer, &QTimer::timeout, this, [this]()
     {
         QLabel *p = memoryLabel;
-        if (p)
+        if (p) //need to check, because timer maybe deleted after label
         {
             IMAGE_LOADER.gc();
             PREVIEW_LOADER.gc();
