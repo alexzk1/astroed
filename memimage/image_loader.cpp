@@ -22,7 +22,8 @@ image_cacher::image_cacher():
     mutex(),
     lastSize(0)
 {
-
+    qRegisterMetaType<image_buffer_ptr>("image_buffer_ptr");
+    qRegisterMetaType<imaging::image_buffer_ptr>("imaging::image_buffer_ptr");
 }
 
 image_buffer_ptr image_cacher::getImage(const QString &fileName)

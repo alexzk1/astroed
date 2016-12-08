@@ -47,13 +47,15 @@ include($$PWD/logic/bl.pri)
 SOURCES += main.cpp\
         mainwindow.cpp \
     previewsmodel.cpp \
-    customtableview.cpp
+    customtableview.cpp \
+    scrollareapannable.cpp
 
 HEADERS  += mainwindow.h \
     previewsmodel.h \
     previewsmodeldata.h \
     customtableview.h \
-    custom_roles.h
+    custom_roles.h \
+    scrollareapannable.h
 
 FORMS    += mainwindow.ui
 

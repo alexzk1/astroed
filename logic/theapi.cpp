@@ -4,14 +4,13 @@
 
 TheAPI::TheAPI()
 {
-    connect(this, &TheAPI::showPreview, this, [](const QImage* img)
+    connect(this, &TheAPI::showPreview, this, [](const imaging::image_buffer_ptr img) //need to have shared_ptr copy, so it will not be gc'ed
     {
-        auto lbl = MainWindow::instance()->openPreviewTab();
-        if (lbl)
-        {
-            //all this trick with signal/slot was for this line - pixmaps can be created ONLY in GUI thread
-            lbl->setPixmap(QPixmap::fromImage(*img));
-        }
+        auto& lbl = MainWindow::instance()->openPreviewTab();
+
+        //all this trick with signal/slot was for this line - pixmaps can be created ONLY in GUI thread
+        lbl.setPixmap(QPixmap::fromImage(*img));
+
     }, Qt::QueuedConnection);
 }
 

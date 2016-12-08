@@ -2,6 +2,7 @@
 #define THEAPI_H
 
 #include "utils/inst_once.h"
+#include "memimage/image_loader.h"
 #include <vector>
 #include <QObject>
 #include <QString>
@@ -18,7 +19,7 @@ public:
     TheAPI();
     virtual ~TheAPI();
 signals:
-    void showPreview(const QImage* file);
+    void showPreview(const imaging::image_buffer_ptr& file);
 };
 
 #define THEAPI utility::globalInstance<TheAPI>()

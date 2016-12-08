@@ -390,7 +390,7 @@ bool PreviewsDelegate::editorEvent(QEvent *event, QAbstractItemModel *model, con
 
             if (captions.at(index.column()).mode == DelegateMode::IMAGE_PREVIEW)
             {
-                THEAPI.showPreview(IMAGE_LOADER.getImage(model->data(index, MyGetPathRole).toString()).get());
+                emit THEAPI.showPreview(IMAGE_LOADER.getImage(model->data(index, MyGetPathRole).toString()));
             }
         }
     }

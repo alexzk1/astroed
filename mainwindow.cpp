@@ -113,11 +113,11 @@ void MainWindow::selectPath(const QString &path, bool collapse)
     }
 }
 
-QLabel *MainWindow::openPreviewTab()
+QLabel &MainWindow::openPreviewTab()
 {
     ui->tabsWidget->setCurrentWidget(ui->tabZoomed);
     ui->scrollAreaZoom->ensureVisible(0,0);
-    return ui->lblZoomPix;
+    return *ui->lblZoomPix;
 }
 
 void MainWindow::changeEvent(QEvent *e)
