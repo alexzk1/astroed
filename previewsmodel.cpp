@@ -1,4 +1,6 @@
 #include "previewsmodel.h"
+#include "custom_roles.h"
+
 #include <vector>
 #include <algorithm>
 
@@ -185,6 +187,12 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
             if (captions.at(col).mode == DelegateMode::CHECKBOX)
                 res = (itm.selected)?Qt::Checked:Qt::Unchecked;
         }
+
+         if (role == MyMouseCursorRole)
+         {
+             if (captions.at(col).mode == DelegateMode::FILE_HYPERLINK)
+                 return static_cast<int>(Qt::PointingHandCursor);
+         }
     }
     return res;
 }

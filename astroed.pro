@@ -46,11 +46,14 @@ include($$PWD/logic/bl.pri)
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    previewsmodel.cpp
+    previewsmodel.cpp \
+    customtableview.cpp
 
 HEADERS  += mainwindow.h \
     previewsmodel.h \
-    previewsmodeldata.h
+    previewsmodeldata.h \
+    customtableview.h \
+    custom_roles.h
 
 FORMS    += mainwindow.ui
 
