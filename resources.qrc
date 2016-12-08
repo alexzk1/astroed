@@ -2,4 +2,7 @@
     <qresource prefix="/icons">
         <file>icons/Galaxy-icon.png</file>
     </qresource>
+    <qresource prefix="/styles">
+        <file alias="darkorange">styles/darkorange.style</file>
+    </qresource>
 </RCC>

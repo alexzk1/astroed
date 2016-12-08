@@ -23,6 +23,9 @@ public:
 
     QString getSelectedFolder();
     void selectPath(const QString &path, bool collapse = true);
+    QLabel* openPreviewTab();
+
+    QString styler;
 protected:
     void changeEvent(QEvent *e);
     virtual void recurseWrite(QSettings& settings, QObject* object);

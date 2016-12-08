@@ -1,5 +1,6 @@
 #include "previewsmodel.h"
 #include "custom_roles.h"
+#include "logic/theapi.h"
 
 #include <vector>
 #include <algorithm>
@@ -33,13 +34,14 @@ struct SectionDescr //just in case I will want some more static data later
 {
     QString text;
     DelegateMode mode;
+    QString tooltip;
 };
 
 const static std::vector<SectionDescr> captions =
 {
-    {QObject::tr("Preview"),   DelegateMode::IMAGE_PREVIEW},
-    {QObject::tr("Use"),       DelegateMode::CHECKBOX},
-    {QObject::tr("File Name"), DelegateMode::FILE_HYPERLINK},
+    {QObject::tr("Preview"),   DelegateMode::IMAGE_PREVIEW,  QObject::tr("Click to zoom")},
+    {QObject::tr("Use"),       DelegateMode::CHECKBOX,       QObject::tr("Lock for processing.")},
+    {QObject::tr("File Name"), DelegateMode::FILE_HYPERLINK, QObject::tr("Click to start external viewer.")},
 };
 
 //todo: add more file formats (should be supported by Qt)
@@ -166,6 +168,9 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
 
         const auto& itm = modelFiles.at(row);
 
+        if (role == MyGetPathRole)
+            res = itm.filePath;
+
         if (role == Qt::DisplayRole)
         {
 
@@ -188,11 +193,14 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
                 res = (itm.selected)?Qt::Checked:Qt::Unchecked;
         }
 
-         if (role == MyMouseCursorRole)
-         {
-             if (captions.at(col).mode == DelegateMode::FILE_HYPERLINK)
-                 return static_cast<int>(Qt::PointingHandCursor);
-         }
+        if (role == MyMouseCursorRole)
+        {
+            if (captions.at(col).mode == DelegateMode::FILE_HYPERLINK)
+                return static_cast<int>(Qt::PointingHandCursor);
+        }
+
+        if (role == Qt::ToolTipRole)
+            return captions.at(col).tooltip;
     }
     return res;
 }
@@ -370,14 +378,19 @@ QSize PreviewsDelegate::sizeHint(const QStyleOptionViewItem &option, const QMode
 bool PreviewsDelegate::editorEvent(QEvent *event, QAbstractItemModel *model, const QStyleOptionViewItem &option, const QModelIndex &index)
 {
     auto me = dynamic_cast<QMouseEvent*>(event);
-    if (captions.at(index.column()).mode == DelegateMode::FILE_HYPERLINK)
+    if (me)
     {
-        if (me)
+        if (me->button() == Qt::LeftButton && me->type() == QEvent::MouseButtonRelease)
         {
-            if (me->button() == Qt::LeftButton && me->type() == QEvent::MouseButtonRelease)
+            if (captions.at(index.column()).mode == DelegateMode::FILE_HYPERLINK)
             {
                 QDesktopServices::openUrl(QString("file://%1").arg(index.data().toString()));
                 return true;
+            }
+
+            if (captions.at(index.column()).mode == DelegateMode::IMAGE_PREVIEW)
+            {
+                THEAPI.showPreview(IMAGE_LOADER.getImage(model->data(index, MyGetPathRole).toString()).get());
             }
         }
     }

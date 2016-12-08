@@ -18,6 +18,14 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     ui->previewsTable->setItemDelegate(previewsDelegate);
     ui->previewsTable->setModel(previewsModel);
+    ui->tabsWidget->setCurrentWidget(ui->tabFiles);
+
+    QFile style(":/styles/darkorange");
+    style.open(QIODevice::ReadOnly | QFile::Text);
+    styler = style.readAll();
+
+    //ok, i dont like that style for the whole app, but need some good visible scrollbars with huge black space picture
+    ui->scrollAreaZoom->setStyleSheet(styler);
 
     auto hdr = ui->previewsTable->horizontalHeader();
     if (hdr)
@@ -103,6 +111,13 @@ void MainWindow::selectPath(const QString &path, bool collapse)
             //qApp->flush();
         }
     }
+}
+
+QLabel *MainWindow::openPreviewTab()
+{
+    ui->tabsWidget->setCurrentWidget(ui->tabZoomed);
+    ui->scrollAreaZoom->ensureVisible(0,0);
+    return ui->lblZoomPix;
 }
 
 void MainWindow::changeEvent(QEvent *e)
