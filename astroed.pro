@@ -42,6 +42,7 @@ else {
 include($$PWD/lua/lua_vm.pri)
 include($$PWD/utils/utils.pri)
 include($$PWD/memimage/memimage.pri)
+include($$PWD/logic/bl.pri)
 
 SOURCES += main.cpp\
         mainwindow.cpp \

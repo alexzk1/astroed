@@ -120,11 +120,18 @@ namespace luavm
 
         //dont use it for short living things like lambda, use for class-methods ...because internal vector is never grows down
         //also functors must live until this object LuaVM exists
-        void setGlobalFunctor(const std::string& name, FUNCTOR&& cb, int nupvals = 0) &
+        void setGlobalFunctor(const std::string& name, const FUNCTOR& cb, int nupvals = 0)
         {
-            functions.push_back(functorptr(new FUNCTOR(std::move(cb))));
+            functions.push_back(functorptr(new FUNCTOR(cb)));
             lua_pushcclosure(state.get(), functions.back().get(), nupvals);
             lua_setglobal(state.get(), name.c_str());
+        }
+
+        //binds class' method to lua function
+        template <class P, class F>
+        void declareAPI(P* Obj, F&& f, const std::string& luaName)
+        {
+            setGlobalFunctor(luaName, std::bind(f, Obj, std::placeholders::_1));
         }
 
         void setGlobalInt(const std::string &name, const int val) const

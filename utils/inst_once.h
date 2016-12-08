@@ -28,26 +28,38 @@ namespace utility
     class ItCanBeOnlyOne
     {
     private:
-        T* dumb; //template ensures compiler will generate different statics for each T
+        using T_ptr = T*;
+
+        static T_ptr& staticPtr()
+        {
+            static T_ptr ptr = nullptr;
+            return ptr;
+        }
+
         std::atomic_flag& lock()
         {
             static std::atomic_flag locked = ATOMIC_FLAG_INIT;
             return locked;
         }
-
     protected:
-        ItCanBeOnlyOne() :
-            dumb(nullptr)
+        ItCanBeOnlyOne()
         {
             if (lock().test_and_set())
             {
                 std::string s = "Second instance of " + std::string(typeid(T).name())+" is now allowed.";
                 throw std::runtime_error(s);
             }
+            else
+                staticPtr() = static_cast<T*>(this);
         }
         virtual ~ItCanBeOnlyOne()
         {
             lock().clear();
+        }
+    public:
+        static T* instance()
+        {
+            return staticPtr();
         }
     };
 }

@@ -18,10 +18,11 @@
 #include <vector>
 #include <set>
 #include <memory>
+#include <algorithm>
 
-#include "lua_vm/common/fatal_err.h"
-#include "lua_vm/common/enums_check.h"
-#include "lua_vm/luasrc/lua.hpp"
+#include "utils/enums_check.h"
+#include "utils/fatal_err.h"
+#include "luasrc/lua.hpp"
 
 namespace luavm
 {
@@ -340,6 +341,17 @@ namespace luavm
             return res;
         }
 
+        //other classes may implement this to do luaPush
+        class LuaPushable
+        {
+        public:
+            LuaPushable() = default;
+            virtual ~LuaPushable(){}
+            virtual void luaPush(lua_State *L) const = 0;
+        };
+#ifdef QT_CORE_LIB
+        inline void luaPushVariant(lua_State* L, const QVariant& var);
+#endif
         struct LuaPushImpl
         {
 #ifdef QT_CORE_LIB
@@ -351,7 +363,6 @@ namespace luavm
 
             static void luaPush(lua_State *L, const QString& s)
             {
-                //lua_pushlstring(L, s.toUtf8().constData(), s.size());
                 luaPush(L, s.toUtf8());
             }
 #endif
@@ -384,6 +395,22 @@ namespace luavm
             {
                 lua_pushlstring(L, ptr, size);
             }
+
+            static void luaPush(lua_State *L, const LuaPushable& c)
+            {
+                c.luaPush(L);
+            }
+
+            static void luaPush(lua_State *L, const LuaPushable* c)
+            {
+                c->luaPush(L);
+            }
+#ifdef  QT_CORE_LIB
+            static void luaPush(lua_State *L, const QVariant& var)
+            {
+                luaPushVariant(L, var);
+            }
+#endif
         };
 
         template<class T>inline
@@ -393,13 +420,16 @@ namespace luavm
             LuaPushImpl::luaPush(L, what);
         }
 
+
         template<class T> inline
         typename std::enable_if<checker<T>::isShared, void>::type
         luaPush(lua_State *L, const T& sp)
         {
             auto p = sp.get();
             if (p)
+            {
                 lua_pushlightuserdata(L, sp.get());
+            }
             else
                 lua_pushnil(L);
         }
@@ -424,19 +454,16 @@ namespace luavm
             }
         }
 
-        //differs from luaPush - this one has check to skip empty strings, used in couple places
-        template <class T>
-        inline void luaPushStringArray(lua_State *L, const T& what, bool skipEmpty = false)
+        template<class T> inline
+        typename std::enable_if<checker<T>::isMap, void>::type
+        luaPush(lua_State *L, const T& sp)
         {
             lua_newtable(L);
-            for (int i = 0, index = 1, sz = what.size(); i < sz; i++)
+            for (const auto& v : sp)
             {
-                if (!skipEmpty || what.at(i).size() > 0)
-                {
-                    lua_pushinteger(L, index++);
-                    luaPush(L, what.at(i));
-                    lua_settable(L, -3);
-                }
+                luaPush(L, v.first);
+                luaPush(L, v.second);
+                lua_settable(L, -3);
             }
         }
 
@@ -489,11 +516,37 @@ namespace luavm
         }
 
         template <typename... Args>
-        void luaPushFunc(lua_State* L, const std::string& funcName, Args... args)
+        inline void luaPushFunc(lua_State* L, const std::string& funcName, Args... args)
         {
             lua_getglobal(L, funcName.c_str());
             luaPushMany(L, args...);
         }
+
+        template <class T>//pushes single field of the current table on lua stack
+        inline void luaPushField(lua_State* L, const std::string& field_name, const T& value)
+        {
+            luaPush(L, field_name);
+            luaPush(L, value);
+            lua_settable(L, -3);
+        }
+
+        template <class T> //pushes single field of the current table on lua stack
+        inline void luaPushField(lua_State* L, const char* field_name, const T& value)
+        {
+            luaPushField(L, std::string(field_name), value);
+        }
+
+#ifdef QT_CORE_LIB
+        template <class T> //pushes single field of the current table on lua stack
+        inline void luaPushField(lua_State* L, const QString& field_name, const T& value)
+        {
+            auto f = field_name.toStdString();
+            luaPushField(L, f, value);
+        }
+#endif
+
+
+//NILP should be used to do lua_pushnil(L)
 #define NILP std::shared_ptr<char>(nullptr)
     }
 }

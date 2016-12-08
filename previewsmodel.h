@@ -2,6 +2,8 @@
 
 #include <vector>
 #include <mutex>
+#include <memory>
+
 #include <QAbstractTableModel>
 #include <QStyledItemDelegate>
 
@@ -52,6 +54,8 @@ class PreviewsDelegate : public QStyledItemDelegate
 {
 public:
     PreviewsDelegate(QWidget *parent = 0) : QStyledItemDelegate(parent) {}
+protected:
     virtual void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
     virtual QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override;
+    virtual bool editorEvent(QEvent *event, QAbstractItemModel *model, const QStyleOptionViewItem &option, const QModelIndex &index) override;
 };

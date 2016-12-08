@@ -13,22 +13,31 @@
 #include <QCollator>
 #include <QApplication>
 #include <QTimer>
+#include <QLabel>
+#include <QMouseEvent>
+#include <QDesktopServices>
+#include <QApplication>
+#include "mainwindow.h"
+
+#include <QDebug>
 #include <queue>
 
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------CONFIG------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
+enum class DelegateMode {IMAGE_PREVIEW, CHECKBOX, FILE_HYPERLINK};
 
 struct SectionDescr //just in case I will want some more static data later
 {
     QString text;
+    DelegateMode mode;
 };
 
 const static std::vector<SectionDescr> captions =
 {
-    {QObject::tr("Preview")},
-    {QObject::tr("Use")},
-    {QObject::tr("Name")}
+    {QObject::tr("Preview"),   DelegateMode::IMAGE_PREVIEW},
+    {QObject::tr("Use"),       DelegateMode::CHECKBOX},
+    {QObject::tr("File Name"), DelegateMode::FILE_HYPERLINK},
 };
 
 //todo: add more file formats (should be supported by Qt)
@@ -60,14 +69,14 @@ PreviewsModel::PreviewsModel(QObject *parent)
         qDebug() << "Previews model-reset";
         loadPreviews = utility::startNewRunner([this](auto stop)
         {
-           // qDebug() << "Previews started load";
+            // qDebug() << "Previews started load";
             using namespace std::literals;
             const static QVector<int> roles = {Qt::DisplayRole};
 
             size_t sz = 0;
             {
-               std::lock_guard<decltype (listMut)> grd(listMut);
-               sz = modelFiles.size();
+                std::lock_guard<decltype (listMut)> grd(listMut);
+                sz = modelFiles.size();
             }
 
             for (size_t i = 0; i < sz && !*stop; ++i)
@@ -114,8 +123,9 @@ QVariant PreviewsModel::headerData(int section, Qt::Orientation orientation, int
     }
     else
     {
+        //vertical numbers shown (left-side)
         if (role == Qt::DisplayRole)
-            res = section;
+            res = section + 1;
     }
     return res;
 }
@@ -157,18 +167,22 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
         if (role == Qt::DisplayRole)
         {
 
-            if (col == 2)
-                res = itm.filePath;
-
-            if (col == 0)
+            switch (captions.at(col).mode)
             {
-                res = itm.getPreview();
+                case DelegateMode::FILE_HYPERLINK:
+                    res = itm.filePath;
+                    break;
+                case DelegateMode::IMAGE_PREVIEW:
+                    res = itm.getPreview();
+                    break;
+                case DelegateMode::CHECKBOX: break;
             }
+
         }
 
         if (role == Qt::CheckStateRole)
         {
-            if (col == 1)
+            if (captions.at(col).mode == DelegateMode::CHECKBOX)
                 res = (itm.selected)?Qt::Checked:Qt::Unchecked;
         }
     }
@@ -177,7 +191,7 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
 
 bool PreviewsModel::setData(const QModelIndex &index, const QVariant &value, int role)
 {
-    if (role == Qt::CheckStateRole && index.column() == 1)
+    if (role == Qt::CheckStateRole && captions.at(index.column()).mode == DelegateMode::CHECKBOX)
     {
         size_t row = static_cast<decltype (row)>(index.row());
         {
@@ -194,7 +208,7 @@ bool PreviewsModel::setData(const QModelIndex &index, const QVariant &value, int
 
 Qt::ItemFlags PreviewsModel::flags(const QModelIndex &index) const
 {
-    if (!index.isValid() || index.column() != 1)
+    if (!index.isValid() || captions.at(index.column()).mode != DelegateMode::CHECKBOX)
         return Qt::NoItemFlags;
 
     return Qt::ItemIsUserCheckable | QAbstractTableModel::flags(index);
@@ -294,30 +308,70 @@ void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list)
 
 void PreviewsDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
-    if (index.data().canConvert<QImage>())
-    {
-        auto img = qvariant_cast<QImage>(index.data());
 
-        if (option.state & QStyle::State_Selected)
-            painter->fillRect(option.rect, option.palette.highlight());
-        painter->drawImage(option.rect, img);
-
-    }
-    else
+    switch (captions.at(index.column()).mode)
     {
-        QStyledItemDelegate::paint(painter, option, index);
+        case DelegateMode::IMAGE_PREVIEW:
+            if (index.data().canConvert<QImage>())
+            {
+                auto img = qvariant_cast<QImage>(index.data());
+
+                if (option.state & QStyle::State_Selected)
+                    painter->fillRect(option.rect, option.palette.highlight());
+                painter->drawImage(option.rect, img);
+                break;
+            }
+        case DelegateMode::FILE_HYPERLINK:
+        {
+            QLabel label;
+            label.setText(QString("<a href='file://%1'>%1</a>").arg(index.data().toString()));
+            label.setTextFormat(Qt::RichText);
+            label.setGeometry(option.rect);
+            label.setStyleSheet("QLabel { background-color : transparent; }");
+            painter->translate(option.rect.topLeft());
+            label.render(painter);
+            painter->translate(-option.rect.topLeft());
+        }
+            break;
+        case DelegateMode::CHECKBOX:
+            QStyledItemDelegate::paint(painter, option, index);
+            break;
     }
 }
 
 QSize PreviewsDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
     QSize sz;
-    if (index.data().canConvert<QImage>())
+    switch (captions.at(index.column()).mode)
     {
-        auto img = qvariant_cast<QImage>(index.data());
-        sz = img.size();
+        case DelegateMode::IMAGE_PREVIEW:
+            if (index.data().canConvert<QImage>())
+            {
+                auto img = qvariant_cast<QImage>(index.data());
+                sz = img.size();
+                break;
+            }
+        case DelegateMode::FILE_HYPERLINK:
+        case DelegateMode::CHECKBOX:
+            sz = QStyledItemDelegate::sizeHint(option, index);
+            break;
     }
-    else
-        sz = QStyledItemDelegate::sizeHint(option, index);
     return sz;
+}
+
+bool PreviewsDelegate::editorEvent(QEvent *event, QAbstractItemModel *model, const QStyleOptionViewItem &option, const QModelIndex &index)
+{
+    auto me = dynamic_cast<QMouseEvent*>(event);
+    if (captions.at(index.column()).mode == DelegateMode::FILE_HYPERLINK)
+    {
+        if (me)
+        {
+            if (me->button() == Qt::LeftButton && me->type() == QEvent::MouseButtonRelease)
+            {
+                QDesktopServices::openUrl(QString("file://%1").arg(index.data().toString()));
+                return true;
+            }
+        }
+    }
+    return QStyledItemDelegate::editorEvent(event, model, option, index);
 }

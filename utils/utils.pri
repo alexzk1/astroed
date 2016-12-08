@@ -6,7 +6,8 @@ HEADERS += \
     $$PWD/inst_once.h \
     $$PWD/erase_if.h \
     $$PWD/saveable_widget.h \
-    $$PWD/runners.h
+    $$PWD/runners.h \
+    $$PWD/fatal_err.h
 
 SOURCES += \
     $$PWD/memsize.cpp
