@@ -167,6 +167,7 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
         std::lock_guard<decltype (listMut)> grd(const_cast<PreviewsModel*>(this)->listMut);
 
         const auto& itm = modelFiles.at(row);
+        const auto col_mode = captions.at(col).mode;
 
         if (role == MyGetPathRole)
             res = itm.filePath;
@@ -174,7 +175,7 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
         if (role == Qt::DisplayRole)
         {
 
-            switch (captions.at(col).mode)
+            switch (col_mode)
             {
                 case DelegateMode::FILE_HYPERLINK:
                     res = itm.filePath;
@@ -189,13 +190,13 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
 
         if (role == Qt::CheckStateRole)
         {
-            if (captions.at(col).mode == DelegateMode::CHECKBOX)
+            if (col_mode == DelegateMode::CHECKBOX)
                 res = (itm.selected)?Qt::Checked:Qt::Unchecked;
         }
 
         if (role == MyMouseCursorRole)
         {
-            if (captions.at(col).mode == DelegateMode::FILE_HYPERLINK)
+            if (col_mode == DelegateMode::FILE_HYPERLINK || col_mode == DelegateMode::IMAGE_PREVIEW)
                 return static_cast<int>(Qt::PointingHandCursor);
         }
 

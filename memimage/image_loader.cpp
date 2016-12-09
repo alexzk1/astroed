@@ -11,6 +11,7 @@ const static size_t maxMemUsage = sysMemory / 3; //mem pressure until it will st
 const static auto& dumb = IMAGE_LOADER; //ensuring single instance is created on program init
 
 const static int64_t longestDelay = 240; //how long at most image will remain cached since last access
+const static int     previewSize  = 300; //recommended size
 
 static int64_t nows()
 {
@@ -30,28 +31,38 @@ image_cacher::image_cacher():
 
 image_buffer_ptr image_cacher::getImage(const QString &fileName)
 {
-    image_buffer_ptr res;
+    return findImage(fileName).data;
+}
+
+exif_t image_cacher::getExif(const QString &fileName)
+{
+    return findImage(fileName).exif;
+}
+
+image_cacher::image_t_s image_cacher::findImage(const QString& key)
+{
+    image_t_s res;
     std::lock_guard<std::recursive_mutex> guard(mutex);
 
-    if (wcache.count(fileName))
+    if (wcache.count(key))
     {
         //trying to restore pointer to somewhere existing image (it is possible somebody else holds shared_ptr copy)
-        res = wcache.at(fileName).second.lock();
+        res = wcache.at(key).second;
     }
 
-    if (!res)
+    if (!res.data)
     {
         //the image is no longer exists in memory. Loading from disk.
-        res = createImage(fileName);
-        auto sz = static_cast<size_t>(res->byteCount());
+        res = createImage(key);
+        auto sz = static_cast<size_t>(res.data->byteCount());
         //idea is to keep images hard locked in RAM until we have sufficient memory, then we unlock it
         //but it will still be in RAM until processing algorithms use it
 
-        wcache[fileName] = std::make_pair(sz, res);
+        wcache[key] = std::make_pair(sz, res);
         lastSize += sz;
     }
 
-    cache[fileName] = std::make_pair(nows(), res); //even if object exists in cache, just updating time
+    cache[key] = std::make_pair(nows(), res); //even if object exists in cache, just updating time
     gc();
 
     return res;
@@ -68,13 +79,13 @@ void image_cacher::gc(bool no_wait)
         utility::erase_if(cache, [this, t, no_wait](const auto& sp)
         {
             auto delay = t - sp.second.first;
-            return (sp.second.second.unique() && (no_wait || delay > 20)) || delay > longestDelay;
+            return (sp.second.second.data.unique() && (no_wait || delay > 20)) || delay > longestDelay;
         });
 
         //2 step, if no hard links left anywhere - clearing weaks too, meaning memory is freed already
         utility::erase_if(wcache, [this](const auto& sp)
         {
-            bool r = sp.second.second.expired();
+            bool r = sp.second.second.data.expired();
             if (r)
                 lastSize -= sp.second.first;
             return r;
@@ -91,17 +102,25 @@ image_cacher::~image_cacher()
 {
 }
 
-image_buffer_ptr image_loader::createImage(const QString &key) const
+image_cacher::image_t_s image_loader::createImage(const QString &key) const
 {
     //todo: need some kinda of "virtual filesystem" to dig into avi/mp4 and pick frames there
     QImage img(key);
-    auto res = std::make_shared<QImage>();
-    *res = img.convertToFormat(QImage::Format_RGB888);
-    return res;
+    image_t_s tmp;
+
+    tmp.data  = std::make_shared<QImage>();
+    *tmp.data = img.convertToFormat(QImage::Format_RGB888);
+
+
+    return tmp;
 }
 
-image_buffer_ptr image_preview_loader::createImage(const QString &key) const
+image_cacher::image_t_s image_preview_loader::createImage(const QString &key) const
 {
-    auto src = IMAGE_LOADER.getImage(key);
-    return image_buffer_ptr(new QImage(src->scaled(300, 300, Qt::KeepAspectRatio)));
+    //this class caches previews, not full objects, so we access OTHER object with full images
+    auto src  = IMAGE_LOADER.findImage(key);
+    //keeping aspect ratio
+    int width = static_cast<decltype(width)>(previewSize * src.data->width() / (double) src.data->height());
+    src.data = image_buffer_ptr(new QImage(src.data->scaled(width, previewSize, Qt::KeepAspectRatio)));
+    return src;
 }
