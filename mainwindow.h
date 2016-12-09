@@ -18,20 +18,24 @@ class MainWindow : public QMainWindow, public utility::ItCanBeOnlyOne<MainWindow
     Q_OBJECT
 
 public:
+    QString styler;
+
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
     QString getSelectedFolder();
     void selectPath(const QString &path, bool collapse = true);
     QLabel &openPreviewTab(const QSize &maxSize);
-
-    QString styler;
+    void showTempNotify(const QString& text, int delay = 10000);
 protected:
     void changeEvent(QEvent *e);
     virtual void recurseWrite(QSettings& settings, QObject* object);
     virtual void recurseRead(QSettings& settings, QObject* object);
 
     void currentDirChanged(const QString& dir);
+private slots:
+    void on_tabsWidget_currentChanged(int index);
+
 private:
     Ui::MainWindow *ui;
     QPointer<QFileSystemModel> dirsModel;

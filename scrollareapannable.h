@@ -12,6 +12,7 @@ public:
     void setMaxZoom(const QSize& maxz);
     QSize getCurrentZoomedSize() const;
 private:
+    int   min_width, min_height;
     QPoint mousePosPan;
     QSize  maxZoom;
 protected:

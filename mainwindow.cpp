@@ -122,6 +122,11 @@ QLabel &MainWindow::openPreviewTab(const QSize& maxSize)
     return *ui->lblZoomPix;
 }
 
+void MainWindow::showTempNotify(const QString &text, int delay)
+{
+    statusBar()->showMessage(text, delay);
+}
+
 void MainWindow::changeEvent(QEvent *e)
 {
     QMainWindow::changeEvent(e);
@@ -177,4 +182,15 @@ void MainWindow::setupFsBrowsing()
         if (p1.isValid() && dirsModel)
             this->currentDirChanged(dirsModel->data(p1, QFileSystemModel::FilePathRole).toString());
     }, Qt::QueuedConnection);
+}
+
+void MainWindow::on_tabsWidget_currentChanged(int index)
+{
+    //active tab changed slot
+    Q_UNUSED(index);
+
+    if (ui->tabsWidget->currentWidget() == ui->tabZoomed)
+    {
+        showTempNotify(tr("LBM - pan, RBM - select, LBM + wheel(shift + wheel) - zoom."), 20000);
+    }
 }

@@ -7,6 +7,7 @@
 
 ScrollAreaPannable::ScrollAreaPannable(QWidget *parent):
     QScrollArea (parent),
+    min_width(width()), min_height(height()),
     mousePosPan(0,0),
     maxZoom(0,0)
 {
@@ -21,7 +22,7 @@ void ScrollAreaPannable::zoomSize(int w, int h)
 
 void ScrollAreaPannable::zoomFitWindow()
 {
-    zoomSize(width(), height());
+    zoomSize(min_width, min_height);
 }
 
 void ScrollAreaPannable::zoom1_1()
@@ -36,7 +37,7 @@ void ScrollAreaPannable::zoomBy(double times)
     int h = static_cast<decltype(h)>(widget()->height()+ widget()->height() * times);
 
     if (w < widget()->width() || h < widget()->height())
-        zoomSize(std::max(w, width()), std::max(h, height()));
+        zoomSize(std::max(w, min_width), std::max(h, min_height));
     else
     {
         if (w > maxZoom.width() || h > maxZoom.height())
@@ -49,6 +50,9 @@ void ScrollAreaPannable::zoomBy(double times)
 void ScrollAreaPannable::setMaxZoom(const QSize &maxz)
 {
     maxZoom = maxz;
+    double p = (double) maxz.width() / maxz.height();
+    min_height = height() - 5;
+    min_width = p * min_height;
 }
 
 QSize ScrollAreaPannable::getCurrentZoomedSize() const

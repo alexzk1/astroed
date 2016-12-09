@@ -10,6 +10,8 @@ const static size_t sysMemory   = getMemorySize();
 const static size_t maxMemUsage = sysMemory / 3; //mem pressure until it will start "gc" loops
 const static auto& dumb = IMAGE_LOADER; //ensuring single instance is created on program init
 
+const static int64_t longestDelay = 240; //how long at most image will remain cached since last access
+
 static int64_t nows()
 {
     using namespace std::chrono;
@@ -33,11 +35,13 @@ image_buffer_ptr image_cacher::getImage(const QString &fileName)
 
     if (wcache.count(fileName))
     {
+        //trying to restore pointer to somewhere existing image (it is possible somebody else holds shared_ptr copy)
         res = wcache.at(fileName).second.lock();
     }
 
     if (!res)
     {
+        //the image is no longer exists in memory. Loading from disk.
         res = createImage(fileName);
         auto sz = static_cast<size_t>(res->byteCount());
         //idea is to keep images hard locked in RAM until we have sufficient memory, then we unlock it
@@ -64,7 +68,7 @@ void image_cacher::gc(bool no_wait)
         utility::erase_if(cache, [this, t, no_wait](const auto& sp)
         {
             auto delay = t - sp.second.first;
-            return (sp.second.second.unique() && (no_wait || delay > 20)) || delay > 120;
+            return (sp.second.second.unique() && (no_wait || delay > 20)) || delay > longestDelay;
         });
 
         //2 step, if no hard links left anywhere - clearing weaks too, meaning memory is freed already
