@@ -59,7 +59,7 @@ namespace imaging
         std::atomic<size_t> lastSize;
     protected:
         virtual image_t_s createImage(const QString& key) const = 0;
-        image_t_s         findImage(const QString& key);
+        void    findImage(const QString& key, image_t_s &res);
     public:
         image_cacher();
         image_buffer_ptr getImage(const QString& fileName);

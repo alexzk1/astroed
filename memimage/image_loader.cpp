@@ -31,17 +31,20 @@ image_cacher::image_cacher():
 
 image_buffer_ptr image_cacher::getImage(const QString &fileName)
 {
-    return findImage(fileName).data;
+    image_t_s t;
+    findImage(fileName, t);
+    return t.data;
 }
 
 exif_t image_cacher::getExif(const QString &fileName)
 {
-    return findImage(fileName).exif;
+    image_t_s t;
+    findImage(fileName, t);
+    return t.exif;
 }
 
-image_cacher::image_t_s image_cacher::findImage(const QString& key)
+void image_cacher::findImage(const QString& key, image_t_s& res)
 {
-    image_t_s res;
     std::lock_guard<std::recursive_mutex> guard(mutex);
 
     if (wcache.count(key))
@@ -64,8 +67,6 @@ image_cacher::image_t_s image_cacher::findImage(const QString& key)
 
     cache[key] = std::make_pair(nows(), res); //even if object exists in cache, just updating time
     gc();
-
-    return res;
 }
 
 void image_cacher::gc(bool no_wait)
@@ -118,7 +119,8 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
 image_cacher::image_t_s image_preview_loader::createImage(const QString &key) const
 {
     //this class caches previews, not full objects, so we access OTHER object with full images
-    auto src  = IMAGE_LOADER.findImage(key);
+    image_t_s src;
+    IMAGE_LOADER.findImage(key, src);
     //keeping aspect ratio
     int width = static_cast<decltype(width)>(previewSize * src.data->width() / (double) src.data->height());
     src.data = image_buffer_ptr(new QImage(src.data->scaled(width, previewSize, Qt::KeepAspectRatio)));
