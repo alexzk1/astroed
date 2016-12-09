@@ -144,14 +144,20 @@ void MainWindow::recurseWrite(QSettings &settings, QObject *object)
 {
     Q_UNUSED(object);
     settings.setValue("LastDirSelection", getSelectedFolder());
+    settings.setValue("splitter", ui->splitter->saveState());
+    settings.setValue("mainwinstate", this->saveState());
 }
 
 void MainWindow::recurseRead(QSettings &settings, QObject *object)
 {
     Q_UNUSED(object);
+    ui->splitter->restoreState(settings.value("splitter").toByteArray());
+    this->restoreState(settings.value("mainwinstate").toByteArray());
+
     auto s = settings.value("LastDirSelection", QDir::homePath()).toString();
     qDebug() << "Read: "<<s;
     selectPath(s);
+
 }
 
 void MainWindow::currentDirChanged(const QString &dir)
