@@ -19,6 +19,7 @@ public:
     TheAPI();
     virtual ~TheAPI();
     void showPreview(const QString& fileName);
+    void showStatusHint(const QString& hint, int delay = 10000);
 signals:
     void showPreviewImage(const imaging::image_buffer_ptr& file);
 };

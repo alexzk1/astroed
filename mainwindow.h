@@ -37,6 +37,8 @@ private slots:
     void on_tabsWidget_currentChanged(int index);
 
 private:
+    QString originalStylesheet;
+
     Ui::MainWindow *ui;
     QPointer<QFileSystemModel> dirsModel;
     QPointer<PreviewsModel>    previewsModel;

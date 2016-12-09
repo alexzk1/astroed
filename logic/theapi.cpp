@@ -23,3 +23,8 @@ void TheAPI::showPreview(const QString &fileName)
 {
     emit showPreviewImage(IMAGE_LOADER.getImage(fileName));
 }
+
+void TheAPI::showStatusHint(const QString &hint, int delay)
+{
+    MainWindow::instance()->showTempNotify(hint, delay);
+}

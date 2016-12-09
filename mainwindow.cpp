@@ -23,6 +23,7 @@ MainWindow::MainWindow(QWidget *parent) :
     QFile style(":/styles/darkorange");
     style.open(QIODevice::ReadOnly | QFile::Text);
     styler = style.readAll();
+    originalStylesheet = qApp->styleSheet();
 
     //ok, i dont like that style for the whole app, but need some good visible scrollbars with huge black space picture
     ui->scrollAreaZoom->setStyleSheet(styler);
@@ -188,9 +189,12 @@ void MainWindow::on_tabsWidget_currentChanged(int index)
 {
     //active tab changed slot
     Q_UNUSED(index);
-
+    qApp->setStyleSheet(originalStylesheet);
     if (ui->tabsWidget->currentWidget() == ui->tabZoomed)
     {
+        //making all dark on big preview, because it's bad for eyes when around black space u see white window borders
+        qApp->setStyleSheet(styler);
         showTempNotify(tr("LBM - pan, RBM - select, LBM + wheel(shift + wheel) - zoom."), 20000);
     }
+
 }
