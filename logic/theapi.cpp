@@ -4,7 +4,7 @@
 
 TheAPI::TheAPI()
 {
-    connect(this, &TheAPI::showPreview, this, [](const imaging::image_buffer_ptr img) //need to have shared_ptr copy, so it will not be gc'ed
+    connect(this, &TheAPI::showPreviewImage, this, [](const imaging::image_buffer_ptr img) //need to have shared_ptr copy, so it will not be gc'ed
     {
         auto& lbl = MainWindow::instance()->openPreviewTab(img->size());
 
@@ -17,4 +17,9 @@ TheAPI::TheAPI()
 TheAPI::~TheAPI()
 {
 
+}
+
+void TheAPI::showPreview(const QString &fileName)
+{
+    emit showPreviewImage(IMAGE_LOADER.getImage(fileName));
 }

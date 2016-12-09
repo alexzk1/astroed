@@ -18,8 +18,9 @@ class TheAPI : public QObject, public utility::ItCanBeOnlyOne<TheAPI>
 public:
     TheAPI();
     virtual ~TheAPI();
+    void showPreview(const QString& fileName);
 signals:
-    void showPreview(const imaging::image_buffer_ptr& file);
+    void showPreviewImage(const imaging::image_buffer_ptr& file);
 };
 
 #define THEAPI utility::globalInstance<TheAPI>()

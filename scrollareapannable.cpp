@@ -101,7 +101,7 @@ void ScrollAreaPannable::mouseReleaseEvent(QMouseEvent *e)
 
 void ScrollAreaPannable::wheelEvent(QWheelEvent *event)
 {
-    if (event->modifiers() == Qt::ShiftModifier)
+    if (event->modifiers() == Qt::ShiftModifier || event->buttons() == Qt::LeftButton)
     {
         auto angle = event->angleDelta();
         double val = ZOOM_SPEED * (angle.y() + angle.x()) / 120.;
