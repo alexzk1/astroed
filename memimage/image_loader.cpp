@@ -58,7 +58,7 @@ image_cacher::image_t_s image_cacher::findImage(const QString& key)
         //idea is to keep images hard locked in RAM until we have sufficient memory, then we unlock it
         //but it will still be in RAM until processing algorithms use it
 
-        wcache[key] = std::make_pair(sz, res);
+        wcache[key] = std::make_pair(sz, static_cast<image_t_w>(res));
         lastSize += sz;
     }
 

@@ -14,10 +14,10 @@ namespace imaging
     using image_buffer_ptr = std::shared_ptr<QImage>;
     using exif_t           = QString; //must be copyable
 
-    class image_cacher //: public utility::ItCanBeOnlyOne<image_loader>
+    class image_cacher
     {
     protected:
-        friend class image_preview_loader;
+        friend class image_preview_loader; //need access from previews object to full object
         template<class C>
         struct image_t
         {
@@ -35,7 +35,7 @@ namespace imaging
                 data = c.data.lock();
                 return *this;
             }
-            operator image_t_w() const
+            explicit operator image_t_w() const
             {
                 image_t_w tmp;
                 tmp.data = data;
