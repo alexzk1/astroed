@@ -53,7 +53,7 @@ void image_cacher::findImage(const QString& key, image_t_s& res)
         res = wcache.at(key).second;
     }
 
-    if (!res.data)
+    if (!res)
     {
         //the image is no longer exists in memory. Loading from disk.
         res = createImage(key);
@@ -111,7 +111,7 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
 
     tmp.data  = std::make_shared<QImage>();
     *tmp.data = img.convertToFormat(QImage::Format_RGB888);
-
+    //todo: this should load exif too
 
     return tmp;
 }

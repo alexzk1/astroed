@@ -23,6 +23,10 @@ namespace imaging
         {
             C data;
             exif_t exif;
+            operator bool() const
+            {
+                return data != nullptr;
+            }
         };
         using image_buffer_wptr = std::weak_ptr<QImage>;
         using image_t_w         = image_t<image_buffer_wptr>;
