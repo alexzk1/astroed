@@ -13,6 +13,7 @@ namespace Ui {
     class MainWindow;
 }
 
+class ClickableLabel;
 class MainWindow : public QMainWindow, public utility::ItCanBeOnlyOne<MainWindow>, protected utility::SaveableWidget
 {
     Q_OBJECT
@@ -43,7 +44,7 @@ private:
     QPointer<QFileSystemModel> dirsModel;
     QPointer<PreviewsModel>    previewsModel;
     QPointer<PreviewsDelegate> previewsDelegate;
-    QPointer<QLabel>           memoryLabel;
+    QPointer<ClickableLabel>   memoryLabel;
     void setupFsBrowsing();
 };
 

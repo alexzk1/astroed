@@ -6,6 +6,7 @@
 #include <QItemSelectionModel>
 #include <QStatusBar>
 #include <QTimer>
+#include "clickablelabel.h"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -13,7 +14,7 @@ MainWindow::MainWindow(QWidget *parent) :
     dirsModel(nullptr),
     previewsModel(new PreviewsModel(this)),
     previewsDelegate(new PreviewsDelegate(this)),
-    memoryLabel(new QLabel(this))
+    memoryLabel(new ClickableLabel(this))
 {
     ui->setupUi(this);
     ui->previewsTable->setItemDelegate(previewsDelegate);
@@ -57,24 +58,25 @@ MainWindow::MainWindow(QWidget *parent) :
     setupFsBrowsing();
     readSettings(this);
     statusBar()->addPermanentWidget(memoryLabel);
-    memoryLabel->setToolTip(tr("The approximate size of memory used."));
+    memoryLabel->setToolTip(tr("The approximate size of memory used. Click to GC."));
 
-    //todo: add some doubleclick handler to the label which calls gc() (maybe even forced gc(true))
-
-    QTimer *timer = new QTimer(this);
-    connect(timer, &QTimer::timeout, this, [this]()
+    auto updateMemoryLabel = [this](bool force)
     {
+        IMAGE_LOADER.gc(force);
+        PREVIEW_LOADER.gc(force);
         QLabel *p = memoryLabel;
-        if (p) //need to check, because timer maybe deleted after label
+        if (p)
         {
-            IMAGE_LOADER.gc();
-            PREVIEW_LOADER.gc();
-            size_t mb = (IMAGE_LOADER.getMemoryUsed() + PREVIEW_LOADER.getMemoryUsed()) / (1024 * 1024);
-            p->setText(QString("%1 MB").arg(mb));
+            const static auto mb = 1024 * 1024;
+            p->setText(QString("Total: %1 MB; Previews: %2 MB").arg((IMAGE_LOADER.getMemoryUsed() + PREVIEW_LOADER.getMemoryUsed()) /mb).arg(PREVIEW_LOADER.getMemoryUsed() / mb));
         }
-    });
-    timer->start(2000);
+    };
 
+    //done: add some doubleclick handler to the label which calls gc() (maybe even forced gc(true))
+    connect(memoryLabel, &ClickableLabel::clicked, this, std::bind(updateMemoryLabel, true));
+    QTimer *timer = new QTimer(this);
+    connect(timer, &QTimer::timeout, this, std::bind(updateMemoryLabel, false));
+    timer->start(2000);
 }
 
 MainWindow::~MainWindow()

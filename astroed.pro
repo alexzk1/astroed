@@ -58,7 +58,8 @@ HEADERS  += mainwindow.h \
     previewsmodeldata.h \
     customtableview.h \
     custom_roles.h \
-    scrollareapannable.h
+    scrollareapannable.h \
+    clickablelabel.h
 
 FORMS    += mainwindow.ui
 
