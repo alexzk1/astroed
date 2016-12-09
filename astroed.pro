@@ -11,7 +11,10 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = astroed
 TEMPLATE = app
 
-QMAKE_CXXFLAGS +=  -march=native -std=c++14 -Wall -frtti -fexceptions -Werror=return-type -Werror=overloaded-virtual
+#lets optimize for CPU on linux
+unix:!macx:QMAKE_CXXFLAGS +=  -march=native
+
+QMAKE_CXXFLAGS +=  -std=c++14 -Wall -frtti -fexceptions -Werror=return-type -Werror=overloaded-virtual
 QMAKE_CXXFLAGS +=  -Wctor-dtor-privacy -Werror=delete-non-virtual-dtor -Werror=strict-aliasing -fstrict-aliasing
 
 
