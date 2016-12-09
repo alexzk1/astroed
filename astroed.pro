@@ -11,7 +11,7 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = astroed
 TEMPLATE = app
 
-QMAKE_CXXFLAGS +=  -std=c++14 -Wall -frtti -fexceptions -Werror=return-type -Werror=overloaded-virtual
+QMAKE_CXXFLAGS +=  -march=native -std=c++14 -Wall -frtti -fexceptions -Werror=return-type -Werror=overloaded-virtual
 QMAKE_CXXFLAGS +=  -Wctor-dtor-privacy -Werror=delete-non-virtual-dtor -Werror=strict-aliasing -fstrict-aliasing
 
 
@@ -26,7 +26,7 @@ macx: QMAKE_CXXFLAGS += -mmacosx-version-min=10.10
 macx: QMAKE_MACOSX_DEPLOYMENT_TARGET=10.10
 
 
-CONFIG(debug, debug|release) {
+CONFIG(debug) {
      message( "Building the DEBUG Version" )
      QMAKE_CXXFLAGS += -O0 -g
      DEFINES += _DEBUG
@@ -34,7 +34,7 @@ CONFIG(debug, debug|release) {
 else {
     DEFINES += NDEBUG
     message( "Building the RELEASE Version" )
-    QMAKE_CXXFLAGS += -O2
+    QMAKE_CXXFLAGS += -O3
 }
 
 !macx:LIBS +=  -lrt

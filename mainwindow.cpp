@@ -113,10 +113,12 @@ void MainWindow::selectPath(const QString &path, bool collapse)
     }
 }
 
-QLabel &MainWindow::openPreviewTab()
+QLabel &MainWindow::openPreviewTab(const QSize& maxSize)
 {
     ui->tabsWidget->setCurrentWidget(ui->tabZoomed);
     ui->scrollAreaZoom->ensureVisible(0,0);
+    ui->scrollAreaZoom->setMaxZoom(maxSize);
+    ui->scrollAreaZoom->zoomFitWindow();
     return *ui->lblZoomPix;
 }
 

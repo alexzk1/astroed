@@ -23,7 +23,7 @@ public:
 
     QString getSelectedFolder();
     void selectPath(const QString &path, bool collapse = true);
-    QLabel &openPreviewTab();
+    QLabel &openPreviewTab(const QSize &maxSize);
 
     QString styler;
 protected:

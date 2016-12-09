@@ -6,7 +6,7 @@ TheAPI::TheAPI()
 {
     connect(this, &TheAPI::showPreview, this, [](const imaging::image_buffer_ptr img) //need to have shared_ptr copy, so it will not be gc'ed
     {
-        auto& lbl = MainWindow::instance()->openPreviewTab();
+        auto& lbl = MainWindow::instance()->openPreviewTab(img->size());
 
         //all this trick with signal/slot was for this line - pixmaps can be created ONLY in GUI thread
         lbl.setPixmap(QPixmap::fromImage(*img));
