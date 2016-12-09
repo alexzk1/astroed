@@ -28,7 +28,7 @@ public:
     void selectPath(const QString &path, bool collapse = true);
     QLabel &openPreviewTab(const QSize &maxSize);
     void showTempNotify(const QString& text, int delay = 10000);
-    void resetPreviewShift();
+    void resetPreview();
 protected:
     virtual void changeEvent(QEvent *e) override;
     virtual bool eventFilter(QObject *src, QEvent *e) override;

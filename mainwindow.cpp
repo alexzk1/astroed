@@ -125,8 +125,7 @@ QLabel &MainWindow::openPreviewTab(const QSize& maxSize)
 {
     ui->tabsWidget->setCurrentWidget(ui->tabZoomed);
     ui->scrollAreaZoom->setMaxZoom(maxSize);
-    ui->scrollAreaZoom->zoomFitWindow();
-    ui->scrollAreaZoom->ensureVisible(0,0);
+    qDebug()  <<"openPreviewTab()";
 
     return *ui->lblZoomPix;
 }
@@ -136,10 +135,13 @@ void MainWindow::showTempNotify(const QString &text, int delay)
     statusBar()->showMessage(text, delay);
 }
 
-void MainWindow::resetPreviewShift()
+void MainWindow::resetPreview()
 {
     previewShift = 0;
-    qDebug()  <<"Reset shift";
+    ui->scrollAreaZoom->zoomFitWindow();
+    ui->scrollAreaZoom->ensureVisible(0,0);
+
+    qDebug()  <<"resetPreview()";
 }
 
 void MainWindow::changeEvent(QEvent *e)
@@ -166,7 +168,7 @@ bool MainWindow::eventFilter(QObject *src, QEvent *e)
             auto dele = dynamic_cast<PreviewsDelegate*>(ui->previewsTable->itemDelegate());
             if (dele)
             {
-                if (dele->showLastClickedPreview(s))
+                if (dele->showLastClickedPreview(s, false))
                 {
                     previewShift = s;
                     qDebug() << "set shift "<<s;

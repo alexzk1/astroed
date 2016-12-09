@@ -18,10 +18,10 @@ class TheAPI : public QObject, public utility::ItCanBeOnlyOne<TheAPI>
 public:
     TheAPI();
     virtual ~TheAPI();
-    void showPreview(const QString& fileName);
+    void showPreview(const QString& fileName,  bool need_reset = true);
     void showStatusHint(const QString& hint, int delay = 10000);
 signals:
-    void showPreviewImage(const imaging::image_buffer_ptr& file);
+    void showPreviewImage(const imaging::image_buffer_ptr& file, bool need_reset);
 };
 
 #define THEAPI utility::globalInstance<TheAPI>()

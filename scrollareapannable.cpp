@@ -50,8 +50,9 @@ void ScrollAreaPannable::zoomBy(double times)
 void ScrollAreaPannable::setMaxZoom(const QSize &maxz)
 {
     maxZoom = maxz;
+
     double p = (double) maxz.width() / maxz.height();
-    min_height = height() - 5;
+    min_height = std::min(height(), maxz.height());
     min_width = p * min_height;
 }
 
