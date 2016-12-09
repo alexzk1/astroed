@@ -28,23 +28,27 @@ public:
     void selectPath(const QString &path, bool collapse = true);
     QLabel &openPreviewTab(const QSize &maxSize);
     void showTempNotify(const QString& text, int delay = 10000);
+    void resetPreviewShift();
 protected:
-    void changeEvent(QEvent *e);
-    virtual void recurseWrite(QSettings& settings, QObject* object);
-    virtual void recurseRead(QSettings& settings, QObject* object);
+    virtual void changeEvent(QEvent *e) override;
+    virtual bool eventFilter(QObject *src, QEvent *e) override;
+
+    virtual void recurseWrite(QSettings& settings, QObject* object) override;
+    virtual void recurseRead(QSettings& settings, QObject* object) override;
 
     void currentDirChanged(const QString& dir);
 private slots:
     void on_tabsWidget_currentChanged(int index);
 
 private:
-    QString originalStylesheet;
-
     Ui::MainWindow *ui;
     QPointer<QFileSystemModel> dirsModel;
     QPointer<PreviewsModel>    previewsModel;
     QPointer<PreviewsDelegate> previewsDelegate;
     QPointer<ClickableLabel>   memoryLabel;
+    int previewShift;
+    const QString originalStylesheet;
+
     void setupFsBrowsing();
 };
 

@@ -323,6 +323,18 @@ void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list)
 //----------------------DELEGATE----------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
 
+bool PreviewsDelegate::showLastClickedPreview(int shift)
+{
+    bool res = false;
+    if (lastClickedPreview.isValid())
+    {
+        QModelIndex ind = lastClickedPreview.model()->index(lastClickedPreview.row() + shift, lastClickedPreview.column());
+        if ((res = ind.isValid()))
+            THEAPI.showPreview(ind.data(MyGetPathRole).toString());
+    }
+    return res;
+}
+
 void PreviewsDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
 
@@ -391,7 +403,9 @@ bool PreviewsDelegate::editorEvent(QEvent *event, QAbstractItemModel *model, con
 
             if (captions.at(index.column()).mode == DelegateMode::IMAGE_PREVIEW)
             {
-                THEAPI.showPreview(model->data(index, MyGetPathRole).toString());
+                lastClickedPreview = index;
+                MainWindow::instance()->resetPreviewShift();
+                showLastClickedPreview();
             }
         }
     }

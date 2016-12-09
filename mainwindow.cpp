@@ -6,6 +6,7 @@
 #include <QItemSelectionModel>
 #include <QStatusBar>
 #include <QTimer>
+#include <QHeaderView>
 #include "clickablelabel.h"
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -14,7 +15,9 @@ MainWindow::MainWindow(QWidget *parent) :
     dirsModel(nullptr),
     previewsModel(new PreviewsModel(this)),
     previewsDelegate(new PreviewsDelegate(this)),
-    memoryLabel(new ClickableLabel(this))
+    memoryLabel(new ClickableLabel(this)),
+    previewShift(0),
+    originalStylesheet(qApp->styleSheet())
 {
     ui->setupUi(this);
     ui->previewsTable->setItemDelegate(previewsDelegate);
@@ -24,7 +27,7 @@ MainWindow::MainWindow(QWidget *parent) :
     QFile style(":/styles/darkorange");
     style.open(QIODevice::ReadOnly | QFile::Text);
     styler = style.readAll();
-    originalStylesheet = qApp->styleSheet();
+
 
     //ok, i dont like that style for the whole app, but need some good visible scrollbars with huge black space picture
     ui->scrollAreaZoom->setStyleSheet(styler);
@@ -77,6 +80,8 @@ MainWindow::MainWindow(QWidget *parent) :
     QTimer *timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, std::bind(updateMemoryLabel, false));
     timer->start(2000);
+
+    ui->scrollAreaZoom->installEventFilter(this);
 }
 
 MainWindow::~MainWindow()
@@ -131,6 +136,12 @@ void MainWindow::showTempNotify(const QString &text, int delay)
     statusBar()->showMessage(text, delay);
 }
 
+void MainWindow::resetPreviewShift()
+{
+    previewShift = 0;
+    qDebug()  <<"Reset shift";
+}
+
 void MainWindow::changeEvent(QEvent *e)
 {
     QMainWindow::changeEvent(e);
@@ -141,6 +152,30 @@ void MainWindow::changeEvent(QEvent *e)
         default:
             break;
     }
+}
+
+bool MainWindow::eventFilter(QObject *src, QEvent *e)
+{
+    if (e->type() == QEvent::KeyPress && src == ui->scrollAreaZoom)
+    {
+        const QKeyEvent *ke = static_cast<decltype (ke)>(e);
+        auto key = ke->key();
+        if (key == Qt::Key_Left || key == Qt::Key_Right)
+        {
+            auto s = previewShift + ((key == Qt::Key_Left)?-1:((key == Qt::Key_Right)?1 : 0));
+            auto dele = dynamic_cast<PreviewsDelegate*>(ui->previewsTable->itemDelegate());
+            if (dele)
+            {
+                if (dele->showLastClickedPreview(s))
+                {
+                    previewShift = s;
+                    qDebug() << "set shift "<<s;
+                }
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 void MainWindow::recurseWrite(QSettings &settings, QObject *object)
@@ -203,7 +238,7 @@ void MainWindow::on_tabsWidget_currentChanged(int index)
     {
         //making all dark on big preview, because it's bad for eyes when around black space u see white window borders
         qApp->setStyleSheet(styler);
-        showTempNotify(tr("LBM - pan, RBM - select, LBM + wheel(shift + wheel) - zoom."), 20000);
+        showTempNotify(tr("LBM - pan, RBM - select, LBM + wheel(shift + wheel) - zoom. L/R arrows to list files."), 20000);
     }
 
 }

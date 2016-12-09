@@ -117,3 +117,4 @@ void ScrollAreaPannable::wheelEvent(QWheelEvent *event)
         QScrollArea::wheelEvent(event);
     }
 }
+
