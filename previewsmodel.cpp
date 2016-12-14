@@ -278,6 +278,12 @@ void PreviewsModel::setCurrentFolder(const QString &path, bool recursive)
     });
 }
 
+void PreviewsModel::simulateModelReset()
+{
+    beginResetModel();
+    endResetModel();
+}
+
 PreviewsModel::~PreviewsModel()
 {
     listFiles.reset();
@@ -355,8 +361,8 @@ void PreviewsDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
 
             //if we have different sized images need to ensure we will not stretch
             QRect rect = option.rect;
-            rect.setHeight(img.height());
-            rect.setWidth(img.width());
+            rect.setHeight(std::min(img.height(), rect.height()));
+            rect.setWidth(std::min(img.width(), rect.width()));
 
             if (option.state & QStyle::State_Selected)
                 painter->fillRect(rect, option.palette.highlight());

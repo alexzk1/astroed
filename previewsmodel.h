@@ -36,6 +36,7 @@ public:
     Qt::ItemFlags flags(const QModelIndex& index) const override;
 
     void setCurrentFolder(const QString& path, bool recursive = false);
+    void simulateModelReset();
     virtual ~PreviewsModel();
 private:
     using files_t  = std::vector<QFileInfo>;

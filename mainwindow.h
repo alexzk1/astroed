@@ -43,8 +43,7 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
-    QPointer<QFileSystemModel>       dirsModel;
-    QPointer<QSortFilterProxyModel > dirsSortProxyModel;
+    QPointer<QFileSystemModel> dirsModel;
     QPointer<PreviewsModel>    previewsModel;
     QPointer<PreviewsDelegate> previewsDelegate;
     QPointer<ClickableLabel>   memoryLabel;

@@ -15,7 +15,6 @@ MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
     dirsModel(nullptr),
-    dirsSortProxyModel(nullptr),
     previewsModel(new PreviewsModel(this)),
     previewsDelegate(new PreviewsDelegate(this)),
     memoryLabel(new ClickableLabel(this)),
@@ -95,12 +94,6 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-QString MainWindow::getSelectedFolder()
-{
-    auto index = ui->dirsTree->selectionModel()->currentIndex();
-    return dirsModel->data(index, QFileSystemModel::FilePathRole).toString();
-}
-
 void MainWindow::selectPath(const QString &path, bool collapse)
 {
     if (!path.isEmpty())
@@ -154,12 +147,13 @@ void MainWindow::changeEvent(QEvent *e)
     QMainWindow::changeEvent(e);
     switch (e->type())
     {
-    case QEvent::LanguageChange:
-        ui->retranslateUi(this);
-        break;
-    default:
-        break;
+        case QEvent::LanguageChange:
+            ui->retranslateUi(this);
+            break;
+        default:
+            break;
     }
+    QMainWindow::changeEvent(e);
 }
 
 bool MainWindow::eventFilter(QObject *src, QEvent *e)
@@ -212,25 +206,29 @@ void MainWindow::recurseRead(QSettings &settings, QObject *object)
 
 void MainWindow::currentDirChanged(const QString &dir)
 {
+    qDebug() << "currentDirChanged: " << dir;
     previewsModel->setCurrentFolder(dir, true);
+}
+
+QString MainWindow::getSelectedFolder()
+{
+    auto index = ui->dirsTree->selectionModel()->currentIndex();
+    return dirsModel->data(index, QFileSystemModel::FilePathRole).toString();
 }
 
 void MainWindow::setupFsBrowsing()
 {
     dirsModel = new QFileSystemModel(this);
-    dirsSortProxyModel = new QSortFilterProxyModel(this);
-    dirsSortProxyModel->setSourceModel(dirsModel);
-
     dirsModel->setRootPath("/");
-
     dirsModel->setFilter(QDir::NoDotAndDotDot | QDir::AllDirs);
     dirsModel->setReadOnly(true);
     //ui->dirsTree->setModel(dirsModel);
-    ui->dirsTree->setModel(dirsSortProxyModel);
+
+    ui->dirsTree->setModel(dirsModel);
     //fixme: on windows that maybe incorrect, need to select some drive or so
     //if you have files ouside home folder on nix, then just symlink it, don't want to bother with full FS explorer yet
-    ui->dirsTree->setRootIndex(dirsSortProxyModel->mapFromSource(dirsModel->index(QDir::homePath())));
-    dirsSortProxyModel->sort(0);
+    ui->dirsTree->setRootIndex(dirsModel->index(QDir::homePath()));
+    dirsModel->sort(0);
 #ifdef Q_OS_WIN
 #warning Revise this piece of code, on windows users dont like home folders.
 #endif
@@ -241,10 +239,9 @@ void MainWindow::setupFsBrowsing()
     connect(ui->dirsTree->selectionModel(), &QItemSelectionModel::currentChanged, this, [this](auto p1, auto p2)
     {
         Q_UNUSED(p2);
-        if (p1.isValid() && dirsModel && dirsSortProxyModel)
+        if (p1.isValid() && dirsModel)
         {
-            auto p3 = dirsSortProxyModel->mapToSource(p1);
-            this->currentDirChanged(dirsModel->data(p3, QFileSystemModel::FilePathRole).toString());
+            this->currentDirChanged(dirsModel->data(p1, QFileSystemModel::FilePathRole).toString());
         }
     }, Qt::QueuedConnection);
 }
