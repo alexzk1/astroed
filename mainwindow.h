@@ -9,15 +9,15 @@
 #include "utils/saveable_widget.h"
 #include "previewsmodel.h"
 
-namespace Ui {
-    class MainWindow;
+namespace Ui
+{
+class MainWindow;
 }
 
 class ClickableLabel;
 class MainWindow : public QMainWindow, public utility::ItCanBeOnlyOne<MainWindow>, protected utility::SaveableWidget
 {
     Q_OBJECT
-
 public:
     QString styler;
 

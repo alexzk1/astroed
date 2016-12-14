@@ -36,7 +36,8 @@ MainWindow::MainWindow(QWidget *parent) :
     if (hdr)
         hdr->setStretchLastSection(true);
 
-    connect(previewsModel, &QAbstractTableModel::modelReset, this, [this](){
+    connect(previewsModel, &QAbstractTableModel::modelReset, this, [this]()
+    {
         qDebug() << "Views model-reset";
         if (ui->previewsTable)
         {
@@ -46,7 +47,8 @@ MainWindow::MainWindow(QWidget *parent) :
     }, Qt::QueuedConnection);
 
 
-    connect(previewsModel, &QAbstractTableModel::dataChanged, this, [this](const auto ind, const auto, const auto&){
+    connect(previewsModel, &QAbstractTableModel::dataChanged, this, [this](const auto ind, const auto, const auto&)
+    {
         if (ui->previewsTable)
         {
             if (ind.isValid())
@@ -147,12 +149,13 @@ void MainWindow::resetPreview()
 void MainWindow::changeEvent(QEvent *e)
 {
     QMainWindow::changeEvent(e);
-    switch (e->type()) {
-        case QEvent::LanguageChange:
-            ui->retranslateUi(this);
-            break;
-        default:
-            break;
+    switch (e->type())
+    {
+    case QEvent::LanguageChange:
+        ui->retranslateUi(this);
+        break;
+    default:
+        break;
     }
 }
 
@@ -186,6 +189,7 @@ void MainWindow::recurseWrite(QSettings &settings, QObject *object)
     settings.setValue("LastDirSelection", getSelectedFolder());
     settings.setValue("splitter", ui->splitter->saveState());
     settings.setValue("mainwinstate", this->saveState());
+    settings.setValue("maximized", this->isMaximized());
 }
 
 void MainWindow::recurseRead(QSettings &settings, QObject *object)
@@ -193,7 +197,10 @@ void MainWindow::recurseRead(QSettings &settings, QObject *object)
     Q_UNUSED(object);
     ui->splitter->restoreState(settings.value("splitter").toByteArray());
     this->restoreState(settings.value("mainwinstate").toByteArray());
-
+    if (settings.value("maximized", false).toBool())
+        showMaximized();
+    else
+        showNormal();
     auto s = settings.value("LastDirSelection", QDir::homePath()).toString();
     qDebug() << "Read: "<<s;
     selectPath(s);
