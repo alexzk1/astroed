@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
     qRegisterMetaType<QVector<int>>("QVector<int>");
     QApplication a(argc, argv);
     THEAPI; //ensuring global is created
-    a.setStyle(QStyleFactory::create("Plastique"));
+    //a.setStyle(QStyleFactory::create("Plastique"));
 
 //    QFile style(":/styles/darkorange");
 //    style.open(QIODevice::ReadOnly | QFile::Text);
@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
     a.setApplicationVersion("0.1");
     a.setApplicationDisplayName("AstroEd");
     a.setOrganizationDomain("pasteover.net");
-    a.setOrganizationName("Oleksiy Zakharov");
+    a.setOrganizationName("pasteover.net");
 
 
     MainWindow w;

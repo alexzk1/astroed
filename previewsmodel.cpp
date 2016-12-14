@@ -177,13 +177,14 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
 
             switch (col_mode)
             {
-                case DelegateMode::FILE_HYPERLINK:
-                    res = itm.filePath;
-                    break;
-                case DelegateMode::IMAGE_PREVIEW:
-                    res = itm.getPreview();
-                    break;
-                case DelegateMode::CHECKBOX: break;
+            case DelegateMode::FILE_HYPERLINK:
+                res = itm.filePath;
+                break;
+            case DelegateMode::IMAGE_PREVIEW:
+                res = itm.getPreview();
+                break;
+            case DelegateMode::CHECKBOX:
+                break;
             }
 
         }
@@ -251,7 +252,8 @@ void PreviewsModel::setCurrentFolder(const QString &path, bool recursive)
 
     listFiles = utility::startNewRunner([this, path, recursive](auto stop)
     {
-        std::vector<QFileInfo> pathes; pathes.reserve(500);
+        std::vector<QFileInfo> pathes;
+        pathes.reserve(500);
 
         QDir dir(path, QString(), QDir::Name | QDir::IgnoreCase, QDir::Files);
         QDirIterator it(dir.absolutePath(), filter, QDir::Files, (recursive)?QDirIterator::Subdirectories:QDirIterator::NoIteratorFlags);
@@ -301,7 +303,10 @@ void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list)
 
 
     if (modelFiles.size())
-        modelFiles.erase(std::remove_if(modelFiles.begin(), modelFiles.end(), [](const auto& v){return !v.selected;}), modelFiles.end());
+        modelFiles.erase(std::remove_if(modelFiles.begin(), modelFiles.end(), [](const auto& v)
+    {
+        return !v.selected;
+    }), modelFiles.end());
     modelFiles.reserve(modelFiles.size() + list.size());
 
     sort_files();
@@ -311,8 +316,11 @@ void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list)
     for (const auto& fi : list)
     {
         auto s = fi.absoluteFilePath();
-        if (std::find_if(modelFiles.begin(), old, [&s](const auto& v){return v.filePath == s;}) == old)
-            modelFiles.emplace_back(s);
+        if (std::find_if(modelFiles.begin(), old, [&s](const auto& v)
+    {
+        return v.filePath == s;
+    }) == old)
+        modelFiles.emplace_back(s);
     }
 
     sort_files();
@@ -340,31 +348,36 @@ void PreviewsDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
 
     switch (captions.at(index.column()).mode)
     {
-        case DelegateMode::IMAGE_PREVIEW:
-            if (index.data().canConvert<QImage>())
-            {
-                auto img = qvariant_cast<QImage>(index.data());
-
-                if (option.state & QStyle::State_Selected)
-                    painter->fillRect(option.rect, option.palette.highlight());
-                painter->drawImage(option.rect, img);
-                break;
-            }
-        case DelegateMode::FILE_HYPERLINK:
+    case DelegateMode::IMAGE_PREVIEW:
+        if (index.data().canConvert<QImage>())
         {
-            QLabel label;
-            label.setText(QString("<a href='file://%1'>%1</a>").arg(index.data().toString()));
-            label.setTextFormat(Qt::RichText);
-            label.setGeometry(option.rect);
-            label.setStyleSheet("QLabel { background-color : transparent; }");
-            painter->translate(option.rect.topLeft());
-            label.render(painter);
-            painter->translate(-option.rect.topLeft());
+            auto img = qvariant_cast<QImage>(index.data());
+
+            //if we have different sized images need to ensure we will not stretch
+            QRect rect = option.rect;
+            rect.setHeight(img.height());
+            rect.setWidth(img.width());
+
+            if (option.state & QStyle::State_Selected)
+                painter->fillRect(rect, option.palette.highlight());
+            painter->drawImage(rect, img); //...because this stretches
+            break;
         }
-            break;
-        case DelegateMode::CHECKBOX:
-            QStyledItemDelegate::paint(painter, option, index);
-            break;
+    case DelegateMode::FILE_HYPERLINK:
+    {
+        QLabel label;
+        label.setText(QString("<a href='file://%1'>%1</a>").arg(index.data().toString()));
+        label.setTextFormat(Qt::RichText);
+        label.setGeometry(option.rect);
+        label.setStyleSheet("QLabel { background-color : transparent; }");
+        painter->translate(option.rect.topLeft());
+        label.render(painter);
+        painter->translate(-option.rect.topLeft());
+    }
+    break;
+    case DelegateMode::CHECKBOX:
+        QStyledItemDelegate::paint(painter, option, index);
+        break;
     }
 }
 
@@ -373,17 +386,17 @@ QSize PreviewsDelegate::sizeHint(const QStyleOptionViewItem &option, const QMode
     QSize sz;
     switch (captions.at(index.column()).mode)
     {
-        case DelegateMode::IMAGE_PREVIEW:
-            if (index.data().canConvert<QImage>())
-            {
-                auto img = qvariant_cast<QImage>(index.data());
-                sz = img.size();
-                break;
-            }
-        case DelegateMode::FILE_HYPERLINK:
-        case DelegateMode::CHECKBOX:
-            sz = QStyledItemDelegate::sizeHint(option, index);
+    case DelegateMode::IMAGE_PREVIEW:
+        if (index.data().canConvert<QImage>())
+        {
+            auto img = qvariant_cast<QImage>(index.data());
+            sz = img.size();
             break;
+        }
+    case DelegateMode::FILE_HYPERLINK:
+    case DelegateMode::CHECKBOX:
+        sz = QStyledItemDelegate::sizeHint(option, index);
+        break;
     }
     return sz;
 }
