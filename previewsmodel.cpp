@@ -351,34 +351,35 @@ bool PreviewsDelegate::showLastClickedPreview(int shift, bool reset)
 
 void PreviewsDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
+    QLabel label;
+    auto draw = [&label, painter, &option](const QRect& g)
+    {
+        label.setGeometry(g);
+        painter->translate(option.rect.topLeft());
+        label.render(painter);
+        painter->translate(-option.rect.topLeft());
+    };
 
     switch (captions.at(index.column()).mode)
     {
     case DelegateMode::IMAGE_PREVIEW:
         if (index.data().canConvert<QImage>())
         {
-            auto img = qvariant_cast<QImage>(index.data());
-
+            QPixmap img = QPixmap::fromImage(qvariant_cast<QImage>(index.data()));
+            label.setPixmap(img);
             //if we have different sized images need to ensure we will not stretch
             QRect rect = option.rect;
             rect.setHeight(std::min(img.height(), rect.height()));
             rect.setWidth(std::min(img.width(), rect.width()));
-
-            if (option.state & QStyle::State_Selected)
-                painter->fillRect(rect, option.palette.highlight());
-            painter->drawImage(rect, img); //...because this stretches
+            draw(rect);
             break;
         }
     case DelegateMode::FILE_HYPERLINK:
     {
-        QLabel label;
         label.setText(QString("<a href='file://%1'>%1</a>").arg(index.data().toString()));
         label.setTextFormat(Qt::RichText);
-        label.setGeometry(option.rect);
         label.setStyleSheet("QLabel { background-color : transparent; }");
-        painter->translate(option.rect.topLeft());
-        label.render(painter);
-        painter->translate(-option.rect.topLeft());
+        draw(option.rect);
     }
     break;
     case DelegateMode::CHECKBOX:
