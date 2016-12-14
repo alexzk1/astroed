@@ -15,6 +15,7 @@ class MainWindow;
 }
 
 class ClickableLabel;
+class QSortFilterProxyModel;
 class MainWindow : public QMainWindow, public utility::ItCanBeOnlyOne<MainWindow>, protected utility::SaveableWidget
 {
     Q_OBJECT
@@ -42,7 +43,8 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
-    QPointer<QFileSystemModel> dirsModel;
+    QPointer<QFileSystemModel>       dirsModel;
+    QPointer<QSortFilterProxyModel > dirsSortProxyModel;
     QPointer<PreviewsModel>    previewsModel;
     QPointer<PreviewsDelegate> previewsDelegate;
     QPointer<ClickableLabel>   memoryLabel;
@@ -50,6 +52,7 @@ private:
     const QString originalStylesheet;
 
     void setupFsBrowsing();
+
 };
 
 #endif // MAINWINDOW_H

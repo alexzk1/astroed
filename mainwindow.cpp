@@ -4,6 +4,8 @@
 #include <QDebug>
 #include <QApplication>
 #include <QItemSelectionModel>
+#include <QSortFilterProxyModel>
+
 #include <QStatusBar>
 #include <QTimer>
 #include <QHeaderView>
@@ -13,6 +15,7 @@ MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
     dirsModel(nullptr),
+    dirsSortProxyModel(nullptr),
     previewsModel(new PreviewsModel(this)),
     previewsDelegate(new PreviewsDelegate(this)),
     memoryLabel(new ClickableLabel(this)),
@@ -215,14 +218,19 @@ void MainWindow::currentDirChanged(const QString &dir)
 void MainWindow::setupFsBrowsing()
 {
     dirsModel = new QFileSystemModel(this);
+    dirsSortProxyModel = new QSortFilterProxyModel(this);
+    dirsSortProxyModel->setSourceModel(dirsModel);
+
     dirsModel->setRootPath("/");
 
     dirsModel->setFilter(QDir::NoDotAndDotDot | QDir::AllDirs);
     dirsModel->setReadOnly(true);
-    ui->dirsTree->setModel(dirsModel);
+    //ui->dirsTree->setModel(dirsModel);
+    ui->dirsTree->setModel(dirsSortProxyModel);
     //fixme: on windows that maybe incorrect, need to select some drive or so
     //if you have files ouside home folder on nix, then just symlink it, don't want to bother with full FS explorer yet
-    ui->dirsTree->setRootIndex(dirsModel->index(QDir::homePath()));
+    ui->dirsTree->setRootIndex(dirsSortProxyModel->mapFromSource(dirsModel->index(QDir::homePath())));
+    dirsSortProxyModel->sort(0);
 #ifdef Q_OS_WIN
 #warning Revise this piece of code, on windows users dont like home folders.
 #endif
@@ -233,8 +241,11 @@ void MainWindow::setupFsBrowsing()
     connect(ui->dirsTree->selectionModel(), &QItemSelectionModel::currentChanged, this, [this](auto p1, auto p2)
     {
         Q_UNUSED(p2);
-        if (p1.isValid() && dirsModel)
-            this->currentDirChanged(dirsModel->data(p1, QFileSystemModel::FilePathRole).toString());
+        if (p1.isValid() && dirsModel && dirsSortProxyModel)
+        {
+            auto p3 = dirsSortProxyModel->mapToSource(p1);
+            this->currentDirChanged(dirsModel->data(p3, QFileSystemModel::FilePathRole).toString());
+        }
     }, Qt::QueuedConnection);
 }
 
