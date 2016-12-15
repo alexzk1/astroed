@@ -36,11 +36,11 @@ image_buffer_ptr image_cacher::getImage(const QString &fileName)
     return t.data;
 }
 
-exif_t image_cacher::getExif(const QString &fileName)
+meta_t image_cacher::getExif(const QString &fileName)
 {
     image_t_s t;
     findImage(fileName, t);
-    return t.exif;
+    return t.meta;
 }
 
 void image_cacher::findImage(const QString& key, image_t_s& res)

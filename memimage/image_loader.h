@@ -12,7 +12,7 @@
 namespace imaging
 {
     using image_buffer_ptr = std::shared_ptr<QImage>;
-    using exif_t           = QString; //must be copyable
+    using meta_t           = QString; //must be copyable
 
     class image_cacher
     {
@@ -22,7 +22,7 @@ namespace imaging
         struct image_t
         {
             C data;
-            exif_t exif;
+            meta_t meta;
             operator bool() const
             {
                 return data != nullptr;
@@ -35,7 +35,7 @@ namespace imaging
         {
             image_t_s& operator = (const image_t_w& c)
             {
-                exif = c.exif;
+                meta = c.meta;
                 data = c.data.lock();
                 return *this;
             }
@@ -43,7 +43,7 @@ namespace imaging
             {
                 image_t_w tmp;
                 tmp.data = data;
-                tmp.exif = exif;
+                tmp.meta = meta;
                 return tmp;
             }
         };
@@ -67,7 +67,7 @@ namespace imaging
     public:
         image_cacher();
         image_buffer_ptr getImage(const QString& fileName);
-        exif_t           getExif(const QString& fileName);
+        meta_t           getExif(const QString& fileName);
 
         void gc(bool no_wait = false);
 
