@@ -173,6 +173,8 @@ void MainWindow::on_tabsWidget_currentChanged(int index)
         qApp->setStyleSheet(styler);
         showTempNotify(tr("LBM /arrows - pan, RBM - select, LBM + wheel(shift + wheel, +-, shift+up/down) - zoom. ctrl + L/R arrows to list files."), 7000);
     }
+    else
+        fileNameLabel->setText("");
 
 }
 
