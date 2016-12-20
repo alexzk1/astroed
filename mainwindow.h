@@ -27,7 +27,7 @@ public:
 
     QString getSelectedFolder();
     void selectPath(const QString &path, bool collapse = true);
-    QLabel &openPreviewTab(const QSize &maxSize);
+    QLabel &openPreviewTab(const QSize &maxSize, const QString &fileName);
     void showTempNotify(const QString& text, int delay = 10000);
     void resetPreview();
 protected:
@@ -47,6 +47,8 @@ private:
     QPointer<PreviewsModel>    previewsModel;
     QPointer<PreviewsDelegate> previewsDelegate;
     QPointer<ClickableLabel>   memoryLabel;
+    QPointer<ClickableLabel>   fileNameLabel;
+
     int previewShift;
     const QString originalStylesheet;
 

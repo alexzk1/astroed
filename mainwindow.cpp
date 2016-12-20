@@ -8,8 +8,11 @@
 
 #include <QStatusBar>
 #include <QTimer>
+#include <QFileInfo>
 #include <QHeaderView>
 #include "clickablelabel.h"
+
+const static auto ZOOMING_KB_VALUE = 2 * ScrollAreaPannable::WheelStep;
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -18,6 +21,7 @@ MainWindow::MainWindow(QWidget *parent) :
     previewsModel(new PreviewsModel(this)),
     previewsDelegate(new PreviewsDelegate(this)),
     memoryLabel(new ClickableLabel(this)),
+    fileNameLabel(new ClickableLabel(this)),
     previewShift(0),
     originalStylesheet(qApp->styleSheet())
 {
@@ -65,6 +69,7 @@ MainWindow::MainWindow(QWidget *parent) :
     setupFsBrowsing();
     readSettings(this);
     statusBar()->addPermanentWidget(memoryLabel);
+    statusBar()->addPermanentWidget(fileNameLabel);
     memoryLabel->setToolTip(tr("The approximate size of memory used. Click to GC."));
 
     auto updateMemoryLabel = [this](bool force)
@@ -119,12 +124,13 @@ void MainWindow::selectPath(const QString &path, bool collapse)
     }
 }
 
-QLabel &MainWindow::openPreviewTab(const QSize& maxSize)
+QLabel &MainWindow::openPreviewTab(const QSize& maxSize, const QString& fileName)
 {
+    const auto txt = (fileName.isEmpty())? "":QString(tr("File: %1")).arg(QFileInfo(fileName).fileName());
     ui->tabsWidget->setCurrentWidget(ui->tabZoomed);
     ui->scrollAreaZoom->setMaxZoom(maxSize);
     qDebug()  <<"openPreviewTab()";
-
+    fileNameLabel->setText(txt);
     return *ui->lblZoomPix;
 }
 
@@ -156,13 +162,29 @@ void MainWindow::changeEvent(QEvent *e)
     QMainWindow::changeEvent(e);
 }
 
+void MainWindow::on_tabsWidget_currentChanged(int index)
+{
+    //active tab changed slot
+    Q_UNUSED(index);
+    qApp->setStyleSheet(originalStylesheet);
+    if (ui->tabsWidget->currentWidget() == ui->tabZoomed)
+    {
+        //making all dark on big preview, because it's bad for eyes when around black space u see white window borders
+        qApp->setStyleSheet(styler);
+        showTempNotify(tr("LBM /arrows - pan, RBM - select, LBM + wheel(shift + wheel, +-, shift+up/down) - zoom. ctrl + L/R arrows to list files."), 7000);
+    }
+
+}
+
 bool MainWindow::eventFilter(QObject *src, QEvent *e)
 {
+    //mouse events for scrollzoom are overloaded in ScrollAreaPannable, do it there
+    //if you change shortcuts here, please fix hint string into on_tabsWidget_currentChanged(int index)
     if (e->type() == QEvent::KeyPress && src == ui->scrollAreaZoom)
     {
         const QKeyEvent *ke = static_cast<decltype (ke)>(e);
         auto key = ke->key();
-        if (key == Qt::Key_Left || key == Qt::Key_Right)
+        if ((ke->modifiers() == Qt::ControlModifier) && (key == Qt::Key_Left || key == Qt::Key_Right))
         {
             auto s = previewShift + ((key == Qt::Key_Left)?-1:((key == Qt::Key_Right)?1 : 0));
             auto dele = dynamic_cast<PreviewsDelegate*>(ui->previewsTable->itemDelegate());
@@ -176,6 +198,12 @@ bool MainWindow::eventFilter(QObject *src, QEvent *e)
                 return true;
             }
         }
+
+        if (key == Qt::Key_Plus || key == Qt::Key_Equal || (key == Qt::Key_Up && ke->modifiers() == Qt::ShiftModifier))
+            ui->scrollAreaZoom->zoomBy(ZOOMING_KB_VALUE);
+
+        if (key == Qt::Key_Minus || (key == Qt::Key_Down && ke->modifiers() == Qt::ShiftModifier))
+            ui->scrollAreaZoom->zoomBy(-ZOOMING_KB_VALUE);
     }
     return false;
 }
@@ -244,18 +272,4 @@ void MainWindow::setupFsBrowsing()
             this->currentDirChanged(dirsModel->data(p1, QFileSystemModel::FilePathRole).toString());
         }
     }, Qt::QueuedConnection);
-}
-
-void MainWindow::on_tabsWidget_currentChanged(int index)
-{
-    //active tab changed slot
-    Q_UNUSED(index);
-    qApp->setStyleSheet(originalStylesheet);
-    if (ui->tabsWidget->currentWidget() == ui->tabZoomed)
-    {
-        //making all dark on big preview, because it's bad for eyes when around black space u see white window borders
-        qApp->setStyleSheet(styler);
-        showTempNotify(tr("LBM - pan, RBM - select, LBM + wheel(shift + wheel) - zoom. L/R arrows to list files."), 20000);
-    }
-
 }

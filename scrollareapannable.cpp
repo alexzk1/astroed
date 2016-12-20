@@ -4,6 +4,7 @@
 #include <QDebug>
 
 #define ZOOM_SPEED (0.075)
+const double ScrollAreaPannable::WheelStep = 15. / 120.; //can be used for zoomBy
 
 ScrollAreaPannable::ScrollAreaPannable(QWidget *parent):
     QScrollArea (parent),
@@ -33,6 +34,7 @@ void ScrollAreaPannable::zoom1_1()
 
 void ScrollAreaPannable::zoomBy(double times)
 {
+    times *= ZOOM_SPEED;
     int w = static_cast<decltype(w)>(widget()->width() + widget()->width()  * times);
     int h = static_cast<decltype(h)>(widget()->height()+ widget()->height() * times);
 
@@ -92,6 +94,8 @@ void ScrollAreaPannable::mousePressEvent(QMouseEvent *e)
     }
 }
 
+//keyboard events are filtered and intercepted by mainform, so to add keys - do it there
+
 void ScrollAreaPannable::mouseMoveEvent(QMouseEvent *e)
 {
     if (e->buttons() == Qt::LeftButton)
@@ -116,7 +120,7 @@ void ScrollAreaPannable::wheelEvent(QWheelEvent *event)
     if (event->modifiers() == Qt::ShiftModifier || event->buttons() == Qt::LeftButton)
     {
         auto angle = event->angleDelta();
-        double val = ZOOM_SPEED * (angle.y() + angle.x()) / 120.;
+        double val = (angle.y() + angle.x()) / 120.;
         zoomBy(val);
     }
     else
