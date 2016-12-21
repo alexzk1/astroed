@@ -48,6 +48,10 @@ private:
     mfiles_t  modelFiles;
 
     void haveFilesList(const files_t& list);
+signals:
+    void startedPreviewsLoad();
+    void finishedPreviewsLoad();
+    void loadProgress(int percents);
 };
 
 

@@ -19,7 +19,7 @@ public:
     {
     }
 
-    bool loadPreview()
+    bool loadPreview() //will be called from thread which iterates over files and does loading (so no hard pressure on HDD)
     {
         bool res = preview->isNull();
         if (res)
@@ -27,6 +27,16 @@ public:
             preview = PREVIEW_LOADER.getImage(filePath);
         }
         return res;
+    }
+
+    QString getFilePath() const
+    {
+        return filePath;
+    }
+
+    QString getPreviewInfo() const
+    {
+        return PREVIEW_LOADER.getExif(filePath).getStringValue();
     }
 
     const QImage& getPreview() const

@@ -12,7 +12,13 @@
 namespace imaging
 {
     using image_buffer_ptr = std::shared_ptr<QImage>;
-    using meta_t           = QString; //must be copyable
+    struct meta_t
+    {
+        meta_t();
+        long iso;
+        QString getStringValue() const;
+        void load(const QString& fileName);
+    };
 
     class image_cacher
     {

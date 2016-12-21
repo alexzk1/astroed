@@ -22,6 +22,7 @@ MainWindow::MainWindow(QWidget *parent) :
     previewsDelegate(new PreviewsDelegate(this)),
     memoryLabel(new ClickableLabel(this)),
     fileNameLabel(new ClickableLabel(this)),
+    loadingProgress(new QProgressBar(this)),
     previewShift(0),
     originalStylesheet(qApp->styleSheet())
 {
@@ -42,19 +43,30 @@ MainWindow::MainWindow(QWidget *parent) :
     if (hdr)
         hdr->setStretchLastSection(true);
 
-    connect(previewsModel, &QAbstractTableModel::modelReset, this, [this]()
-    {
-        qDebug() << "Views model-reset";
+    connect(previewsModel, &PreviewsModel::startedPreviewsLoad, this, [this](){
         if (ui->previewsTable)
+            ui->previewsTable->scrollToTop();
+        if (loadingProgress)
         {
-            ui->previewsTable->resizeColumnsToContents();
-            ui->previewsTable->resizeRowsToContents();
+            loadingProgress->setVisible(true);
+            loadingProgress->setRange(0, 100);
+            loadingProgress->setValue(0);
         }
     }, Qt::QueuedConnection);
 
+    connect(previewsModel, &PreviewsModel::loadProgress, this, [this](int pr){
+      if (loadingProgress)
+          loadingProgress->setValue(pr);
+    }, Qt::QueuedConnection);
+
+    connect(previewsModel, &PreviewsModel::finishedPreviewsLoad, this, [this](){
+      if (loadingProgress)
+          loadingProgress->setVisible(false);
+    }, Qt::QueuedConnection);
 
     connect(previewsModel, &QAbstractTableModel::dataChanged, this, [this](const auto ind, const auto, const auto&)
     {
+
         if (ui->previewsTable)
         {
             if (ind.isValid())
@@ -68,9 +80,16 @@ MainWindow::MainWindow(QWidget *parent) :
     setWindowTitle("");
     setupFsBrowsing();
     readSettings(this);
+
     statusBar()->addPermanentWidget(memoryLabel);
     statusBar()->addPermanentWidget(fileNameLabel);
     memoryLabel->setToolTip(tr("The approximate size of memory used. Click to GC."));
+
+    statusBar()->addPermanentWidget(loadingProgress);
+    loadingProgress->resize(50, statusBar()->height() - 3);
+    loadingProgress->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    loadingProgress->setVisible(false);
+    loadingProgress->setToolTip(tr("Previews' loading progress."));
 
     auto updateMemoryLabel = [this](bool force)
     {
@@ -118,8 +137,9 @@ void MainWindow::selectPath(const QString &path, bool collapse)
                     index = index.parent();
                 }
             }
-            //qApp->processEvents();
-            //qApp->flush();
+            //need that, so it does "smooth start", window appears immediatly on startup
+            qApp->processEvents();
+            qApp->flush();
         }
     }
 }

@@ -6,6 +6,7 @@ class CustomTableView : public QTableView
 {
 public:
     explicit CustomTableView(QWidget *parent);
+
 private:
     QModelIndex m_lastIndex;
 protected:

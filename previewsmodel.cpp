@@ -28,7 +28,7 @@
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------CONFIG------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
-enum class DelegateMode {IMAGE_PREVIEW, CHECKBOX, FILE_HYPERLINK};
+enum class DelegateMode {IMAGE_PREVIEW, IMAGE_META, CHECKBOX, FILE_HYPERLINK};
 
 struct SectionDescr //just in case I will want some more static data later
 {
@@ -40,6 +40,7 @@ struct SectionDescr //just in case I will want some more static data later
 const static std::vector<SectionDescr> captions =
 {
     {QObject::tr("Preview"),   DelegateMode::IMAGE_PREVIEW,  QObject::tr("Click to zoom")},
+    {QObject::tr("Info"),      DelegateMode::IMAGE_META,     QObject::tr("EXIF if present in image")},
     {QObject::tr("Use"),       DelegateMode::CHECKBOX,       QObject::tr("Lock for processing.")},
     {QObject::tr("File Name"), DelegateMode::FILE_HYPERLINK, QObject::tr("Click to start external viewer.")},
 };
@@ -70,44 +71,53 @@ PreviewsModel::PreviewsModel(QObject *parent)
 {
     connect(this, &QAbstractTableModel::modelReset, this, [this]()
     {
-        qDebug() << "Previews model-reset";
+        //qDebug() << "Previews model-reset";
         loadPreviews = utility::startNewRunner([this](auto stop)
         {
             // qDebug() << "Previews started load";
+            emit this->startedPreviewsLoad();
             using namespace std::literals;
             const static QVector<int> roles = {Qt::DisplayRole};
 
             size_t sz = 0;
             {
-                std::lock_guard<decltype (listMut)> grd(listMut);
+                //std::lock_guard<decltype (listMut)> grd(listMut);
                 sz = modelFiles.size();
             }
 
-            for (size_t i = 0; i < sz && !*stop; ++i)
+            const double mul = 100. / sz; //some optimization of the loop
+
+            for (decltype(sz) i = 0; i < sz && !*stop; ++i)
             {
                 bool loaded = false;
                 {
                     std::lock_guard<decltype (listMut)> grd(listMut);
                     if (sz != modelFiles.size())
                         break;
-                    loaded = modelFiles.at(i).loadPreview();
+                    loaded   = modelFiles.at(i).loadPreview();
                 }
 
                 if (loaded && !*stop) //stop check is important here, or GUI may stack if thread interrupted and signal is out
                 {
                     QModelIndex k = this->index(static_cast<int>(i), 0);
                     emit this->dataChanged(k, k, roles);
-                    std::this_thread::sleep_for(20ms); //allowing gui to process items
+                    std::this_thread::sleep_for(15ms); //allowing gui to process items
                 }
 
-                if ( i % 30 == 0)
+                if (i)
                 {
-                    IMAGE_LOADER.gc(true); //because of the hard pressure of loading many files for preview, need to cleanse cache asap
+                    if (i % 10 == 0)
+                       emit this->loadProgress(i * mul);
 
-                    if (!*stop)
-                        std::this_thread::sleep_for(150ms);
+                    if (i % 40 == 0)
+                    {
+                        IMAGE_LOADER.gc(true); //because of the hard pressure of loading many files for preview, need to cleanse cache asap
+                        if (!*stop)
+                            std::this_thread::sleep_for(50ms);
+                    }
                 }
             }
+            emit this->finishedPreviewsLoad();
             //qDebug() << "Previews loaded" << modelFiles.size();
         });
     }, Qt::QueuedConnection);
@@ -177,14 +187,17 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
 
             switch (col_mode)
             {
-            case DelegateMode::FILE_HYPERLINK:
-                res = itm.filePath;
-                break;
-            case DelegateMode::IMAGE_PREVIEW:
-                res = itm.getPreview();
-                break;
-            case DelegateMode::CHECKBOX:
-                break;
+                case DelegateMode::FILE_HYPERLINK:
+                    res = itm.filePath;
+                    break;
+                case DelegateMode::IMAGE_PREVIEW:
+                    res = itm.getPreview();
+                    break;
+                case DelegateMode::IMAGE_META:
+                    res = itm.getPreviewInfo();
+                    break;
+                case DelegateMode::CHECKBOX:
+                    break;
             }
 
         }
@@ -310,9 +323,9 @@ void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list)
 
     if (modelFiles.size())
         modelFiles.erase(std::remove_if(modelFiles.begin(), modelFiles.end(), [](const auto& v)
-    {
-        return !v.selected;
-    }), modelFiles.end());
+        {
+            return !v.selected;
+        }), modelFiles.end());
     modelFiles.reserve(modelFiles.size() + list.size());
 
     sort_files();
@@ -322,11 +335,8 @@ void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list)
     for (const auto& fi : list)
     {
         auto s = fi.absoluteFilePath();
-        if (std::find_if(modelFiles.begin(), old, [&s](const auto& v)
-    {
-        return v.filePath == s;
-    }) == old)
-        modelFiles.emplace_back(s);
+        if (std::find_if(modelFiles.begin(), old, [&s](const auto& v){return v.filePath == s;}) == old)
+            modelFiles.emplace_back(s);
     }
 
     sort_files();
@@ -362,29 +372,30 @@ void PreviewsDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
 
     switch (captions.at(index.column()).mode)
     {
-    case DelegateMode::IMAGE_PREVIEW:
-        if (index.data().canConvert<QImage>())
+        case DelegateMode::IMAGE_PREVIEW:
+            if (index.data().canConvert<QImage>())
+            {
+                QPixmap img = QPixmap::fromImage(qvariant_cast<QImage>(index.data()));
+                label.setPixmap(img);
+                //if we have different sized images need to ensure we will not stretch
+                QRect rect = option.rect;
+                rect.setHeight(std::min(img.height(), rect.height()));
+                rect.setWidth(std::min(img.width(), rect.width()));
+                draw(rect);
+                break;
+            }
+        case DelegateMode::FILE_HYPERLINK:
         {
-            QPixmap img = QPixmap::fromImage(qvariant_cast<QImage>(index.data()));
-            label.setPixmap(img);
-            //if we have different sized images need to ensure we will not stretch
-            QRect rect = option.rect;
-            rect.setHeight(std::min(img.height(), rect.height()));
-            rect.setWidth(std::min(img.width(), rect.width()));
-            draw(rect);
-            break;
+            label.setText(QString("<a href='file://%1'>%1</a>").arg(index.data().toString()));
+            label.setTextFormat(Qt::RichText);
+            label.setStyleSheet("QLabel { background-color : transparent; }");
+            draw(option.rect);
         }
-    case DelegateMode::FILE_HYPERLINK:
-    {
-        label.setText(QString("<a href='file://%1'>%1</a>").arg(index.data().toString()));
-        label.setTextFormat(Qt::RichText);
-        label.setStyleSheet("QLabel { background-color : transparent; }");
-        draw(option.rect);
-    }
-    break;
-    case DelegateMode::CHECKBOX:
-        QStyledItemDelegate::paint(painter, option, index);
-        break;
+            break;
+        case DelegateMode::IMAGE_META:
+        case DelegateMode::CHECKBOX:
+            QStyledItemDelegate::paint(painter, option, index);
+            break;
     }
 }
 
@@ -393,17 +404,18 @@ QSize PreviewsDelegate::sizeHint(const QStyleOptionViewItem &option, const QMode
     QSize sz;
     switch (captions.at(index.column()).mode)
     {
-    case DelegateMode::IMAGE_PREVIEW:
-        if (index.data().canConvert<QImage>())
-        {
-            auto img = qvariant_cast<QImage>(index.data());
-            sz = img.size();
+        case DelegateMode::IMAGE_PREVIEW:
+            if (index.data().canConvert<QImage>())
+            {
+                auto img = qvariant_cast<QImage>(index.data());
+                sz = img.size();
+                break;
+            }
+        case DelegateMode::FILE_HYPERLINK:
+        case DelegateMode::IMAGE_META:
+        case DelegateMode::CHECKBOX:
+            sz = QStyledItemDelegate::sizeHint(option, index);
             break;
-        }
-    case DelegateMode::FILE_HYPERLINK:
-    case DelegateMode::CHECKBOX:
-        sz = QStyledItemDelegate::sizeHint(option, index);
-        break;
     }
     return sz;
 }

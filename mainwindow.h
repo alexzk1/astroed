@@ -5,6 +5,8 @@
 #include <QPointer>
 #include <QFileSystemModel>
 #include <QLabel>
+#include <QProgressBar>
+
 #include "utils/inst_once.h"
 #include "utils/saveable_widget.h"
 #include "previewsmodel.h"
@@ -48,6 +50,7 @@ private:
     QPointer<PreviewsDelegate> previewsDelegate;
     QPointer<ClickableLabel>   memoryLabel;
     QPointer<ClickableLabel>   fileNameLabel;
+    QPointer<QProgressBar>     loadingProgress;
 
     int previewShift;
     const QString originalStylesheet;

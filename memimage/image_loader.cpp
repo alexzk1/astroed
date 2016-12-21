@@ -1,7 +1,12 @@
 #include "image_loader.h"
 #include <QImage>
+#include <QDebug>
+
 #include "utils/erase_if.h"
 #include <chrono>
+#include <vector>
+#include <exiv2/exiv2.hpp>
+#include <exiv2/exif.hpp>
 
 using namespace imaging;
 
@@ -103,16 +108,20 @@ image_cacher::~image_cacher()
 {
 }
 
+//todo: need some kinda of "virtual filesystem" to dig into avi/mp4 and pick frames there
 image_cacher::image_t_s image_loader::createImage(const QString &key) const
 {
-    //todo: need some kinda of "virtual filesystem" to dig into avi/mp4 and pick frames there
-    QImage img(key);
     image_t_s tmp;
+    { //ensuring img will close file "key"
+        QImage img(key);
+        tmp.data  = std::make_shared<QImage>();
+        *tmp.data = img.convertToFormat(QImage::Format_RGB888);
+    }
 
-    tmp.data  = std::make_shared<QImage>();
-    *tmp.data = img.convertToFormat(QImage::Format_RGB888);
-    //todo: this should load exif too
-
+    //done: this should load exif too
+    {
+        tmp.meta.load(key);
+    }
     return tmp;
 }
 
@@ -125,4 +134,71 @@ image_cacher::image_t_s image_preview_loader::createImage(const QString &key) co
     int width = static_cast<decltype(width)>(previewSize * src.data->width() / (double) src.data->height());
     src.data = image_buffer_ptr(new QImage(src.data->scaled(width, previewSize, Qt::KeepAspectRatio)));
     return src;
+}
+
+meta_t::meta_t():
+    iso(0)
+{
+
+}
+
+QString meta_t::getStringValue() const //should prepare human readable value
+{
+    return QString("ISO: %1").arg(iso);
+}
+
+template <class T, class R>
+void meta_value(const R& src, T& result);
+
+template <class T, class R>
+void meta_value(const R& src, std::string& res)
+{
+    res = src.toString();
+}
+
+template <class T, class R>
+void meta_value(const R& src, long& res)
+{
+    res = src.toLong();
+}
+
+template <class T, class R>
+void meta_value(const R& src, float& res)
+{
+    res = src.toFloat();
+}
+
+void meta_t::load(const QString &fileName)
+{
+    auto image = Exiv2::ImageFactory::open(fileName.toStdString());
+    if (image.get() != nullptr)
+    {
+        image->readMetadata();
+
+        auto getValue = [&image](const auto& src, const std::string& key, auto& result) -> bool
+        {
+            auto r = std::find_if(src.begin(), src.end(), [&key](const auto& val){
+               // qDebug() << val.key().c_str();
+                return val.key() == key;
+            });
+            bool res = r != src.end();
+            if (res)
+                meta_value<typename std::remove_reference<decltype(result)>::type>(r->value(), result);
+            else
+                qDebug() << QString("Could not find key %1").arg( key.c_str());
+            return res;
+        };
+        auto getValueLst = [&image, &getValue](const auto& src, const std::vector<std::string>& keys, auto& result) -> bool
+        {
+            bool res = false;
+            for (const auto& s : keys)
+            {
+                res = getValue(src, s, result);
+                if (res)
+                    break;
+            }
+            return res;
+        };
+        getValueLst(image->exifData(), {"Exif.Photo.ISOSpeedRatings", "Exif.Image.ISOSpeedRatings"}, iso);
+    }
 }
