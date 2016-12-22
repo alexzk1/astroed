@@ -12,7 +12,8 @@ using namespace imaging;
 
 extern size_t getMemorySize();
 const static size_t sysMemory   = getMemorySize();
-const static size_t maxMemUsage = (sysMemory > 2 * 1024 * 1024 * 1024)?(sysMemory / 3): (sysMemory * 3/ 4); //mem pressure until it will start "gc" loops
+const static size_t lowMemory   = 2ll * 1024 * 1024 * 1024;
+const static size_t maxMemUsage = (sysMemory > lowMemory)?(sysMemory / 3): (sysMemory * 3/ 4); //mem pressure until it will start "gc" loops
 const static auto& dumb = IMAGE_LOADER; //ensuring single instance is created on program init
 
 const static int64_t longestDelay = 240; //how long at most image will remain cached since last access

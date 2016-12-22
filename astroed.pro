@@ -46,6 +46,9 @@ include($$PWD/lua/lua_vm.pri)
 include($$PWD/utils/utils.pri)
 include($$PWD/memimage/memimage.pri)
 include($$PWD/logic/bl.pri)
+include($$PWD/singleapp/singleapplication.pri)
+
+DEFINES += QAPPLICATION_CLASS=QApplication
 
 SOURCES += main.cpp\
         mainwindow.cpp \
