@@ -12,7 +12,7 @@ using namespace imaging;
 
 extern size_t getMemorySize();
 const static size_t sysMemory   = getMemorySize();
-const static size_t maxMemUsage = sysMemory / 3; //mem pressure until it will start "gc" loops
+const static size_t maxMemUsage = (sysMemory > 2 * 1024 * 1024 * 1024)?(sysMemory / 3): (sysMemory * 3/ 4); //mem pressure until it will start "gc" loops
 const static auto& dumb = IMAGE_LOADER; //ensuring single instance is created on program init
 
 const static int64_t longestDelay = 240; //how long at most image will remain cached since last access
@@ -137,68 +137,51 @@ image_cacher::image_t_s image_preview_loader::createImage(const QString &key) co
 }
 
 meta_t::meta_t():
-    iso(0)
+    iso(0),
+    exposure(0),
+    aperture(0)
 {
 
 }
 
 QString meta_t::getStringValue() const //should prepare human readable value
 {
-    return QString("ISO: %1").arg(iso);
+    return QString("ISO:\t%1\nExp:\t%2\nAperture:\t%3").arg(iso).arg(exposure, 0, 'f', 2).arg(aperture, 0, 'f', 4);
 }
 
-template <class T, class R>
-void meta_value(const R& src, T& result);
 
-template <class T, class R>
-void meta_value(const R& src, std::string& res)
-{
-    res = src.toString();
-}
-
-template <class T, class R>
-void meta_value(const R& src, long& res)
-{
-    res = src.toLong();
-}
-
-template <class T, class R>
-void meta_value(const R& src, float& res)
-{
-    res = src.toFloat();
-}
 
 void meta_t::load(const QString &fileName)
 {
+    using namespace exiv2_helpers;
     auto image = Exiv2::ImageFactory::open(fileName.toStdString());
     if (image.get() != nullptr)
     {
         image->readMetadata();
+        const auto test_all_metas = [&image](const std::vector<keys_t>& e_x_i, auto& result)
+        {
+            if (!getValueOneOf(image->exifData(),    e_x_i.at(0), result))
+                if (!getValueOneOf(image->xmpData(), e_x_i.at(1), result))
+                    getValueOneOf(image->iptcData(), e_x_i.at(2), result);
+        };
 
-        auto getValue = [&image](const auto& src, const std::string& key, auto& result) -> bool
-        {
-            auto r = std::find_if(src.begin(), src.end(), [&key](const auto& val){
-               // qDebug() << val.key().c_str();
-                return val.key() == key;
-            });
-            bool res = r != src.end();
-            if (res)
-                meta_value<typename std::remove_reference<decltype(result)>::type>(r->value(), result);
-            else
-                qDebug() << QString("Could not find key %1").arg( key.c_str());
-            return res;
-        };
-        auto getValueLst = [&image, &getValue](const auto& src, const std::vector<std::string>& keys, auto& result) -> bool
-        {
-            bool res = false;
-            for (const auto& s : keys)
-            {
-                res = getValue(src, s, result);
-                if (res)
-                    break;
-            }
-            return res;
-        };
-        getValueLst(image->exifData(), {"Exif.Photo.ISOSpeedRatings", "Exif.Image.ISOSpeedRatings"}, iso);
+        //todo: add keys to read values from xmp/iptc
+        test_all_metas({
+                           {"Exif.Photo.ISOSpeedRatings", "Exif.Image.ISOSpeedRatings"}, //exif keys
+                           {}, //xmp keys
+                           {}, //iptc keys
+                       }, iso);
+
+        test_all_metas({
+                           {"Exif.Photo.ExposureTime", "Exif.Image.ExposureTime"}, //exif keys
+                           {}, //xmp keys
+                           {}, //iptc keys
+                       }, exposure);
+
+        test_all_metas({
+                           {"Exif.Photo.ApertureValue", "Exif.Image.ApertureValue"}, //exif keys
+                           {}, //xmp keys
+                           {}, //iptc keys
+                       }, aperture);
     }
 }

@@ -99,8 +99,10 @@ PreviewsModel::PreviewsModel(QObject *parent)
 
                 if (loaded && !*stop) //stop check is important here, or GUI may stack if thread interrupted and signal is out
                 {
+                    //updating preview
                     QModelIndex k = this->index(static_cast<int>(i), 0);
                     emit this->dataChanged(k, k, roles);
+
                     std::this_thread::sleep_for(15ms); //allowing gui to process items
                 }
 

@@ -8,14 +8,71 @@
 #include <atomic>
 #include <stdint.h>
 #include <tuple>
+#include <algorithm>
+
 
 namespace imaging
 {
     using image_buffer_ptr = std::shared_ptr<QImage>;
+
+    //helpers to work with libexiv2
+    namespace exiv2_helpers {
+        using keys_t = std::vector<std::string>;
+        template <class T, class R>
+        void meta_value(const R& src, T& result);
+
+        template <class T, class R>
+        void meta_value(const R& src, std::string& res)
+        {
+            res = src.toString();
+        }
+
+        template <class T, class R>
+        void meta_value(const R& src, long& res)
+        {
+            res = src.toLong();
+        }
+
+        template <class T, class R>
+        void meta_value(const R& src, float& res)
+        {
+            res = src.toFloat();
+        }
+
+        template<class T, class R>
+        bool getValue(const T& src, const std::string& key, R& result)
+        {
+            auto r = std::find_if(src.begin(), src.end(), [&key](const auto& val)
+            {
+                return val.key() == key;
+            });
+            bool res = r != src.end();
+            if (res)
+                meta_value<typename std::remove_reference<decltype(result)>::type>(r->value(), result);
+            return res;
+        }
+
+        template<class T, class R>
+        bool getValueOneOf(const T& src, const keys_t& keys, R& result)
+        {
+            bool res = false;
+            for (const auto& s : keys)
+            {
+                res = getValue(src, s, result);
+                if (res)
+                    break;
+            }
+            return res;
+        }
+    }
+
     struct meta_t
     {
         meta_t();
-        long iso;
+        long  iso;
+        float exposure;
+        float aperture;
+
         QString getStringValue() const;
         void load(const QString& fileName);
     };

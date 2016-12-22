@@ -62,6 +62,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(previewsModel, &PreviewsModel::finishedPreviewsLoad, this, [this](){
       if (loadingProgress)
           loadingProgress->setVisible(false);
+      ui->previewsTable->resizeColumnsToContents();
     }, Qt::QueuedConnection);
 
     connect(previewsModel, &QAbstractTableModel::dataChanged, this, [this](const auto ind, const auto, const auto&)
