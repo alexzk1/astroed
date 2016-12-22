@@ -192,7 +192,12 @@ void MainWindow::on_tabsWidget_currentChanged(int index)
     {
         //making all dark on big preview, because it's bad for eyes when around black space u see white window borders
         qApp->setStyleSheet(styler);
-        showTempNotify(tr("LBM /arrows - pan, RBM - select, LBM + wheel(shift + wheel, +-, shift+up/down) - zoom. ctrl + L/R arrows to list files."), 7000);
+        static bool session_once = true;
+        if (session_once)
+        {
+            showTempNotify(tr("LBM /arrows - pan, RBM - select, LBM + wheel(shift + wheel, +-, shift+up/down) - zoom. ctrl + L/R arrows to list files."), 15000);
+            session_once = false;
+        }
     }
     else
         fileNameLabel->setText("");
