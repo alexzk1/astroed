@@ -85,6 +85,7 @@ PreviewsModel::PreviewsModel(QObject *parent)
 
             size_t sz = 0;
             {
+                //we still need all those lock_guards, because 3 threads access it, 2 are serialized (list files, load files) but 3rd is GUI and it is not
                 std::lock_guard<decltype (listMut)> grd(listMut);
                 sz = modelFiles.size();
             }
@@ -98,6 +99,7 @@ PreviewsModel::PreviewsModel(QObject *parent)
                 {
                     bool loaded = false;
                     {
+                        //we still need all those lock_guards, because 3 threads access it, 2 are serialized (list files, load files) but 3rd is GUI and it is not
                         std::lock_guard<decltype (listMut)> grd(listMut);
                         if (sz != modelFiles.size())
                             break;
