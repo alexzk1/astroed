@@ -68,6 +68,12 @@ namespace luavm
     {
         return var.toDouble();
     }
+
+    template<>
+    inline QVariant variantTo(const QVariant& var)
+    {
+        return var;
+    }
 }
 #endif
 #endif // VARIANT_CONVERT_H

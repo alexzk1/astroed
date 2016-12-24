@@ -1,21 +1,24 @@
 #pragma once
 #include <QString>
 #include <QImage>
+#include <QVariant>
 #include <mutex>
+#include <map>
 #include "memimage/image_loader.h"
+#include "lua/variant_convert.h"
 
 class PreviewsModelData
 {
 private:
     imaging::image_buffer_ptr preview;
 public:
-    QString filePath;
+    QString  filePath;
+    std::map<int, QVariant> valuesPerColumn;
 
-    bool    selected;
     PreviewsModelData(const QString& path):
         preview(new QImage()),
         filePath(path),
-        selected(false)
+        valuesPerColumn()
     {
     }
 
@@ -42,5 +45,13 @@ public:
     const QImage& getPreview() const
     {
         return *preview;
+    }
+
+    template<class T>
+    T getValue(int column, const T& def) const
+    {
+        if (!valuesPerColumn.count(column))
+            return def;
+        return luavm::variantTo<T>(valuesPerColumn.at(column));
     }
 };

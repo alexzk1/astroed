@@ -67,7 +67,6 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(previewsModel, &QAbstractTableModel::dataChanged, this, [this](const auto ind, const auto, const auto&)
     {
-
         if (ui->previewsTable)
         {
             if (ind.isValid())

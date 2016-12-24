@@ -18,6 +18,7 @@
 #include <QTimer>
 #include <QLabel>
 #include <QMouseEvent>
+#include <QComboBox>
 #include <QDesktopServices>
 #include <QApplication>
 #include "mainwindow.h"
@@ -28,21 +29,53 @@
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------CONFIG------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
-enum class DelegateMode {IMAGE_PREVIEW, IMAGE_META, CHECKBOX, FILE_HYPERLINK};
+//I think it is 1st step to re-invent qt-quick but C++ based >: ...hate JS
+
+enum class DelegateMode {IMAGE_PREVIEW, IMAGE_META, CHECKBOX, FILE_HYPERLINK, FIXED_COMBO_BOX};
+
+
+using create_widget_t = std::function<QWidget*(QWidget* parent, const QStyleOptionViewItem &option, const QModelIndex& index)>;
+const static create_widget_t create_widget_t_defimpl = [](auto, const auto&, const auto&)noexcept{return nullptr;};
+
+
+#define IGNORED_TXT QObject::tr("Ignored")
+
+static bool isEditable(DelegateMode mode)
+{
+    return mode != DelegateMode::FILE_HYPERLINK && mode != DelegateMode::IMAGE_PREVIEW && mode != DelegateMode::IMAGE_META;
+}
 
 struct SectionDescr //just in case I will want some more static data later
 {
-    QString text;
-    DelegateMode mode;
-    QString tooltip;
+    const QString text;
+    const DelegateMode mode;
+    const QString tooltip;
+    const create_widget_t editor;
+    const QVariant initialValue;
+    static bool keepInList(const PreviewsModelData& itm) //checks if file should be removed from list when user switches folder
+    {
+        //ok, I just want all config kept in same place together, this one checks if user selected anything and corelate with vector below
+        return itm.getValue(2, IGNORED_TXT) != IGNORED_TXT; //user selected anything except default in 2nd column
+    }
 };
 
 const static std::vector<SectionDescr> captions =
 {
-    {QObject::tr("Preview"),   DelegateMode::IMAGE_PREVIEW,  QObject::tr("Click to zoom")},
-    {QObject::tr("Info"),      DelegateMode::IMAGE_META,     QObject::tr("EXIF if present in image")},
-    {QObject::tr("Use"),       DelegateMode::CHECKBOX,       QObject::tr("Lock for processing.")},
-    {QObject::tr("File Name"), DelegateMode::FILE_HYPERLINK, QObject::tr("Click to start external viewer.")},
+    {QObject::tr("Preview"),   DelegateMode::IMAGE_PREVIEW,  QObject::tr("Click to zoom"),                   create_widget_t_defimpl, QVariant()},
+    {QObject::tr("Info"),      DelegateMode::IMAGE_META,     QObject::tr("EXIF if present in image"),        create_widget_t_defimpl, QVariant()},
+    {QObject::tr("Role"),      DelegateMode::FIXED_COMBO_BOX,QObject::tr("Select usage for this image."), //dont forget update keepInList() method
+     [](QWidget* parent, const QStyleOptionViewItem &option, const QModelIndex& index)
+     {
+         Q_UNUSED(option);
+         Q_UNUSED(index);
+         QComboBox *editor = new QComboBox(parent);
+         editor->setEditable(false);
+         editor->addItems({IGNORED_TXT, QObject::tr("Stack source"), QObject::tr("Dark")});
+         // u can populate ur combo here.
+         return editor;
+     }, IGNORED_TXT
+    },
+    {QObject::tr("File Name"), DelegateMode::FILE_HYPERLINK, QObject::tr("Click to start external viewer."), create_widget_t_defimpl, QVariant()},
 };
 
 //todo: add more file formats (should be supported by Qt)
@@ -211,16 +244,23 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
                 case DelegateMode::IMAGE_META:
                     res = itm.getPreviewInfo();
                     break;
-                case DelegateMode::CHECKBOX:
+                default:
+                    res = itm.getValue(col, captions.at(col).initialValue);
                     break;
             }
 
+        }
+        if (role == Qt::EditRole && isEditable(col_mode))
+        {
+            res = itm.getValue(col, captions.at(col).initialValue);
         }
 
         if (role == Qt::CheckStateRole)
         {
             if (col_mode == DelegateMode::CHECKBOX)
-                res = (itm.selected)?Qt::Checked:Qt::Unchecked;
+            {
+                res = (itm.getValue(col, false))?Qt::Checked:Qt::Unchecked;
+            }
         }
 
         if (role == MyMouseCursorRole)
@@ -237,27 +277,53 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
 
 bool PreviewsModel::setData(const QModelIndex &index, const QVariant &value, int role)
 {
-    if (role == Qt::CheckStateRole && captions.at(index.column()).mode == DelegateMode::CHECKBOX)
+    bool changed = false;
+    if (index.isValid())
     {
-        size_t row = static_cast<decltype (row)>(index.row());
+        const int col    = index.column();
+        const auto mode = captions.at(col).mode;
+        auto set = [&col, &index, &changed, this](const QVariant& v)
         {
-            std::lock_guard<decltype (listMut)> grd(const_cast<PreviewsModel*>(this)->listMut);
+            size_t row = static_cast<decltype (row)>(index.row());
+            std::lock_guard<decltype (this->listMut)> grd(this->listMut);
             auto& itm = modelFiles.at(row);
-            itm.selected = value == Qt::Checked;
-        }
-        emit dataChanged(index, index, QVector<int>() << role);
-        return true;
-    }
+            itm.valuesPerColumn[col] = v;
+            changed = true;
+        };
 
-    return false;
+        if (role == Qt::CheckStateRole && mode == DelegateMode::CHECKBOX)
+        {
+            set(value == Qt::Checked);
+        }
+
+        if (role == Qt::EditRole && isEditable(mode))
+        {
+            set(value);
+        }
+
+        if (changed)
+            emit dataChanged(index, index, QVector<int>() << role);
+    }
+    return changed;
 }
 
 Qt::ItemFlags PreviewsModel::flags(const QModelIndex &index) const
 {
-    if (!index.isValid() || captions.at(index.column()).mode != DelegateMode::CHECKBOX)
-        return Qt::NoItemFlags;
+    QFlags<Qt::ItemFlag> res = Qt::NoItemFlags;
 
-    return Qt::ItemIsUserCheckable | QAbstractTableModel::flags(index);
+    if (index.isValid())
+    {
+        auto mode = captions.at(index.column()).mode;
+        if (mode == DelegateMode::CHECKBOX)
+            res = Qt::ItemIsUserCheckable;
+        else
+        {
+            if (isEditable(mode))
+                res = Qt::ItemIsEditable;
+        }
+        res = res | QAbstractTableModel::flags(index);
+    }
+    return res;
 }
 
 void PreviewsModel::setCurrentFolder(const QString &path, bool recursive)
@@ -339,7 +405,7 @@ void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list, const util
     if (modelFiles.size())
         modelFiles.erase(std::remove_if(modelFiles.begin(), modelFiles.end(), [](const auto& v)
         {
-            return !v.selected;
+            return !SectionDescr::keepInList(v);
         }), modelFiles.end());
     modelFiles.reserve(modelFiles.size() + list.size());
 
@@ -407,14 +473,13 @@ void PreviewsDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
                 }
             case DelegateMode::FILE_HYPERLINK:
             {
-                label.setText(QString("<a href='file://%1'>%1</a>").arg(index.data().toString()));
+                label.setText(QString("&nbsp;&nbsp;<a href='file://%1'>%1</a>").arg(index.data().toString()));
                 label.setTextFormat(Qt::RichText);
                 label.setStyleSheet("QLabel { background-color : transparent; }");
                 draw(option.rect);
             }
                 break;
-            case DelegateMode::IMAGE_META:
-            case DelegateMode::CHECKBOX:
+            default:
                 QStyledItemDelegate::paint(painter, option, index);
                 break;
         }
@@ -423,6 +488,7 @@ void PreviewsDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
 QSize PreviewsDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
     QSize sz = QStyledItemDelegate::sizeHint(option, index);
+    sz.setWidth(sz.width() + 5);
     if (index.isValid())
     {
         switch (captions.at(index.column()).mode)
@@ -458,8 +524,56 @@ bool PreviewsDelegate::editorEvent(QEvent *event, QAbstractItemModel *model, con
             {
                 lastClickedPreview = index;
                 showLastClickedPreview();
+                return true;
             }
         }
     }
     return QStyledItemDelegate::editorEvent(event, model, option, index);
+}
+
+QWidget *PreviewsDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem &option, const QModelIndex &index) const
+{
+    QWidget *res = nullptr;
+    if (index.isValid())
+    {
+        res = captions.at(index.column()).editor(parent, option, index);
+        if (res)
+        {
+            res->setFocusPolicy(Qt::StrongFocus); //otherwise tableview will get mouse events
+            //res->setAutoFillBackground(true); //if commented, view's background will be used
+        }
+    }
+    return res;
+}
+
+void PreviewsDelegate::setEditorData(QWidget *editor, const QModelIndex &index) const
+{
+    if (index.isValid() && editor)
+    {
+        if (captions.at(index.column()).mode == DelegateMode::FIXED_COMBO_BOX)
+        {
+            QComboBox *p = qobject_cast<QComboBox*>(editor);
+            if (p)
+            {
+                const QString txt = index.data(Qt::EditRole).toString();
+                p->setCurrentText(txt);
+            }
+        }
+    }
+}
+
+void PreviewsDelegate::setModelData(QWidget *editor, QAbstractItemModel *model, const QModelIndex &index) const
+{
+    Q_UNUSED(model);
+    if (index.isValid() && editor)
+    {
+        if (captions.at(index.column()).mode == DelegateMode::FIXED_COMBO_BOX)
+        {
+            QComboBox *p = qobject_cast<QComboBox*>(editor);
+            if (p && model)
+            {
+                model->setData(index, p->currentText());
+            }
+        }
+    }
 }
