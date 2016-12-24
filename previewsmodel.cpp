@@ -85,47 +85,50 @@ PreviewsModel::PreviewsModel(QObject *parent)
 
             size_t sz = 0;
             {
-                //std::lock_guard<decltype (listMut)> grd(listMut);
+                std::lock_guard<decltype (listMut)> grd(listMut);
                 sz = modelFiles.size();
             }
 
-            const double mul = 100. / sz; //some optimization of the loop
-
-            const auto work = [&stop](){return !(*stop);}; //operations may take significant time during it thread could be stopped, so want to check latest always
-            for (decltype(sz) i = 0; i < sz && work(); ++i)
+            if (sz) //don't div by zero!
             {
-                bool loaded = false;
+                const double mul = 100. / sz; //some optimization of the loop
+                const auto work = [&stop](){return !(*stop);}; //operations may take significant time during it thread could be stopped, so want to check latest always
+
+                for (decltype(sz) i = 0; i < sz && work(); ++i)
                 {
-                    std::lock_guard<decltype (listMut)> grd(listMut);
-                    if (sz != modelFiles.size())
-                        break;
-                    loaded   = modelFiles.at(i).loadPreview();
-                }
-
-                if (loaded && work()) //stop check is important here, or GUI may stack if thread interrupted and signal is out
-                {
-                    //updating preview
-                    QModelIndex k = this->index(static_cast<int>(i), 0);
-                    emit this->dataChanged(k, k, roles);
-
-                    std::this_thread::sleep_for(25ms); //allowing gui to process items
-                }
-
-                if (i)
-                {
-                    if (i % 10 == 0 && work())
-                        emit this->loadProgress(i * mul);
-
-                    if (i % 40 == 0 && work())
+                    bool loaded = false;
                     {
-                        IMAGE_LOADER.gc(true); //because of the hard pressure of loading many files for preview, need to cleanse cache asap
-                        if (work())
-                            std::this_thread::sleep_for(100ms);
+                        std::lock_guard<decltype (listMut)> grd(listMut);
+                        if (sz != modelFiles.size())
+                            break;
+                        loaded   = modelFiles.at(i).loadPreview();
+                    }
+
+                    if (loaded && work()) //stop check is important here, or GUI may stack if thread interrupted and signal is out
+                    {
+                        //updating preview
+                        QModelIndex k = this->index(static_cast<int>(i), 0);
+                        emit this->dataChanged(k, k, roles);
+
+                        std::this_thread::sleep_for(25ms); //allowing gui to process items
+                    }
+
+                    if (i)
+                    {
+                        if (i % 10 == 0 && work())
+                            emit this->loadProgress(i * mul);
+
+                        if (i % 40 == 0 && work())
+                        {
+                            IMAGE_LOADER.gc(true); //because of the hard pressure of loading many files for preview, need to cleanse cache asap
+                            if (work())
+                                std::this_thread::sleep_for(100ms);
+                        }
                     }
                 }
+                if (work())
+                    emit this->finishedPreviewsLoad();
             }
-            if (work())
-                emit this->finishedPreviewsLoad();
             //qDebug() << "Previews loaded" << modelFiles.size();
         });
     }, Qt::QueuedConnection);
