@@ -71,7 +71,9 @@ PreviewsModel::PreviewsModel(QObject *parent)
 {
     connect(this, &QAbstractTableModel::modelReset, this, [this]()
     {
-        //qDebug() << "Previews model-reset";
+        //it's kinda limitation of qt-gui, same thread cannot list files & load files, bcs list is model reset and load is fillup of the model,
+        //if we do in 1 thread, it will not be smooth, i.e. all empty until full load
+
         loadPreviews = utility::startNewRunner([this](auto stop)
         {
             using namespace std::literals;
