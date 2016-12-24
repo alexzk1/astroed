@@ -74,9 +74,13 @@ PreviewsModel::PreviewsModel(QObject *parent)
         //qDebug() << "Previews model-reset";
         loadPreviews = utility::startNewRunner([this](auto stop)
         {
+            using namespace std::literals;
+
             // qDebug() << "Previews started load";
             emit this->startedPreviewsLoad();
-            using namespace std::literals;
+            std::this_thread::sleep_for(50ms);
+
+
             const static QVector<int> roles = {Qt::DisplayRole};
 
             size_t sz = 0;
@@ -87,7 +91,8 @@ PreviewsModel::PreviewsModel(QObject *parent)
 
             const double mul = 100. / sz; //some optimization of the loop
 
-            for (decltype(sz) i = 0; i < sz && !*stop; ++i)
+            const auto work = [&stop](){return !(*stop);}; //operations may take significant time during it thread could be stopped, so want to check latest always
+            for (decltype(sz) i = 0; i < sz && work(); ++i)
             {
                 bool loaded = false;
                 {
@@ -97,29 +102,30 @@ PreviewsModel::PreviewsModel(QObject *parent)
                     loaded   = modelFiles.at(i).loadPreview();
                 }
 
-                if (loaded && !*stop) //stop check is important here, or GUI may stack if thread interrupted and signal is out
+                if (loaded && work()) //stop check is important here, or GUI may stack if thread interrupted and signal is out
                 {
                     //updating preview
                     QModelIndex k = this->index(static_cast<int>(i), 0);
                     emit this->dataChanged(k, k, roles);
 
-                    std::this_thread::sleep_for(15ms); //allowing gui to process items
+                    std::this_thread::sleep_for(25ms); //allowing gui to process items
                 }
 
                 if (i)
                 {
-                    if (i % 10 == 0)
-                       emit this->loadProgress(i * mul);
+                    if (i % 10 == 0 && work())
+                        emit this->loadProgress(i * mul);
 
-                    if (i % 40 == 0)
+                    if (i % 40 == 0 && work())
                     {
                         IMAGE_LOADER.gc(true); //because of the hard pressure of loading many files for preview, need to cleanse cache asap
-                        if (!*stop)
-                            std::this_thread::sleep_for(50ms);
+                        if (work())
+                            std::this_thread::sleep_for(100ms);
                     }
                 }
             }
-            emit this->finishedPreviewsLoad();
+            if (work())
+                emit this->finishedPreviewsLoad();
             //qDebug() << "Previews loaded" << modelFiles.size();
         });
     }, Qt::QueuedConnection);
@@ -272,7 +278,7 @@ void PreviewsModel::setCurrentFolder(const QString &path, bool recursive)
 
         QDir dir(path, QString(), QDir::Name | QDir::IgnoreCase, QDir::Files);
         QDirIterator it(dir.absolutePath(), filter, QDir::Files, (recursive)?QDirIterator::Subdirectories:QDirIterator::NoIteratorFlags);
-        while (it.hasNext() && !*stop)
+        while (it.hasNext() && !(*stop))
         {
             it.next();
             if (!it.fileInfo().isDir())
@@ -287,7 +293,7 @@ void PreviewsModel::setCurrentFolder(const QString &path, bool recursive)
         else
         {
             this->beginResetModel();
-            this->haveFilesList(pathes);
+            this->haveFilesList(pathes, stop);
             this->endResetModel();
         }
     });
@@ -305,7 +311,7 @@ PreviewsModel::~PreviewsModel()
     loadPreviews.reset();
 }
 
-void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list)
+void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list, const utility::runnerint_t &stop)
 {
     std::lock_guard<decltype (listMut)> grd(listMut);
 
@@ -330,18 +336,23 @@ void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list)
         }), modelFiles.end());
     modelFiles.reserve(modelFiles.size() + list.size());
 
-    sort_files();
+    if (!*stop)
+        sort_files();
 
     auto old = std::end(modelFiles);
 
     for (const auto& fi : list)
     {
+        if (*stop)
+            break;
         auto s = fi.absoluteFilePath();
         if (std::find_if(modelFiles.begin(), old, [&s](const auto& v){return v.filePath == s;}) == old)
             modelFiles.emplace_back(s);
     }
-
-    sort_files();
+    if (!*stop)
+        sort_files();
+    else
+        modelFiles.clear();
     //qDebug() << "Files listed "<<modelFiles.size();
 }
 
@@ -372,52 +383,53 @@ void PreviewsDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
         painter->translate(-option.rect.topLeft());
     };
 
-    switch (captions.at(index.column()).mode)
-    {
-        case DelegateMode::IMAGE_PREVIEW:
-            if (index.data().canConvert<QImage>())
-            {
-                QPixmap img = QPixmap::fromImage(qvariant_cast<QImage>(index.data()));
-                label.setPixmap(img);
-                //if we have different sized images need to ensure we will not stretch
-                QRect rect = option.rect;
-                rect.setHeight(std::min(img.height(), rect.height()));
-                rect.setWidth(std::min(img.width(), rect.width()));
-                draw(rect);
-                break;
-            }
-        case DelegateMode::FILE_HYPERLINK:
+    if (index.isValid())
+        switch (captions.at(index.column()).mode)
         {
-            label.setText(QString("<a href='file://%1'>%1</a>").arg(index.data().toString()));
-            label.setTextFormat(Qt::RichText);
-            label.setStyleSheet("QLabel { background-color : transparent; }");
-            draw(option.rect);
+            case DelegateMode::IMAGE_PREVIEW:
+                if (index.data().canConvert<QImage>())
+                {
+                    QPixmap img = QPixmap::fromImage(qvariant_cast<QImage>(index.data()));
+                    label.setPixmap(img);
+                    //if we have different sized images need to ensure we will not stretch
+                    QRect rect = option.rect;
+                    rect.setHeight(std::min(img.height(), rect.height()));
+                    rect.setWidth(std::min(img.width(), rect.width()));
+                    draw(rect);
+                    break;
+                }
+            case DelegateMode::FILE_HYPERLINK:
+            {
+                label.setText(QString("<a href='file://%1'>%1</a>").arg(index.data().toString()));
+                label.setTextFormat(Qt::RichText);
+                label.setStyleSheet("QLabel { background-color : transparent; }");
+                draw(option.rect);
+            }
+                break;
+            case DelegateMode::IMAGE_META:
+            case DelegateMode::CHECKBOX:
+                QStyledItemDelegate::paint(painter, option, index);
+                break;
         }
-            break;
-        case DelegateMode::IMAGE_META:
-        case DelegateMode::CHECKBOX:
-            QStyledItemDelegate::paint(painter, option, index);
-            break;
-    }
 }
 
 QSize PreviewsDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
-    QSize sz;
-    switch (captions.at(index.column()).mode)
+    QSize sz = QStyledItemDelegate::sizeHint(option, index);
+    if (index.isValid())
     {
-        case DelegateMode::IMAGE_PREVIEW:
-            if (index.data().canConvert<QImage>())
-            {
-                auto img = qvariant_cast<QImage>(index.data());
-                sz = img.size();
+        switch (captions.at(index.column()).mode)
+        {
+            case DelegateMode::IMAGE_PREVIEW:
+                if (index.data().canConvert<QImage>())
+                {
+                    auto img = qvariant_cast<QImage>(index.data());
+                    sz = img.size();
+                    break;
+                }
+            default:
                 break;
-            }
-        case DelegateMode::FILE_HYPERLINK:
-        case DelegateMode::IMAGE_META:
-        case DelegateMode::CHECKBOX:
-            sz = QStyledItemDelegate::sizeHint(option, index);
-            break;
+        }
     }
     return sz;
 }
@@ -425,7 +437,7 @@ QSize PreviewsDelegate::sizeHint(const QStyleOptionViewItem &option, const QMode
 bool PreviewsDelegate::editorEvent(QEvent *event, QAbstractItemModel *model, const QStyleOptionViewItem &option, const QModelIndex &index)
 {
     auto me = dynamic_cast<QMouseEvent*>(event);
-    if (me)
+    if (me && index.isValid())
     {
         if (me->button() == Qt::LeftButton && me->type() == QEvent::MouseButtonRelease)
         {

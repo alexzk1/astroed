@@ -47,7 +47,7 @@ private:
     std::recursive_mutex listMut;
     mfiles_t  modelFiles;
 
-    void haveFilesList(const files_t& list);
+    void haveFilesList(const files_t& list, const utility::runnerint_t& stop);
 signals:
     void startedPreviewsLoad();
     void finishedPreviewsLoad();
