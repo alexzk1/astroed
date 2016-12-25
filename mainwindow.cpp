@@ -41,7 +41,11 @@ MainWindow::MainWindow(QWidget *parent) :
 
     auto hdr = ui->previewsTable->horizontalHeader();
     if (hdr)
+    {
+        //ui will be not responsive with this, need to do manualy
+        //hdr->setSectionResizeMode(QHeaderView::ResizeToContents);
         hdr->setStretchLastSection(true);
+    }
 
     connect(previewsModel, &PreviewsModel::startedPreviewsLoad, this, [this](){
         if (ui->previewsTable)
@@ -62,7 +66,6 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(previewsModel, &PreviewsModel::finishedPreviewsLoad, this, [this](){
       if (loadingProgress)
           loadingProgress->setVisible(false);
-      ui->previewsTable->resizeColumnsToContents();
     }, Qt::QueuedConnection);
 
     connect(previewsModel, &QAbstractTableModel::dataChanged, this, [this](const auto ind, const auto, const auto&)

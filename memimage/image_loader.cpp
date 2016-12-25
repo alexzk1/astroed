@@ -147,7 +147,7 @@ meta_t::meta_t():
 
 QString meta_t::getStringValue() const //should prepare human readable value
 {
-    return QString("ISO:\t%1\nExposure:\t%2\nAperture:\t%3").arg(iso).arg(exposure, 0, 'f', 2).arg(aperture, 0, 'f', 4);
+    return QString("ISO: %1\nExposure: %2\nAperture: %3").arg(iso).arg(exposure, 0, 'f', 2).arg(aperture, 0, 'f', 4);
 }
 
 

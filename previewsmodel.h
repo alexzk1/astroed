@@ -7,11 +7,12 @@
 #include <QAbstractTableModel>
 #include <QStyledItemDelegate>
 
+#include "lua/lua_gen.h"
 #include "utils/runners.h"
 #include "previewsmodeldata.h"
 
 class QFileInfo;
-class PreviewsModel : public QAbstractTableModel
+class PreviewsModel : public QAbstractTableModel, public luavm::LuaGenerator
 {
     Q_OBJECT
 public:
@@ -20,7 +21,6 @@ public:
 
     // Header:
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
-
     bool setHeaderData(int section, Qt::Orientation orientation, const QVariant &value, int role = Qt::EditRole) override;
 
     // Basic functionality:
@@ -37,6 +37,9 @@ public:
 
     void setCurrentFolder(const QString& path, bool recursive = false);
     void simulateModelReset();
+
+     virtual void generateLuaCode(std::ostream& out) const;
+
     virtual ~PreviewsModel();
 private:
     using files_t  = std::vector<QFileInfo>;
@@ -46,6 +49,8 @@ private:
     utility::runner_t loadPreviews;
     std::recursive_mutex listMut;
     mfiles_t  modelFiles;
+
+    std::map<int, QStringList> fixedCombosLists; //wana to do generic solution
 
     void haveFilesList(const files_t& list, const utility::runnerint_t& stop);
 signals:

@@ -37,43 +37,52 @@ enum class DelegateMode {IMAGE_PREVIEW, IMAGE_META, CHECKBOX, FILE_HYPERLINK, FI
 using create_widget_t = std::function<QWidget*(QWidget* parent, const QStyleOptionViewItem &option, const QModelIndex& index)>;
 const static create_widget_t create_widget_t_defimpl = [](auto, const auto&, const auto&)noexcept{return nullptr;};
 
-
-#define IGNORED_TXT QObject::tr("Ignored")
-
 static bool isEditable(DelegateMode mode)
 {
     return mode != DelegateMode::FILE_HYPERLINK && mode != DelegateMode::IMAGE_PREVIEW && mode != DelegateMode::IMAGE_META;
 }
 
-struct SectionDescr //just in case I will want some more static data later
+//section of the preview table description, code below will build and process according declaration here
+struct sectiondescr_t
 {
     const QString text;
-    const DelegateMode mode;
+    const DelegateMode mode; //determinates how it will be processed, not special things are just stored/returned as variants
     const QString tooltip;
-    const create_widget_t editor;
-    const QVariant initialValue;
-    static bool keepInList(const PreviewsModelData& itm) //checks if file should be removed from list when user switches folder
-    {
-        //ok, I just want all config kept in same place together, this one checks if user selected anything and corelate with vector below
-        return itm.getValue(2, IGNORED_TXT) != IGNORED_TXT; //user selected anything except default in 2nd column
-    }
+    const create_widget_t editor; //widget which allows to choose values, like combobox
+    const QVariant initialValue; //initial default value for things like combobox
 };
 
-const static std::vector<SectionDescr> captions =
+//texts can be translated, but for lua need to have some fixed values
+struct fileroles_t
+{
+    const QString humanRole;
+    const int     luaRole;
+};
+
+//order is important here, lua-generator below relays on it
+const static std::vector<fileroles_t> fileRoles =
+{
+    {QObject::tr("Stack source"), 0}, //must be 1st (1st will be set as default)
+    {QObject::tr("Ignored"), -1},
+    {QObject::tr("Dark"), 1},
+};
+
+
+
+//if you change order in arrays here, something below may break bcs assumes fixed index
+const static std::vector<sectiondescr_t> captions =
 {
     {QObject::tr("Preview"),   DelegateMode::IMAGE_PREVIEW,  QObject::tr("Click to zoom"),                   create_widget_t_defimpl, QVariant()},
     {QObject::tr("Info"),      DelegateMode::IMAGE_META,     QObject::tr("EXIF if present in image"),        create_widget_t_defimpl, QVariant()},
     {QObject::tr("Role"),      DelegateMode::FIXED_COMBO_BOX,QObject::tr("Select usage for this image."), //dont forget update keepInList() method
-     [](QWidget* parent, const QStyleOptionViewItem &option, const QModelIndex& index)
-     {
+     [](QWidget* parent, const QStyleOptionViewItem &option, const QModelIndex& index){
          Q_UNUSED(option);
          Q_UNUSED(index);
          QComboBox *editor = new QComboBox(parent);
          editor->setEditable(false);
-         editor->addItems({IGNORED_TXT, QObject::tr("Stack source"), QObject::tr("Dark")});
-         // u can populate ur combo here.
+         for (const auto& i : fileRoles) editor->addItem(i.humanRole);
          return editor;
-     }, IGNORED_TXT
+     }, 0 //FIXED_COMBO_BOX stores indexes in model
     },
     {QObject::tr("File Name"), DelegateMode::FILE_HYPERLINK, QObject::tr("Click to start external viewer."), create_widget_t_defimpl, QVariant()},
 };
@@ -95,6 +104,11 @@ const static QStringList supportedExt =
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------MODEL-------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
+void PreviewsModel::generateLuaCode(std::ostream &out) const
+{
+    //generating lua code from internal state, hardly bound to arrays above (to their indexes, values, etc)
+    (void)out;
+}
 
 PreviewsModel::PreviewsModel(QObject *parent)
     : QAbstractTableModel(parent),
@@ -244,12 +258,37 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
                 case DelegateMode::IMAGE_META:
                     res = itm.getPreviewInfo();
                     break;
+                case DelegateMode::FIXED_COMBO_BOX:
+                {
+                    //dumping string list from combobox just created and storing for future use in this column
+                    //so u can add more columns
+                    if (!fixedCombosLists.count(col))
+                    {
+                        QStringList items;
+                        auto p1 = captions.at(col).editor(nullptr, QStyleOptionViewItem(), index);
+                        QComboBox *cp = qobject_cast<QComboBox*>(p1);
+                        if (cp)
+                        {
+                            for (int i = 0; i < cp->count(); ++i)
+                                items << cp->itemText(i);
+                        }
+                        if (p1)
+                            delete p1;
+                        const_cast<PreviewsModel*>(this)->fixedCombosLists[col] = items;
+                    }
+                    const auto& sli = fixedCombosLists.at(col);
+                    int index = itm.getValue(col, captions.at(col).initialValue).toInt();
+                    if (index >-1 && index < sli.size())
+                        res =  sli.at(index);
+                }
+                    break;
                 default:
                     res = itm.getValue(col, captions.at(col).initialValue);
                     break;
             }
 
         }
+
         if (role == Qt::EditRole && isEditable(col_mode))
         {
             res = itm.getValue(col, captions.at(col).initialValue);
@@ -401,13 +440,15 @@ void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list, const util
 
     };
 
-
-    if (modelFiles.size())
-        modelFiles.erase(std::remove_if(modelFiles.begin(), modelFiles.end(), [](const auto& v)
-        {
-            return !SectionDescr::keepInList(v);
-        }), modelFiles.end());
-    modelFiles.reserve(modelFiles.size() + list.size());
+    //fixme: all complicated here, lets do for now simple - if user picks other fodler all selections are lost
+    //    if (modelFiles.size())
+    //        modelFiles.erase(std::remove_if(modelFiles.begin(), modelFiles.end(), [](const auto& v)
+    //        {
+    //            return !SectionDescr::keepInList(v);
+    //        }), modelFiles.end());
+    //    modelFiles.reserve(modelFiles.size() + list.size());
+    modelFiles.clear();
+    modelFiles.reserve(list.size());
 
     if (!*stop)
         sort_files();
@@ -488,7 +529,7 @@ void PreviewsDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
 QSize PreviewsDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
     QSize sz = QStyledItemDelegate::sizeHint(option, index);
-    sz.setWidth(sz.width() + 5);
+    sz.setWidth(std::max(50, sz.width()));
     if (index.isValid())
     {
         switch (captions.at(index.column()).mode)
@@ -555,8 +596,8 @@ void PreviewsDelegate::setEditorData(QWidget *editor, const QModelIndex &index) 
             QComboBox *p = qobject_cast<QComboBox*>(editor);
             if (p)
             {
-                const QString txt = index.data(Qt::EditRole).toString();
-                p->setCurrentText(txt);
+                int ind= index.data(Qt::EditRole).toInt();
+                p->setCurrentIndex(ind);
             }
         }
     }
@@ -572,7 +613,7 @@ void PreviewsDelegate::setModelData(QWidget *editor, QAbstractItemModel *model, 
             QComboBox *p = qobject_cast<QComboBox*>(editor);
             if (p && model)
             {
-                model->setData(index, p->currentText());
+                model->setData(index, p->currentIndex());
             }
         }
     }

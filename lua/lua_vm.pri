@@ -5,4 +5,5 @@ include($$PWD/luasrc/lua.pri)
 
 HEADERS += \
     $$PWD/lua_params.h \
-    $$PWD/variant_convert.h
+    $$PWD/variant_convert.h \
+    $$PWD/lua_gen.h

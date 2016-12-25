@@ -13,7 +13,7 @@ private:
     imaging::image_buffer_ptr preview;
 public:
     QString  filePath;
-    std::map<int, QVariant> valuesPerColumn;
+    std::map<int, QVariant>          valuesPerColumn;
 
     PreviewsModelData(const QString& path):
         preview(new QImage()),
