@@ -13,7 +13,7 @@ namespace luavm
         virtual ~LuaGenerator(){};
         virtual void generateLuaCode(std::ostream& out) const = 0;
 
-        std::string generateLuaCode() const
+        std::string generateLuaString() const
         {
             std::stringstream os(std::ios_base::out);
             generateLuaCode(os);

@@ -26,6 +26,7 @@
 #include <QDebug>
 #include <queue>
 
+#include "utils/no_const.h"
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------CONFIG------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
@@ -106,12 +107,23 @@ const static QStringList supportedExt =
 //----------------------------------------------------------------------------------------------------------------------------
 void PreviewsModel::generateLuaCode(std::ostream &out) const
 {
+    std::lock_guard<decltype (listMut)> (utility::noconst(this)->listMut);//that will break code if original model object is created as const, but who will do it ?!
     //generating lua code from internal state, hardly bound to arrays above (to their indexes, values, etc)
-    (void)out;
+    out << "local guiSelectedFiles = {";
+    for (const auto& file : modelFiles)
+    {
+        const auto& role = fileRoles.at(file.getValue(2, captions.at(2).initialValue).toInt());
+        if (role.luaRole > -1)
+        {
+            out << "\n\t{\n\t\tfileName='"<<file.filePath.toStdString()<<"',\n\t\tfileMode="<<role.luaRole<< ", --" << role.humanRole.toStdString() << "\n\t}";
+        }
+    }
+    out << "\n}" << std::endl;
 }
 
 PreviewsModel::PreviewsModel(QObject *parent)
     : QAbstractTableModel(parent),
+      luavm::LuaGenerator(),
       listFiles(nullptr),
       loadPreviews(nullptr),
       listMut()
@@ -219,7 +231,7 @@ bool PreviewsModel::setHeaderData(int section, Qt::Orientation orientation, cons
 int PreviewsModel::rowCount(const QModelIndex &parent) const
 {
     Q_UNUSED(parent);
-    std::lock_guard<decltype (listMut)> grd(const_cast<PreviewsModel*>(this)->listMut);
+    std::lock_guard<decltype (listMut)> grd(utility::noconst(this)->listMut);
     return static_cast<int>(modelFiles.size());
 }
 
@@ -236,7 +248,7 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
     {
         int col  = index.column();
         size_t row = static_cast<decltype (row)>(index.row());
-        std::lock_guard<decltype (listMut)> grd(const_cast<PreviewsModel*>(this)->listMut);
+        std::lock_guard<decltype (listMut)> grd(utility::noconst(this)->listMut);
 
         const auto& itm = modelFiles.at(row);
         const auto col_mode = captions.at(col).mode;
@@ -274,7 +286,7 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
                         }
                         if (p1)
                             delete p1;
-                        const_cast<PreviewsModel*>(this)->fixedCombosLists[col] = items;
+                        utility::noconst(this)->fixedCombosLists[col] = items;
                     }
                     const auto& sli = fixedCombosLists.at(col);
                     int index = itm.getValue(col, captions.at(col).initialValue).toInt();

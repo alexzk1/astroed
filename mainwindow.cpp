@@ -66,6 +66,9 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(previewsModel, &PreviewsModel::finishedPreviewsLoad, this, [this](){
       if (loadingProgress)
           loadingProgress->setVisible(false);
+
+
+      qDebug() << ((PreviewsModel*)ui->previewsTable->model())->generateLuaString().c_str();
     }, Qt::QueuedConnection);
 
     connect(previewsModel, &QAbstractTableModel::dataChanged, this, [this](const auto ind, const auto, const auto&)
