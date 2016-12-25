@@ -115,7 +115,7 @@ void PreviewsModel::generateLuaCode(std::ostream &out) const
         const auto& role = fileRoles.at(file.getValue(2, captions.at(2).initialValue).toInt());
         if (role.luaRole > -1)
         {
-            out << "\n\t{\n\t\tfileName='"<<file.filePath.toStdString()<<"',\n\t\tfileMode="<<role.luaRole<< ", --" << role.humanRole.toStdString() << "\n\t}";
+            out << "\n\t{\n\t\tfileName='"<<file.filePath.toStdString()<<"',\n\t\tfileMode="<<role.luaRole<< ", --" << role.humanRole.toStdString() << "\n\t},";
         }
     }
     out << "\n}" << std::endl;
