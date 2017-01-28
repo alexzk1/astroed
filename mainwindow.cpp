@@ -31,6 +31,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->previewsTable->setModel(previewsModel);
     ui->tabsWidget->setCurrentWidget(ui->tabFiles);
 
+
     QFile style(":/styles/darkorange");
     style.open(QIODevice::ReadOnly | QFile::Text);
     styler = style.readAll();
@@ -114,6 +115,7 @@ MainWindow::MainWindow(QWidget *parent) :
     timer->start(2000);
 
     ui->scrollAreaZoom->installEventFilter(this);
+
 }
 
 MainWindow::~MainWindow()
@@ -186,6 +188,7 @@ void MainWindow::changeEvent(QEvent *e)
     QMainWindow::changeEvent(e);
 }
 
+const QString MainWindow::zoomKbHintText = MainWindow::tr("LBM /arrows - pan, RBM - select, LBM + wheel(shift + wheel, +-, shift+up/down) - zoom. ctrl + L/R arrows to list files.");
 void MainWindow::on_tabsWidget_currentChanged(int index)
 {
     //active tab changed slot
@@ -198,7 +201,7 @@ void MainWindow::on_tabsWidget_currentChanged(int index)
         static bool session_once = true;
         if (session_once)
         {
-            showTempNotify(tr("LBM /arrows - pan, RBM - select, LBM + wheel(shift + wheel, +-, shift+up/down) - zoom. ctrl + L/R arrows to list files."), 15000);
+            showTempNotify(zoomKbHintText, 15000);
             session_once = false;
         }
     }
@@ -246,6 +249,7 @@ void MainWindow::recurseWrite(QSettings &settings, QObject *object)
     settings.setValue("splitter", ui->splitter->saveState());
     settings.setValue("mainwinstate", this->saveState());
     settings.setValue("maximized", this->isMaximized());
+    settings.setValue("newtone", this->ui->actionNewtone->isChecked());
 }
 
 void MainWindow::recurseRead(QSettings &settings, QObject *object)
@@ -257,6 +261,7 @@ void MainWindow::recurseRead(QSettings &settings, QObject *object)
         showMaximized();
     else
         showNormal();
+    this->ui->actionNewtone->setChecked(settings.value("newtone", false).toBool()); //load prior dir, so skip unneeded files list
     auto s = settings.value("LastDirSelection", QDir::homePath()).toString();
     qDebug() << "Read: "<<s;
     selectPath(s);
@@ -272,7 +277,9 @@ void MainWindow::currentDirChanged(const QString &dir)
 QString MainWindow::getSelectedFolder()
 {
     auto index = ui->dirsTree->selectionModel()->currentIndex();
-    return dirsModel->data(index, QFileSystemModel::FilePathRole).toString();
+    if (index.isValid())
+        return dirsModel->data(index, QFileSystemModel::FilePathRole).toString();
+    return "";
 }
 
 void MainWindow::setupFsBrowsing()
@@ -303,4 +310,13 @@ void MainWindow::setupFsBrowsing()
             this->currentDirChanged(dirsModel->data(p1, QFileSystemModel::FilePathRole).toString());
         }
     }, Qt::QueuedConnection);
+}
+
+void MainWindow::on_actionNewtone_toggled(bool checked)
+{
+    QString lastFolder = getSelectedFolder();
+    IMAGE_LOADER.setNewtoneTelescope(checked);
+    PREVIEW_LOADER.setNewtoneTelescope(checked);
+    if (!lastFolder.isEmpty())
+        currentDirChanged(lastFolder);
 }

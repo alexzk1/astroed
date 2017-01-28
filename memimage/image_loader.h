@@ -122,8 +122,9 @@ namespace imaging
 
         ptrs_t  cache;
         weaks_t wcache;
-        std::recursive_mutex mutex;
         std::atomic<size_t> lastSize;
+        std::recursive_mutex mutex;
+        bool assumeMirrored;
     protected:
         virtual image_t_s createImage(const QString& key) const = 0;
         void    findImage(const QString& key, image_t_s &res);
@@ -133,8 +134,11 @@ namespace imaging
         meta_t           getExif(const QString& fileName);
 
         void gc(bool no_wait = false);
-
+        void wipe();
         size_t getMemoryUsed() const;
+        //ok, maybe mirroring on loading is not really good idea for scripting, but .. at least images in ram are already properly loaded = time
+        void setNewtoneTelescope(bool isNewtone); //if true, applies mirror transformation to all images on load
+        bool isNewtoneTelescope() const;
         virtual ~image_cacher();
     };
 

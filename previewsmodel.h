@@ -51,7 +51,6 @@ private:
     mfiles_t  modelFiles;
 
     std::map<int, QStringList> fixedCombosLists; //wana to do generic solution
-
     void haveFilesList(const files_t& list, const utility::runnerint_t& stop);
 signals:
     void startedPreviewsLoad();

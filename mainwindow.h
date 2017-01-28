@@ -42,7 +42,7 @@ protected:
     void currentDirChanged(const QString& dir);
 private slots:
     void on_tabsWidget_currentChanged(int index);
-
+    void on_actionNewtone_toggled(bool checked);
 private:
     Ui::MainWindow *ui;
     QPointer<QFileSystemModel> dirsModel;
@@ -56,7 +56,7 @@ private:
     const QString originalStylesheet;
 
     void setupFsBrowsing();
-
+    const static QString zoomKbHintText;
 };
 
 #endif // MAINWINDOW_H

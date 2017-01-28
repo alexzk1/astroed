@@ -28,8 +28,9 @@ static int64_t nows()
 image_cacher::image_cacher():
     cache(),
     wcache(),
+    lastSize(0),
     mutex(),
-    lastSize(0)
+    assumeMirrored(false)
 {
     qRegisterMetaType<image_buffer_ptr>("image_buffer_ptr");
     qRegisterMetaType<imaging::image_buffer_ptr>("imaging::image_buffer_ptr");
@@ -100,9 +101,32 @@ void image_cacher::gc(bool no_wait)
     }
 }
 
+void image_cacher::wipe()
+{
+    std::lock_guard<std::recursive_mutex> guard(mutex);
+    cache.clear();
+    wcache.clear();
+    lastSize = 0;
+}
+
 size_t image_cacher::getMemoryUsed() const
 {
     return lastSize;
+}
+
+void image_cacher::setNewtoneTelescope(bool isNewtone)
+{
+    std::lock_guard<std::recursive_mutex> guard(mutex);
+    if (assumeMirrored != isNewtone)
+    {
+        wipe();
+        assumeMirrored = isNewtone;
+    }
+}
+
+bool image_cacher::isNewtoneTelescope() const
+{
+    return assumeMirrored;
 }
 
 image_cacher::~image_cacher()
@@ -115,6 +139,8 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
     image_t_s tmp;
     { //ensuring img will close file "key"
         QImage img(key);
+        if (isNewtoneTelescope())
+            img = img.mirrored(true, true);
         tmp.data  = std::make_shared<QImage>();
         *tmp.data = img.convertToFormat(QImage::Format_RGB888);
     }
