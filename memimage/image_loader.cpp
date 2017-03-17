@@ -159,21 +159,28 @@ image_cacher::image_t_s image_preview_loader::createImage(const QString &key) co
     IMAGE_LOADER.findImage(key, src);
     //keeping aspect ratio
     int width = static_cast<decltype(width)>(previewSize * src.data->width() / (double) src.data->height());
-    src.data = image_buffer_ptr(new QImage(src.data->scaled(width, previewSize, Qt::KeepAspectRatio)));
+    src.data = std::make_shared<QImage>(src.data->scaled(width, previewSize, Qt::KeepAspectRatio));
     return src;
 }
 
 meta_t::meta_t():
     iso(0),
-    exposure(0),
-    aperture(0)
+    exposure(0, 1),
+    aperture(0, 1),
+    optZoom(1)
 {
 
 }
 
 QString meta_t::getStringValue() const //should prepare human readable value
 {
-    return QString("ISO: %1\nExposure: %2\nAperture: %3").arg(iso).arg(exposure, 0, 'f', 2).arg(aperture, 0, 'f', 4);
+    using namespace exiv2_helpers;
+    return QString("ISO: %1\nExposure: %2 s\nAperture: %3 mm\nOptical Zoom: x%4")
+            .arg(iso)
+            .arg(toDouble(exposure), 0, 'f', 2)
+            .arg(toDouble(aperture), 0, 'f', 2)
+            .arg(optZoom, 0, 'f', 2)
+            ;
 }
 
 
@@ -192,7 +199,7 @@ void meta_t::load(const QString &fileName)
                     getValueOneOf(image->iptcData(), e_x_i.at(2), result);
         };
 
-        //todo: add keys to read values from xmp/iptc
+        //todo: add keys to read values from xmp/iptc http://www.exiv2.org/tags.html
         test_all_metas({
                            {"Exif.Photo.ISOSpeedRatings", "Exif.Image.ISOSpeedRatings"}, //exif keys
                            {}, //xmp keys
@@ -206,9 +213,36 @@ void meta_t::load(const QString &fileName)
                        }, exposure);
 
         test_all_metas({
-                           {"Exif.Photo.ApertureValue", "Exif.Image.ApertureValue"}, //exif keys
-                           {}, //xmp keys
+                           {"Exif.Photo.ApertureValue", "Exif.Image.ApertureValue", "Exif.Image.FNumber"}, //exif keys
+                           {"Xmp.exif.ApertureValue", "Xmp.exif.FNumber"}, //xmp keys
                            {}, //iptc keys
                        }, aperture);
+        Exiv2::Rational actualFocus;
+        test_all_metas({
+                           {"Exif.Photo.FocalLength", "Exif.Image.FocalLength"}, //exif keys
+                           {"Xmp.exif.FocalLength"}, //xmp keys
+                           {}, //iptc keys
+                       }, actualFocus);
+        RationalArray lensSpec;
+        test_all_metas({
+                           {"Exif.Photo.LensSpecification", "Exif.Image.LensSpecification"}, //exif keys
+                           {}, //xmp keys
+                           {}, //iptc keys
+                       }, lensSpec);
+        if (!lensSpec.size())
+        {
+            std::vector<uint16_t> sf;
+            test_all_metas({
+                               {"Exif.CanonCs.Lens"}, //exif keys
+                               {}, //xmp keys
+                               {}, //iptc keys
+                           }, sf);
+            if (sf.size() == 3)
+            {
+                lensSpec.push_back({sf.at(1), sf.at(2)});
+            }
+        }
+        if (lensSpec.size())
+            optZoom = toDouble(div(actualFocus, lensSpec.at(0)));
     }
 }

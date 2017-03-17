@@ -2,6 +2,7 @@
 
 #include "utils/inst_once.h"
 #include <QString>
+#include <type_traits>
 #include <QImage>
 #include <map>
 #include <mutex>
@@ -9,34 +10,126 @@
 #include <stdint.h>
 #include <tuple>
 #include <algorithm>
-
+#include <exiv2/exiv2.hpp>
+#include <stdint.h>
 
 namespace imaging
 {
     using image_buffer_ptr = std::shared_ptr<QImage>;
 
     //helpers to work with libexiv2
-    namespace exiv2_helpers {
+    namespace exiv2_helpers
+    {
+        using RationalArray  = std::vector<Exiv2::Rational>;
+        using URationalArray = std::vector<Exiv2::URational>;
+
+        template <typename T>       struct isvector:std::false_type{};
+        template <typename... Args> struct isvector<std::vector<Args...>>:std::true_type{};
+
+        template <typename T>       struct ispair:std::false_type{};
+        template <typename... Args> struct ispair<std::pair<Args...>>:std::true_type{};
+
+        inline double toDouble(const Exiv2::Rational& v)
+        {
+            return v.first / v.second;
+        }
+
+        inline double toDouble(const Exiv2::URational& v)
+        {
+            return v.first / v.second;
+        }
+
+        inline Exiv2::Rational div(const Exiv2::Rational& up, const Exiv2::Rational& down)
+        {
+            Exiv2::Rational res;
+            res.first  = up.first * down.second;
+            res.second = up.second * down.first;
+            return res;
+        }
+
         using keys_t = std::vector<std::string>;
         template <class T, class R>
-        void meta_value(const R& src, T& result);
+        void meta_value(const R& src, T& result, long index);
 
         template <class T, class R>
-        void meta_value(const R& src, std::string& res)
+        void meta_value(const R& src, std::string& res, long index = 0)
         {
-            res = src.toString();
+            res = src.toString(index);
         }
 
         template <class T, class R>
-        void meta_value(const R& src, long& res)
+        void meta_value(const R& src, long& res, long index = 0)
         {
-            res = src.toLong();
+            res = src.toLong(index);
         }
 
         template <class T, class R>
-        void meta_value(const R& src, float& res)
+        void meta_value(const R& src, int16_t& res, long index = 0)
         {
-            res = src.toFloat();
+            res = 0xFFFF & src.toLong(index);
+        }
+
+        template <class T, class R>
+        void meta_value(const R& src, uint16_t& res, long index = 0)
+        {
+            res = 0xFFFF & src.toLong(index);
+        }
+
+        template <class T, class R>
+        void meta_value(const R& src, float& res, long index = 0)
+        {
+            res = src.toFloat(index);
+        }
+
+        template <class T, class R>
+        void meta_value(const R& src, double& res, long index = 0)
+        {
+            res = static_cast<double>(src.toFloat(index));
+        }
+
+        template <class T, class R>
+        void meta_value(const R& src, Exiv2::Rational& res, long index = 0)
+        {
+            res = src.toRational(index);
+        }
+
+        template <class T, class R>
+        void meta_value(const R& src, Exiv2::URational& res, long index = 0)
+        {
+            auto tmp   = src.toRational(index);
+            res.first  = static_cast<Exiv2::URational::first_type>(tmp.first);
+            res.second = static_cast<Exiv2::URational::second_type>(tmp.second);
+        }
+
+        template <class T>
+        typename std::enable_if<std::is_fundamental<T>::value, size_t>::type
+        getTypeSize()
+        {
+            return sizeof (T);
+        }
+
+        template <class T>
+        typename std::enable_if<ispair<T>::value, size_t>::type getTypeSize()
+        {
+            return sizeof (typename T::first_type) + sizeof (typename T::second_type);
+        }
+
+        template <class Vec, class R, class T = typename std::enable_if<isvector<Vec>::value, typename Vec::value_type>::type>
+        void meta_value(const R& src, Vec& res)
+        {
+            const long sz = src.count();
+            const size_t typesz = getTypeSize<T>();
+            const size_t srcsz  = static_cast<decltype(srcsz)>(src.size() / sz);
+            if (typesz != srcsz)
+                throw std::runtime_error("Invalid type compiled for the field stored.");
+
+            res.reserve(sz);
+            for (long i = 0; i < sz; ++i)
+            {
+                T tmp;
+                meta_value<T>(src, tmp, i);
+                res.push_back(tmp);
+            }
         }
 
         template<class T, class R>
@@ -70,9 +163,9 @@ namespace imaging
     {
         meta_t();
         long  iso;
-        float exposure;
-        float aperture;
-
+        Exiv2::URational exposure;
+        Exiv2::URational aperture;
+        double optZoom;
         QString getStringValue() const;
         void load(const QString& fileName);
     };
