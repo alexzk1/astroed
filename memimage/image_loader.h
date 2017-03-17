@@ -35,6 +35,9 @@ namespace imaging
             typename std::enable_if<ispair<T>::value, double>::type
             toDouble(const T& v)
             {
+                if (v.second == 0)
+                    return 0; //resolving x/0 as 0
+
                 return v.first / v.second;
             }
 

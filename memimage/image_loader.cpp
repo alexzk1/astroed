@@ -229,6 +229,7 @@ void meta_t::load(const QString &fileName)
                            {}, //xmp keys
                            {}, //iptc keys
                        }, lensSpec);
+
         if (!lensSpec.size())
         {
             std::vector<uint16_t> sf;
