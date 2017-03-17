@@ -29,19 +29,18 @@ namespace imaging
         template <typename T>       struct ispair:std::false_type{};
         template <typename... Args> struct ispair<std::pair<Args...>>:std::true_type{};
 
-        inline double toDouble(const Exiv2::Rational& v)
+        template <class T>
+        typename std::enable_if<ispair<T>::value, double>::type
+        toDouble(const T& v)
         {
             return v.first / v.second;
         }
 
-        inline double toDouble(const Exiv2::URational& v)
+        template <class T>
+        typename std::enable_if<ispair<T>::value, T>::type
+        div(const T& up, const T& down)
         {
-            return v.first / v.second;
-        }
-
-        inline Exiv2::Rational div(const Exiv2::Rational& up, const Exiv2::Rational& down)
-        {
-            Exiv2::Rational res;
+            T res;
             res.first  = up.first * down.second;
             res.second = up.second * down.first;
             return res;
