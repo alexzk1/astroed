@@ -29,23 +29,25 @@ namespace imaging
         template <typename T>       struct ispair:std::false_type{};
         template <typename... Args> struct ispair<std::pair<Args...>>:std::true_type{};
 
-        template <class T>
-        typename std::enable_if<ispair<T>::value, double>::type
-        toDouble(const T& v)
+        namespace exiv_rationals
         {
-            return v.first / v.second;
-        }
+            template <class T>
+            typename std::enable_if<ispair<T>::value, double>::type
+            toDouble(const T& v)
+            {
+                return v.first / v.second;
+            }
 
-        template <class T>
-        typename std::enable_if<ispair<T>::value, T>::type
-        div(const T& up, const T& down)
-        {
-            T res;
-            res.first  = up.first * down.second;
-            res.second = up.second * down.first;
-            return res;
+            template <class T>
+            typename std::enable_if<ispair<T>::value, T>::type
+            div(const T& up, const T& down) // = up/down
+            {
+                T res;
+                res.first  = up.first * down.second;
+                res.second = up.second * down.first;
+                return res;
+            }
         }
-
         using keys_t = std::vector<std::string>;
         template <class T, class R>
         void meta_value(const R& src, T& result, long index);

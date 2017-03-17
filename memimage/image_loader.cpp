@@ -174,7 +174,7 @@ meta_t::meta_t():
 
 QString meta_t::getStringValue() const //should prepare human readable value
 {
-    using namespace exiv2_helpers;
+    using namespace exiv2_helpers::exiv_rationals;
     return QString("ISO: %1\nExposure: %2 s\nAperture: %3 mm\nOptical Zoom: x%4")
             .arg(iso)
             .arg(toDouble(exposure), 0, 'f', 2)
@@ -243,6 +243,6 @@ void meta_t::load(const QString &fileName)
             }
         }
         if (lensSpec.size())
-            optZoom = toDouble(div(actualFocus, lensSpec.at(0)));
+            optZoom = exiv_rationals::toDouble(exiv_rationals::div(actualFocus, lensSpec.at(0)));
     }
 }
