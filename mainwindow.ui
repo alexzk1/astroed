@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>911</width>
-    <height>601</height>
+    <height>645</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -34,28 +34,93 @@
        <attribute name="title">
         <string>File System</string>
        </attribute>
-       <layout class="QVBoxLayout" name="verticalLayout_2">
+       <layout class="QVBoxLayout" name="verticalLayout_5">
         <item>
          <widget class="QSplitter" name="splitter">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
-          <widget class="QTreeView" name="dirsTree">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-             <horstretch>1</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="sortingEnabled">
-            <bool>true</bool>
-           </property>
-           <attribute name="headerHighlightSections">
-            <bool>true</bool>
-           </attribute>
-           <attribute name="headerShowSortIndicator" stdset="0">
-            <bool>true</bool>
-           </attribute>
+          <widget class="QWidget" name="layoutWidget">
+           <layout class="QVBoxLayout" name="verticalLayout_2">
+            <property name="spacing">
+             <number>0</number>
+            </property>
+            <item>
+             <widget class="QWidget" name="treeBtnsHost" native="true">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                <horstretch>0</horstretch>
+                <verstretch>1</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+              <layout class="QHBoxLayout" name="horizontalLayout">
+               <property name="spacing">
+                <number>7</number>
+               </property>
+               <property name="leftMargin">
+                <number>5</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>5</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item>
+                <widget class="QToolButton" name="btnRecurseList">
+                 <property name="toolTip">
+                  <string>Recurse read (list subfolders).</string>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                 <property name="icon">
+                  <iconset resource="resources.qrc">
+                   <normaloff>:/icons/icons/spiral-icon.png</normaloff>:/icons/icons/spiral-icon.png</iconset>
+                 </property>
+                 <property name="iconSize">
+                  <size>
+                   <width>24</width>
+                   <height>24</height>
+                  </size>
+                 </property>
+                 <property name="checkable">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QTreeView" name="dirsTree">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+                <horstretch>1</horstretch>
+                <verstretch>19</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="sortingEnabled">
+               <bool>true</bool>
+              </property>
+              <attribute name="headerHighlightSections">
+               <bool>true</bool>
+              </attribute>
+              <attribute name="headerShowSortIndicator" stdset="0">
+               <bool>true</bool>
+              </attribute>
+             </widget>
+            </item>
+           </layout>
           </widget>
           <widget class="CustomTableView" name="previewsTable">
            <property name="sizePolicy">
@@ -112,7 +177,7 @@
              <x>0</x>
              <y>0</y>
              <width>844</width>
-             <height>456</height>
+             <height>500</height>
             </rect>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_4">

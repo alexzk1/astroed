@@ -5,7 +5,7 @@
 #include <QApplication>
 #include <QItemSelectionModel>
 #include <QSortFilterProxyModel>
-
+#include <QToolButton>
 #include <QStatusBar>
 #include <QTimer>
 #include <QFileInfo>
@@ -115,7 +115,6 @@ MainWindow::MainWindow(QWidget *parent) :
     timer->start(2000);
 
     ui->scrollAreaZoom->installEventFilter(this);
-
 }
 
 MainWindow::~MainWindow()
@@ -155,7 +154,7 @@ QLabel &MainWindow::openPreviewTab(const QSize& maxSize, const QString& fileName
     const auto txt = (fileName.isEmpty())? "":QString(tr("File: %1")).arg(QFileInfo(fileName).fileName());
     ui->tabsWidget->setCurrentWidget(ui->tabZoomed);
     ui->scrollAreaZoom->setMaxZoom(maxSize);
-    qDebug()  <<"openPreviewTab()";
+    //qDebug()  <<"openPreviewTab()";
     fileNameLabel->setText(txt);
     return *ui->lblZoomPix;
 }
@@ -171,7 +170,7 @@ void MainWindow::resetPreview()
     ui->scrollAreaZoom->zoomFitWindow();
     ui->scrollAreaZoom->ensureVisible(0,0);
 
-    qDebug()  <<"resetPreview()";
+    //qDebug()  <<"resetPreview()";
 }
 
 void MainWindow::changeEvent(QEvent *e)
@@ -227,7 +226,7 @@ bool MainWindow::eventFilter(QObject *src, QEvent *e)
                 if (dele->showLastClickedPreview(s, false))
                 {
                     previewShift = s;
-                    qDebug() << "set shift "<<s;
+                    //qDebug() << "set shift "<<s;
                 }
                 return true;
             }
@@ -263,15 +262,15 @@ void MainWindow::recurseRead(QSettings &settings, QObject *object)
         showNormal();
     this->ui->actionNewtone->setChecked(settings.value("newtone", false).toBool()); //load prior dir, so skip unneeded files list
     auto s = settings.value("LastDirSelection", QDir::homePath()).toString();
-    qDebug() << "Read: "<<s;
+    //qDebug() << "Read: "<<s;
     selectPath(s);
 
 }
 
 void MainWindow::currentDirChanged(const QString &dir)
 {
-    qDebug() << "currentDirChanged: " << dir;
-    previewsModel->setCurrentFolder(dir, true);
+    //qDebug() << "currentDirChanged: " << dir;
+    previewsModel->setCurrentFolder(dir, ui->btnRecurseList->isChecked());
 }
 
 QString MainWindow::getSelectedFolder()
@@ -302,13 +301,21 @@ void MainWindow::setupFsBrowsing()
     ui->dirsTree->hideColumn(2);
     ui->dirsTree->hideColumn(3);
 
-    connect(ui->dirsTree->selectionModel(), &QItemSelectionModel::currentChanged, this, [this](auto p1, auto p2)
+    ui->treeBtnsHost->layout()->setAlignment(Qt::AlignLeft);
+
+    const std::shared_ptr<QString> lastFolder(new QString());
+    connect(ui->dirsTree->selectionModel(), &QItemSelectionModel::currentChanged, this, [this, lastFolder](auto p1, auto p2)
     {
         Q_UNUSED(p2);
         if (p1.isValid() && dirsModel)
         {
-            this->currentDirChanged(dirsModel->data(p1, QFileSystemModel::FilePathRole).toString());
+            *lastFolder = dirsModel->data(p1, QFileSystemModel::FilePathRole).toString();
+            this->currentDirChanged(*lastFolder);
         }
+    }, Qt::QueuedConnection);
+
+    connect(ui->btnRecurseList, &QToolButton::clicked, this, [this, lastFolder](){
+        this->currentDirChanged(*lastFolder);
     }, Qt::QueuedConnection);
 }
 
