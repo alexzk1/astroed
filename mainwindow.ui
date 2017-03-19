@@ -203,6 +203,12 @@
         </item>
        </layout>
       </widget>
+      <widget class="QWidget" name="tabScript">
+       <attribute name="title">
+        <string>Script</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout_6"/>
+      </widget>
      </widget>
     </item>
    </layout>

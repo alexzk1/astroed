@@ -11,6 +11,7 @@
 #include <QFileInfo>
 #include <QHeaderView>
 #include "clickablelabel.h"
+#include "editor/luaeditor.h"
 
 const static auto ZOOMING_KB_VALUE = 2 * ScrollAreaPannable::WheelStep;
 
@@ -115,6 +116,7 @@ MainWindow::MainWindow(QWidget *parent) :
     timer->start(2000);
 
     ui->scrollAreaZoom->installEventFilter(this);
+    ui->tabScript->layout()->addWidget(new LuaEditor(this));
 }
 
 MainWindow::~MainWindow()

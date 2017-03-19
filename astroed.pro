@@ -47,6 +47,7 @@ include($$PWD/utils/utils.pri)
 include($$PWD/memimage/memimage.pri)
 include($$PWD/logic/bl.pri)
 include($$PWD/singleapp/singleapplication.pri)
+include($$PWD/editor/codeeditor.pri)
 
 DEFINES += QAPPLICATION_CLASS=QApplication
 
