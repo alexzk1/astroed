@@ -43,7 +43,6 @@ public:
 
     virtual ~PreviewsModel();
 private:
-    QString lastFolderSet;
     using files_t  = std::vector<QFileInfo>;
     using mfiles_t = std::vector<PreviewsModelData>;
 

@@ -74,6 +74,7 @@ const static std::vector<fileroles_t> fileRoles =
 
 
 
+
 //if you change order in arrays here, something below may break bcs assumes fixed index
 //PreviewsModel::guessDarks() relays on it
 const static std::vector<sectiondescr_t> captions =
@@ -106,6 +107,18 @@ const static QStringList supportedExt =
     "xbm",
     "xpm"
 };
+
+template <class T>
+bool isDark(const T& path)
+{
+    //words filter to guess darks
+    const static std::vector<QString> termsDark = {
+        //use lowercase here
+        "dark",
+    };
+    auto src = utility::toLower(path);
+    return utility::strcontains(src, termsDark);
+}
 
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------MODEL-------------------------------------------------------------------------------------------------
@@ -363,23 +376,15 @@ bool PreviewsModel::setData(const QModelIndex &index, const QVariant &value, int
     return changed;
 }
 
+
 void PreviewsModel::guessDarks()
 {
-    using namespace utility;
     //trying to guess dark frames according to path name, which should contain "dark" word
-    const static std::vector<QString> terms = {
-        //use lowercase here
-        "dark",
-    };
-
     for (int row = 0, size = rowCount(); row < size; ++row)
     {
         const auto& itm = modelFiles.at(static_cast<size_t>(row));
-        auto src = toLower(itm.getFilePath());
-        if (strcontains(src, terms))
-        {
+        if (isDark(itm.getFilePath()))
             setData(index(row, 2), 2, Qt::EditRole);
-        }
     }
 }
 
@@ -418,23 +423,43 @@ void PreviewsModel::setCurrentFolder(const QString &path, bool recursive)
     loadPreviews.reset();
     listFiles.reset();
 
-    lastFolderSet = path;
-
     listFiles = utility::startNewRunner([this, path, recursive](auto stop)
     {
+        using namespace utility;
         std::vector<QFileInfo> pathes;
+        std::vector<QString>  subfolders;
+        subfolders.reserve(50);
         pathes.reserve(500);
+        QDir dir(path);
+        const auto absPath = dir.absolutePath();
 
-        QDir dir(path, QString(), QDir::Name | QDir::IgnoreCase, QDir::Files);
-        QDirIterator it(dir.absolutePath(), filter, QDir::Files, (recursive)?QDirIterator::Subdirectories:QDirIterator::NoIteratorFlags);
+        //if not recursive we still must add "darks" recursive
+        if (!recursive)
+        {
+            QDirIterator directories(absPath, QDir::Dirs | QDir::NoSymLinks | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+            while(directories.hasNext())
+            {
+                directories.next();
+                subfolders.push_back(directories.filePath());
+            }
+        }
+
+        QDirIterator it(absPath, filter, QDir::Files, QDirIterator::Subdirectories);
         while (it.hasNext() && !(*stop))
         {
             it.next();
             if (!it.fileInfo().isDir())
-                pathes.push_back(QFileInfo(it.filePath()));
+            {
+                bool push = recursive;
+                if (!push)
+                    push = !strcontains(it.filePath(), subfolders) || isDark(it.filePath());
+
+                if (push)
+                    pathes.push_back(QFileInfo(it.filePath()));
+            }
 
             if (pathes.capacity() - 5 < pathes.size())
-                pathes.reserve(pathes.capacity() + 50);
+                pathes.reserve(static_cast<size_t>(pathes.capacity() * 1.25 + 10));
         }
 
         if (*stop)
