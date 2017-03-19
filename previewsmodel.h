@@ -32,6 +32,7 @@ public:
     // Editable:
     bool setData(const QModelIndex &index, const QVariant &value,
                  int role = Qt::EditRole) override;
+    void guessDarks();
 
     Qt::ItemFlags flags(const QModelIndex& index) const override;
 
@@ -42,6 +43,7 @@ public:
 
     virtual ~PreviewsModel();
 private:
+    QString lastFolderSet;
     using files_t  = std::vector<QFileInfo>;
     using mfiles_t = std::vector<PreviewsModelData>;
 

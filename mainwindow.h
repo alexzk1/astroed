@@ -43,6 +43,8 @@ protected:
 private slots:
     void on_tabsWidget_currentChanged(int index);
     void on_actionNewtone_toggled(bool checked);
+    void on_actionGuess_Darks_triggered();
+
 private:
     Ui::MainWindow *ui;
     QPointer<QFileSystemModel> dirsModel;

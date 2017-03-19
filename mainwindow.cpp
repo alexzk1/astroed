@@ -327,3 +327,9 @@ void MainWindow::on_actionNewtone_toggled(bool checked)
     if (!lastFolder.isEmpty())
         currentDirChanged(lastFolder);
 }
+
+void MainWindow::on_actionGuess_Darks_triggered()
+{
+    if (previewsModel)
+        previewsModel->guessDarks();
+}

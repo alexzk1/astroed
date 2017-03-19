@@ -228,6 +228,7 @@
     <bool>false</bool>
    </attribute>
    <addaction name="actionNewtone"/>
+   <addaction name="actionGuess_Darks"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <action name="actionNewtone">
@@ -243,6 +244,18 @@
    </property>
    <property name="toolTip">
     <string>Assumes pictures made by newtone (mirrored).</string>
+   </property>
+  </action>
+  <action name="actionGuess_Darks">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/icons/dark.png</normaloff>:/icons/icons/dark.png</iconset>
+   </property>
+   <property name="text">
+    <string>Guess Darks</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Trying to guess darks using file path (should contain word like &amp;quot;dark&amp;quot;, works with current list).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
  </widget>

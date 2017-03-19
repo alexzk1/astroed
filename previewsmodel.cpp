@@ -27,6 +27,9 @@
 #include <queue>
 
 #include "utils/no_const.h"
+#include "utils/strutils.h"
+#include "utils/cont_utils.h"
+
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------CONFIG------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
@@ -61,6 +64,7 @@ struct fileroles_t
 };
 
 //order is important here, lua-generator below relays on it
+//PreviewsModel::guessDarks() relays on it
 const static std::vector<fileroles_t> fileRoles =
 {
     {QObject::tr("Stack source"), 0}, //must be 1st (1st will be set as default)
@@ -71,6 +75,7 @@ const static std::vector<fileroles_t> fileRoles =
 
 
 //if you change order in arrays here, something below may break bcs assumes fixed index
+//PreviewsModel::guessDarks() relays on it
 const static std::vector<sectiondescr_t> captions =
 {
     {QObject::tr("Preview"),   DelegateMode::IMAGE_PREVIEW,  QObject::tr("Click to zoom"),                   create_widget_t_defimpl, QVariant()},
@@ -358,13 +363,33 @@ bool PreviewsModel::setData(const QModelIndex &index, const QVariant &value, int
     return changed;
 }
 
+void PreviewsModel::guessDarks()
+{
+    using namespace utility;
+    //trying to guess dark frames according to path name, which should contain "dark" word
+    const static std::vector<QString> terms = {
+        //use lowercase here
+        "dark",
+    };
+
+    for (int row = 0, size = rowCount(); row < size; ++row)
+    {
+        const auto& itm = modelFiles.at(static_cast<size_t>(row));
+        auto src = toLower(itm.getFilePath());
+        if (strcontains(src, terms))
+        {
+            setData(index(row, 2), 2, Qt::EditRole);
+        }
+    }
+}
+
 Qt::ItemFlags PreviewsModel::flags(const QModelIndex &index) const
 {
     QFlags<Qt::ItemFlag> res = Qt::NoItemFlags;
 
     if (index.isValid())
     {
-        auto mode = captions.at(index.column()).mode;
+        auto mode = captions.at(static_cast<size_t>(index.column())).mode;
         if (mode == DelegateMode::CHECKBOX)
             res = Qt::ItemIsUserCheckable;
         else
@@ -393,7 +418,7 @@ void PreviewsModel::setCurrentFolder(const QString &path, bool recursive)
     loadPreviews.reset();
     listFiles.reset();
 
-
+    lastFolderSet = path;
 
     listFiles = utility::startNewRunner([this, path, recursive](auto stop)
     {
@@ -459,8 +484,10 @@ void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list, const util
     //            return !SectionDescr::keepInList(v);
     //        }), modelFiles.end());
     //    modelFiles.reserve(modelFiles.size() + list.size());
+
     modelFiles.clear();
     modelFiles.reserve(list.size());
+
 
     if (!*stop)
         sort_files();

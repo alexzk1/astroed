@@ -152,6 +152,13 @@ namespace utility
         return src;
     }
 
+#ifdef QT_CORE_LIB
+    inline QString toLower(const QString& src)
+    {
+        return src.toLower();
+    }
+#endif
+
     inline bool endsWith (std::string const &fullString, std::string const &ending)
     {
         if (fullString.length() >= ending.length())
@@ -165,6 +172,30 @@ namespace utility
     {
         size_t lastindex = fileName.find_last_of(".");
         return fileName.substr(0, lastindex);
+    }
+
+#ifdef QT_CORE_LIB
+    inline bool strcontains(const QString& src, const QString& what)
+    {
+        return src.contains(what);
+    }
+#endif
+
+    inline bool strcontains(const std::string& src, const std::string& what)
+    {
+        return std::string::npos != src.find(what);
+    }
+
+    //check if src string contains one of substrings listed in what
+    template <class T>
+    bool strcontains(const T& src, const std::vector<T>& what)
+    {
+        for (const auto& w : what)
+        {
+            if (strcontains(src, w))
+                return true;
+        }
+        return false;
     }
 }
 #endif // STDSTRINGFMT_H

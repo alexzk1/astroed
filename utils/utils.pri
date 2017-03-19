@@ -8,7 +8,8 @@ HEADERS += \
     $$PWD/saveable_widget.h \
     $$PWD/runners.h \
     $$PWD/fatal_err.h \
-    $$PWD/no_const.h
+    $$PWD/no_const.h \
+    $$PWD/cont_utils.h
 
 SOURCES += \
     $$PWD/memsize.cpp
