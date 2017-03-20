@@ -4,7 +4,7 @@
 
 LuaLexer::LuaLexer(QObject *parent, const std::vector<CppExport> &exports):
     QsciLexerLua(parent),
-    lastJoinedApis()
+    lastJoinedApis(genExportedKw(exports))
 {
     installCppExports(exports);
 
@@ -46,19 +46,12 @@ void LuaLexer::installCppExports(const std::vector<CppExport> &exports)
         for (const auto& f : tmp)
             apis->add(f);
 
-        std::vector<std::string> lastApis;
         for (const auto& f : exports)
         {
             auto s = f.buildApiText();
             apis->add(s);
-            lastApis.push_back(f.funcName.toStdString());
         }
         apis->prepare();
-
-
-        std::stringstream res;
-        std::copy(lastApis.begin(), lastApis.end(), std::ostream_iterator<std::string>(res, " "));
-        lastJoinedApis = res.str();
     }
 }
 
@@ -142,6 +135,16 @@ QFont LuaLexer::defaultFont(int style) const
 int LuaLexer::blockLookback() const
 {
     return 200;
+}
+
+std::string LuaLexer::genExportedKw(const std::vector<CppExport> &exports)
+{
+    std::vector<std::string> lastApis;
+    for (const auto& f : exports)
+        lastApis.push_back(f.funcName.toStdString());
+    std::stringstream res;
+    std::copy(lastApis.begin(), lastApis.end(), std::ostream_iterator<std::string>(res, " "));
+    return res.str();
 }
 
 const char *LuaLexer::blockStartKeyword(int *style) const

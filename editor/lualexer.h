@@ -38,9 +38,10 @@ protected:
     virtual const char* blockEnd(int* style = 0)const override;
     virtual int  blockLookback() const override;
 private:
+    static std::string genExportedKw(const std::vector<CppExport>& exports);
     void installCppExports(const std::vector<CppExport>& exports);
     QStringList getAllKeywords() const;
-    std::string lastJoinedApis;
+    const std::string lastJoinedApis;
 };
 
 using LuaLexerPtr = std::shared_ptr<LuaLexer>;
