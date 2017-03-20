@@ -4,8 +4,6 @@
 #include <memory>
 #include "lualexer.h"
 
-using LuaLexerPtr = std::shared_ptr<QsciLexerLua>;
-
 class LuaEditor : public QsciScintilla
 {
     Q_OBJECT
@@ -35,7 +33,6 @@ private:
     void setCurrentFile(const QString &file);
     QString getStrippedName(const QString &fullPath);
     QString getCurrentFile();
-
 };
 
 #endif // LUAEDITOR_H

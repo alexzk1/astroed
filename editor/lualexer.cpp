@@ -5,6 +5,11 @@ LuaLexer::LuaLexer(QObject *parent):
     QsciLexerLua(parent)
 
 {
+    setFoldCompact(false);
+    //setAutoIndentStyle(QsciScintilla::AiOpening | QsciScintilla::AiClosing);
+    //setAutoIndentStyle(QsciScintilla::AiClosing);
+    //setAutoIndentStyle(QsciScintilla::AiMaintain);
+    setAutoIndentStyle(0); //block structured
 }
 
 QStringList LuaLexer::getAllKeywords() const
@@ -36,15 +41,15 @@ void LuaLexer::installKeywordsToAutocomplete() const
 const char *LuaLexer::keywords(int set) const
 {
     if (set == 1)
-            // Keywords.
-            return
-                "and break do else elseif end false for function if "
-                "in local nil not or repeat return then true until "
+        // Keywords.
+        return
+                "and break do else elseif end for function if "
+                "in local not or repeat return then until "
                 "while";
 
-        if (set == 2)
-            // Basic functions.
-            return
+    if (set == 2)
+        // Basic functions.
+        return
                 "_ALERT _ERRORMESSAGE _INPUT _PROMPT _OUTPUT _STDERR "
                 "_STDIN _STDOUT call dostring getn "
                 "globals newtype rawget rawset require sort "
@@ -52,11 +57,11 @@ const char *LuaLexer::keywords(int set) const
                 "G getfenv getmetatable ipairs loadlib next pairs "
                 "pcall rawegal rawget rawset require setfenv "
                 "setmetatable xpcall string table math coroutine io "
-                "os debug";
+                "os print tostring tonumber";
 
-        if (set == 3)
-            // String, table and maths functions.
-            return
+    if (set == 3)
+        // String, table and maths functions.
+        return
                 "abs acos asin atan atan2 ceil cos deg exp floor "
                 "format frexp gsub ldexp log log10 max min mod rad "
                 "random randomseed sin sqrt strbyte strchar strfind "
@@ -73,9 +78,9 @@ const char *LuaLexer::keywords(int set) const
                 "math.min math.mod math.pi math.rad math.random "
                 "math.randomseed math.sin math.sqrt math.tan";
 
-        if (set == 4)
-            // Coroutine, I/O and system facilities.
-            return
+    if (set == 4)
+        // Coroutine, I/O and system facilities.
+        return
                 "openfile closefile readfrom writeto appendto remove "
                 "rename flush seek tmpfile tmpname read write clock "
                 "date difftime execute exit getenv setlocale time "
@@ -86,7 +91,102 @@ const char *LuaLexer::keywords(int set) const
                 "io.tmpfile io.type io.write io.stdin io.stdout "
                 "io.stderr os.clock os.date os.difftime os.execute "
                 "os.exit os.getenv os.remove os.rename os.setlocale "
-                "os.time os.tmpname print";
-
-        return nullptr;
+                "os.time os.tmpname";
+    if (set == 5)
+        return "self true false nil";
+    return nullptr;
 }
+
+QFont LuaLexer::defaultFont(int style) const
+{
+    auto f = QsciLexerLua::defaultFont(style);
+    if (f.pointSize() < 12)
+        f.setPointSize(12);
+    if (style == KeywordSet5 || style == KeywordSet6)
+        f.setItalic(true);
+
+    if (style == Keyword)
+        f.setBold(true);
+
+    return f;
+}
+
+int LuaLexer::blockLookback() const
+{
+        return 200;
+}
+
+const char *LuaLexer::blockStartKeyword(int *style) const
+{
+    //this is should be list which starts 1-line block like
+    //while () ;
+    //in C++, it is 1 line block, absent in lua such
+    if (style)
+           *style = Keyword;
+    return nullptr;
+}
+
+const char *LuaLexer::blockStart(int *style) const
+{
+    if (style)
+           *style = Keyword;
+    return "do then else function";
+}
+
+const char *LuaLexer::blockEnd(int *style) const
+{
+    if (style)
+           *style = Keyword;
+    return "end";
+}
+
+QColor LuaLexer::defaultPaper(int style) const
+{
+    return QsciLexer::defaultPaper(style);
+}
+
+// Returns the foreground colour of the text for a style.
+QColor LuaLexer::defaultColor(int style) const
+{
+
+    switch (style)
+    {
+        case Default:
+            return QColor(0x00,0x00,0x00);
+
+        case Comment:
+        case LineComment:
+            return QColor(0x00,0x7f,0x00);
+
+        case Number:
+            return QColor(0x00,0x7f,0x7f);
+
+        case KeywordSet5:
+            return QColor(0x4b,0x00,0x82);
+
+        case KeywordSet6: //this is reserved set for C++ exported API
+            return QColor(0x30,0xD5,0xC8);
+
+        case Keyword:
+        case BasicFunctions:
+        case StringTableMathsFunctions:
+        case CoroutinesIOSystemFacilities:
+            return QColor(0x00,0x00,0x7f);
+
+        case String:
+        case Character:
+        case LiteralString:
+            return QColor(0x7f,0x00,0x7f);
+
+        case Preprocessor:
+        case Label:
+            return QColor(0x7f,0x7f,0x00);
+        case Identifier:
+        case Operator:
+            break;
+
+    }
+
+    return QsciLexer::defaultColor(style);
+}
+

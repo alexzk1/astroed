@@ -18,23 +18,25 @@ LuaEditor::LuaEditor(QWidget *parent, const LuaLexerPtr &lexer):
     setLexer(lexer.get());
 
     setAutoCompletionSource(QsciScintilla::AcsAll);
-    setAutoCompletionCaseSensitivity(true);
+    setAutoCompletionCaseSensitivity(false);
     setAnnotationDisplay(AnnotationDisplay::AnnotationStandard);
     setAutoCompletionFillupsEnabled(true);
     setAutoCompletionReplaceWord(true);
     setAutoCompletionThreshold(2);
     setAutoCompletionUseSingle(AutoCompletionUseSingle::AcusExplicit);
-
+    setCallTipsStyle(CallTipsStyle::CallTipsNoContext);
     setUtf8(true);
+
     setMarginLineNumbers(1, true);
     setMarginWidth(1, 35);
+
     setTabIndents(true);
     setIndentationGuides(true);
-    setIndentationsUseTabs(true);
+    setIndentationsUseTabs(false);
     setAutoIndent(true);
-
     setBackspaceUnindents(true);
     setTabWidth(4);
+
     setFolding(QsciScintilla::BoxedTreeFoldStyle);
     setBraceMatching(QsciScintilla::StrictBraceMatch);
 
@@ -45,27 +47,16 @@ LuaEditor::LuaEditor(QWidget *parent, const LuaLexerPtr &lexer):
     {
         setWindowModified(isModified());
     }, Qt::QueuedConnection);
+
+    //disconnect(this,SIGNAL(SCN_CHARADDED(int)));
+    //connect(this,SIGNAL(SCN_CHARADDED(int)), SLOT(handleCharAdded(int)));
 }
 
 LuaLexerPtr LuaEditor::createLuaLexer()
 {
-    LuaLexer* p;
-    LuaLexerPtr lexer(p = new LuaLexer());
-
-    lexer->setFoldCompact(false);
+    LuaLexerPtr lexer(new LuaLexer());
     lexer->setAPIs(new QsciAPIs(lexer.get()));
-    p->installKeywordsToAutocomplete();
-
-   // lexer->setAutoIndentStyle(1);
-//        lexer->setColor(QColor(128, 128, 255), 5);
-//        lexer->setColor(QColor(0, 220, 0), 1);
-//        lexer->setColor(QColor(0, 220, 0), 2);
-//        lexer->setColor(QColor(Qt::red), 6);
-//        lexer->setColor(QColor(Qt::red), 8);
-//        lexer->setColor(QColor(255, 128, 0), 13);
-//        lexer->setColor(QColor(51, 102, 255), 15);
-//        lexer->setColor(QColor(72, 61, 139), 10);
-    //    lexer->setFont(QFont("Courier New", 11, QFont::Bold));
+    lexer->installKeywordsToAutocomplete();
 
     return lexer;
 }
