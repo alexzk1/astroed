@@ -48,24 +48,17 @@ LuaEditor::LuaEditor(QWidget *parent, const LuaLexerPtr &lexer):
         setWindowModified(isModified());
     }, Qt::QueuedConnection);
 
-    //disconnect(this,SIGNAL(SCN_CHARADDED(int)));
-    //connect(this,SIGNAL(SCN_CHARADDED(int)), SLOT(handleCharAdded(int)));
 }
 
-LuaLexerPtr LuaEditor::createLuaLexer()
+LuaLexerPtr LuaEditor::createSharedLuaLexer(const std::vector<CppExport> &exports)
 {
-    LuaLexerPtr lexer(new LuaLexer());
-    lexer->setAPIs(new QsciAPIs(lexer.get()));
-    lexer->installKeywordsToAutocomplete();
-
-    return lexer;
+    getSharedLexer().reset(new LuaLexer(nullptr, exports));
+    return getSharedLexer();
 }
 
-LuaLexerPtr LuaEditor::getSharedLexer()
+LuaLexerPtr& LuaEditor::getSharedLexer()
 {
     static LuaLexerPtr sharedLexer(nullptr);
-    if (!sharedLexer)
-        sharedLexer = createLuaLexer();
     return sharedLexer;
 }
 

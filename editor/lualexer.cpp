@@ -1,10 +1,13 @@
 #include "lualexer.h"
 #include <QString>
+#include <sstream>
 
-LuaLexer::LuaLexer(QObject *parent):
-    QsciLexerLua(parent)
-
+LuaLexer::LuaLexer(QObject *parent, const std::vector<CppExport> &exports):
+    QsciLexerLua(parent),
+    lastJoinedApis()
 {
+    installCppExports(exports);
+
     setFoldCompact(false);
     //setAutoIndentStyle(QsciScintilla::AiOpening | QsciScintilla::AiClosing);
     //setAutoIndentStyle(QsciScintilla::AiClosing);
@@ -26,15 +29,36 @@ QStringList LuaLexer::getAllKeywords() const
     return res;
 }
 
-void LuaLexer::installKeywordsToAutocomplete() const
+void LuaLexer::installCppExports(const std::vector<CppExport> &exports)
 {
     auto apis = qobject_cast<QsciAPIs*>(this->apis());
+    if (apis)
+    {
+        setAPIs(nullptr);
+        delete apis;
+    }
+    //once prepared, nothing can be added it seems
+    setAPIs(apis = new QsciAPIs(this));
+
     if (apis)
     {
         auto tmp = getAllKeywords();
         for (const auto& f : tmp)
             apis->add(f);
+
+        std::vector<std::string> lastApis;
+        for (const auto& f : exports)
+        {
+            auto s = f.buildApiText();
+            apis->add(s);
+            lastApis.push_back(f.funcName.toStdString());
+        }
         apis->prepare();
+
+
+        std::stringstream res;
+        std::copy(lastApis.begin(), lastApis.end(), std::ostream_iterator<std::string>(res, " "));
+        lastJoinedApis = res.str();
     }
 }
 
@@ -94,6 +118,10 @@ const char *LuaLexer::keywords(int set) const
                 "os.time os.tmpname";
     if (set == 5)
         return "self true false nil";
+
+    if (set == 6) //that MUST BE set from constructor
+        return lastJoinedApis.c_str();
+
     return nullptr;
 }
 
@@ -113,7 +141,7 @@ QFont LuaLexer::defaultFont(int style) const
 
 int LuaLexer::blockLookback() const
 {
-        return 200;
+    return 200;
 }
 
 const char *LuaLexer::blockStartKeyword(int *style) const
@@ -122,21 +150,21 @@ const char *LuaLexer::blockStartKeyword(int *style) const
     //while () ;
     //in C++, it is 1 line block, absent in lua such
     if (style)
-           *style = Keyword;
+        *style = Keyword;
     return nullptr;
 }
 
 const char *LuaLexer::blockStart(int *style) const
 {
     if (style)
-           *style = Keyword;
+        *style = Keyword;
     return "do then else function";
 }
 
 const char *LuaLexer::blockEnd(int *style) const
 {
     if (style)
-           *style = Keyword;
+        *style = Keyword;
     return "end";
 }
 

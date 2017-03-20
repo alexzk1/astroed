@@ -9,8 +9,8 @@ class LuaEditor : public QsciScintilla
     Q_OBJECT
 public:
     LuaEditor(QWidget *parent = nullptr, const LuaLexerPtr& lexer = getSharedLexer());
-    static LuaLexerPtr createLuaLexer();
-    static LuaLexerPtr getSharedLexer(); //single instance, used to share between all tabs or so
+    static LuaLexerPtr createSharedLuaLexer(const std::vector<CppExport> &exports);
+    static LuaLexerPtr &getSharedLexer(); //single instance, used to share between all tabs or so
 
     void newFile();
     bool openFile(const QString &file);

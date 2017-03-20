@@ -116,6 +116,10 @@ MainWindow::MainWindow(QWidget *parent) :
     timer->start(2000);
 
     ui->scrollAreaZoom->installEventFilter(this);
+
+    //lexer must be created prior widget
+    LuaEditor::createSharedLuaLexer({{"apiTest", "param", "test function"}});
+
     ui->tabScript->layout()->addWidget(new LuaEditor(this));
 }
 
