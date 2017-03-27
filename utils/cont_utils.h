@@ -4,6 +4,7 @@
 #include <vector>
 #include <set>
 #include <algorithm>
+#include <type_traits>
 //containers utils
 
 namespace utility
@@ -25,6 +26,15 @@ namespace utility
         vec.erase(newEnd, vec.end());
 
         return vec.size();
+    }
+
+    //swaps pointed values (so huge template, just to ensure it will swap values and not pointers itself and fail at compile time)
+    template <typename PtrT,
+              typename Pointed = typename std::enable_if<std::is_pointer<PtrT>::value,
+                                                         typename std::remove_pointer<PtrT>::type>::type>
+    void swapPointed(PtrT v1, PtrT v2)
+    {
+        std::swap<Pointed>(*v1, *v2);
     }
 }
 

@@ -3,6 +3,8 @@
 #include "logic/theapi.h"
 
 #include <vector>
+#include <queue>
+#include <set>
 #include <algorithm>
 
 #include <QDirIterator>
@@ -24,7 +26,7 @@
 #include "mainwindow.h"
 
 #include <QDebug>
-#include <queue>
+
 
 #include "utils/no_const.h"
 #include "utils/strutils.h"
@@ -108,6 +110,14 @@ const static QStringList supportedExt =
     "xpm"
 };
 
+#ifdef USING_VIDEO_FS
+const static std::set<QString> supportedVids = {
+    "mov",
+    "mp4",
+    "avi",
+};
+#endif
+
 template <class T>
 bool isDark(const T& path)
 {
@@ -187,11 +197,16 @@ PreviewsModel::PreviewsModel(QObject *parent)
 
                     if (loaded && work()) //stop check is important here, or GUI may stack if thread interrupted and signal is out
                     {
-                        //updating preview
-                        QModelIndex k = this->index(static_cast<int>(i), 0);
-                        emit this->dataChanged(k, k, roles);
-
-                        std::this_thread::sleep_for(25ms); //allowing gui to process items
+                        //if cannot load preview - make it ignored (happened with 0th frame of the vids for me)
+                        if (modelFiles.at(i).brokenPreview)
+                            this->setData(this->index(i, 2), 1, Qt::EditRole);
+                        else
+                        {
+                            //updating preview
+                            QModelIndex k = this->index(static_cast<int>(i), 0);
+                            emit this->dataChanged(k, k, roles);
+                            std::this_thread::sleep_for(25ms); //allowing gui to process items
+                        }
                     }
 
                     if (i)
@@ -334,7 +349,8 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
 
         if (role == MyMouseCursorRole)
         {
-            if (col_mode == DelegateMode::FILE_HYPERLINK || col_mode == DelegateMode::IMAGE_PREVIEW)
+            //if (col_mode == DelegateMode::FILE_HYPERLINK || col_mode == DelegateMode::IMAGE_PREVIEW)
+            if (col_mode == DelegateMode::IMAGE_PREVIEW)
                 return static_cast<int>(Qt::PointingHandCursor);
         }
 
@@ -418,6 +434,13 @@ void PreviewsModel::setCurrentFolder(const QString &path, bool recursive)
             filter << "*."+s.toLower();
             filter << "*."+s.toUpper();
         }
+#ifdef USING_VIDEO_FS
+        for (const auto& s: supportedVids)
+        {
+            filter << "*."+s.toLower();
+            filter << "*."+s.toUpper();
+        }
+#endif
     }
 
     loadPreviews.reset();
@@ -451,6 +474,8 @@ void PreviewsModel::setCurrentFolder(const QString &path, bool recursive)
             if (!it.fileInfo().isDir())
             {
                 bool push = recursive;
+
+                //darks must be always listed, even if "non-recursive" mode is, so "auto-guess" can work and it is more user friendly
                 if (!push)
                     push = !strcontains(it.filePath(), subfolders) || isDark(it.filePath());
 
@@ -502,30 +527,29 @@ void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list, const util
 
     };
 
-    //fixme: all complicated here, lets do for now simple - if user picks other fodler all selections are lost
-    //    if (modelFiles.size())
-    //        modelFiles.erase(std::remove_if(modelFiles.begin(), modelFiles.end(), [](const auto& v)
-    //        {
-    //            return !SectionDescr::keepInList(v);
-    //        }), modelFiles.end());
-    //    modelFiles.reserve(modelFiles.size() + list.size());
-
     modelFiles.clear();
     modelFiles.reserve(list.size());
-
-
-    if (!*stop)
-        sort_files();
-
-    auto old = std::end(modelFiles);
 
     for (const auto& fi : list)
     {
         if (*stop)
             break;
         auto s = fi.absoluteFilePath();
-        if (std::find_if(modelFiles.begin(), old, [&s](const auto& v){return v.filePath == s;}) == old)
-            modelFiles.emplace_back(s);
+#ifdef USING_VIDEO_FS
+        if (supportedVids.count(fi.suffix().toLower()))
+        {
+            auto frames = IMAGE_LOADER.getVideoFramesLinks(s);
+            if (frames.size())
+                for (const auto& f : frames)
+                {
+                    if (*stop)
+                        break;
+                    modelFiles.emplace_back(f);
+                }
+        }
+        else
+#endif
+        modelFiles.emplace_back(s);
     }
     if (!*stop)
         sort_files();
@@ -574,8 +598,8 @@ void PreviewsDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
                     rect.setHeight(std::min(img.height(), rect.height()));
                     rect.setWidth(std::min(img.width(), rect.width()));
                     draw(rect);
-                    break;
                 }
+                break;
             case DelegateMode::FILE_HYPERLINK:
             {
                 label.setText(QString("&nbsp;&nbsp;<a href='file://%1'>%1</a>").arg(index.data().toString()));
@@ -603,8 +627,8 @@ QSize PreviewsDelegate::sizeHint(const QStyleOptionViewItem &option, const QMode
                 {
                     auto img = qvariant_cast<QImage>(index.data());
                     sz = img.size();
-                    break;
                 }
+                break;
             default:
                 break;
         }
@@ -621,7 +645,7 @@ bool PreviewsDelegate::editorEvent(QEvent *event, QAbstractItemModel *model, con
         {
             if (captions.at(index.column()).mode == DelegateMode::FILE_HYPERLINK)
             {
-                QDesktopServices::openUrl(QString("file://%1").arg(index.data().toString()));
+                QDesktopServices::openUrl(QString("file://%1").arg(IMAGE_LOADER.getFileLinkForExternalTools(index.data().toString())));
                 return true;
             }
 

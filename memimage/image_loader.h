@@ -1,9 +1,13 @@
 #pragma once
 
 #include "utils/inst_once.h"
+
 #include <QString>
-#include <type_traits>
 #include <QImage>
+#include <QTemporaryFile>
+
+#include <type_traits>
+
 #include <map>
 #include <mutex>
 #include <atomic>
@@ -12,6 +16,10 @@
 #include <algorithm>
 #include <exiv2/exiv2.hpp>
 #include <stdint.h>
+#include "opencv_vid.h"
+
+//videofs is expexted to be in form: videofs://file_path.mov?frame_number
+#define VFS_PREFIX "videofs"
 
 namespace imaging
 {
@@ -166,6 +174,7 @@ namespace imaging
     struct meta_t
     {
         meta_t();
+        bool wasLoaded;
         long  iso;
         Exiv2::URational exposure;
         Exiv2::URational aperture;
@@ -178,15 +187,20 @@ namespace imaging
     {
     protected:
         friend class image_preview_loader; //need access from previews object to full object
-        template<class C>
+        template<class Ptr>
         struct image_t
         {
-            C data;
+            Ptr data;
             meta_t meta;
+#ifdef USING_VIDEO_FS
+            VideoCapturePtr framesLoader; //we want to keep same loader for all frames in same file
+            std::shared_ptr<QTemporaryFile> tempFile;
+#endif
             operator bool() const
             {
                 return data != nullptr;
             }
+
         };
         using image_buffer_wptr = std::weak_ptr<QImage>;
         using image_t_w         = image_t<image_buffer_wptr>;
@@ -197,6 +211,9 @@ namespace imaging
             {
                 meta = c.meta;
                 data = c.data.lock();
+#ifdef USING_VIDEO_FS
+                framesLoader = c.framesLoader;
+#endif
                 return *this;
             }
             explicit operator image_t_w() const
@@ -204,6 +221,9 @@ namespace imaging
                 image_t_w tmp;
                 tmp.data = data;
                 tmp.meta = meta;
+#ifdef USING_VIDEO_FS
+                tmp.framesLoader = framesLoader;
+#endif
                 return tmp;
             }
         };
@@ -217,21 +237,25 @@ namespace imaging
         using size_wptr_t = std::pair<size_t, image_t_w>;
         using weaks_t = std::map<QString, size_wptr_t>;
 
+
         ptrs_t  cache;
         weaks_t wcache;
         std::atomic<size_t> lastSize;
-        std::recursive_mutex mutex;
         bool assumeMirrored;
+
     protected:
+        mutable std::recursive_mutex mutex;
         virtual image_t_s createImage(const QString& key) const = 0;
         void    findImage(const QString& key, image_t_s &res);
+
+        bool isProperVfs(const QUrl& url) const;
     public:
         image_cacher();
         image_buffer_ptr getImage(const QString& fileName);
         meta_t           getExif(const QString& fileName);
 
-        void gc(bool no_wait = false);
-        void wipe();
+        virtual void gc(bool no_wait = false);
+        virtual void wipe();
         size_t getMemoryUsed() const;
         //ok, maybe mirroring on loading is not really good idea for scripting, but .. at least images in ram are already properly loaded = time
         void setNewtoneTelescope(bool isNewtone); //if true, applies mirror transformation to all images on load
@@ -242,9 +266,25 @@ namespace imaging
     class image_loader : public utility::ItCanBeOnlyOne<image_loader>, public image_cacher
     {
     protected:
+#ifdef USING_VIDEO_FS
+        using loaders_t = std::map<QString, VideoCapturePtrW>;
+        mutable loaders_t frameLoaders;
+        VideoCapturePtr getVideoCapturer(const QString &filePath) const;
+#endif
         virtual image_t_s createImage(const QString& key) const override;
+
+
     public:
         image_loader() = default;
+        virtual void gc(bool no_wait = false)override;
+        virtual void wipe()override;
+
+        //can be used to generate list of all possible frames inside video
+        QStringList getVideoFramesLinks(const QString& videoFileName);
+
+        //makes temporary file out of frame if needed
+        QString getFileLinkForExternalTools(const QString& originalLink) const;
+        virtual ~image_loader() final;
     };
 
     class image_preview_loader : public utility::ItCanBeOnlyOne<image_preview_loader>, public image_cacher
@@ -253,6 +293,7 @@ namespace imaging
         virtual image_t_s createImage(const QString& key) const override;
     public:
         image_preview_loader() = default;
+        virtual ~image_preview_loader() final;
     };
 }
 

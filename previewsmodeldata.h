@@ -14,11 +14,13 @@ private:
 public:
     QString  filePath;
     std::map<int, QVariant>          valuesPerColumn;
+    bool brokenPreview;
 
     PreviewsModelData(const QString& path):
         preview(new QImage()),
         filePath(path),
-        valuesPerColumn()
+        valuesPerColumn(),
+        brokenPreview(false)
     {
     }
 
@@ -28,6 +30,7 @@ public:
         if (res)
         {
             preview = PREVIEW_LOADER.getImage(filePath);
+            brokenPreview = preview == nullptr || preview->isNull();
         }
         return res;
     }

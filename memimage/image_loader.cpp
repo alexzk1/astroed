@@ -3,21 +3,31 @@
 #include <QDebug>
 
 #include "utils/erase_if.h"
+#include "utils/cont_utils.h"
+
 #include <chrono>
 #include <vector>
+#include <stdint.h>
 #include <exiv2/exiv2.hpp>
 #include <exiv2/exif.hpp>
+#include <QUrl>
+#include <QTimer>
 
 using namespace imaging;
 
 extern size_t getMemorySize();
 const static size_t sysMemory     = getMemorySize();
 constexpr static size_t lowMemory = 2ll * 1024 * 1024 * 1024;
-const static size_t maxMemUsage   = (sysMemory > lowMemory)?(sysMemory / 3): (sysMemory * 3/ 4); //mem pressure until it will start "gc" loops
+//mem pressure until it will start "gc" loops (with systems <2Gb ram we will have to use most of ram I think)
+const static size_t maxMemUsage   = (sysMemory > lowMemory)?(sysMemory / 3): (sysMemory * 3/ 4);
 const static auto& dumb           = IMAGE_LOADER; //ensuring single instance is created on program init
 
 const static int64_t longestDelay = 240; //how long at most image will remain cached since last access
 const static int     previewSize  = 300; //recommended size
+
+const static QString vfs_scheme(VFS_PREFIX);
+
+constexpr static auto base_frames_to_string_numbering = 10;
 
 static int64_t nows()
 {
@@ -29,8 +39,8 @@ image_cacher::image_cacher():
     cache(),
     wcache(),
     lastSize(0),
-    mutex(),
-    assumeMirrored(false)
+    assumeMirrored(false),
+    mutex()
 {
     qRegisterMetaType<image_buffer_ptr>("image_buffer_ptr");
     qRegisterMetaType<imaging::image_buffer_ptr>("imaging::image_buffer_ptr");
@@ -75,6 +85,7 @@ void image_cacher::findImage(const QString& key, image_t_s& res)
     cache[key] = std::make_pair(nows(), res); //even if object exists in cache, just updating time
     gc();
 }
+
 
 void image_cacher::gc(bool no_wait)
 {
@@ -133,23 +144,180 @@ image_cacher::~image_cacher()
 {
 }
 
-//todo: need some kinda of "virtual filesystem" to dig into avi/mp4 and pick frames there
+VideoCapturePtr image_loader::getVideoCapturer(const QString& filePath) const
+{
+    std::lock_guard<std::recursive_mutex> guard(mutex);
+    VideoCapturePtr ptr(nullptr);
+    if (frameLoaders.count(filePath))
+        ptr = frameLoaders.at(filePath).lock();
+
+    if (!ptr)
+    {
+        ptr.reset(new cv::VideoCapture());
+        frameLoaders[filePath] = ptr;
+    }
+
+    if (!ptr->isOpened())
+    {
+        ptr->open(filePath.toStdString());
+        ptr->set(CV_CAP_PROP_POS_FRAMES, 0);
+    }
+    return ptr;
+}
+
+bool image_cacher::isProperVfs(const QUrl &url) const
+{
+    //such a condition for now, isValid == true for simple file-names too
+    return url.isValid() && url.scheme() == vfs_scheme;;
+}
+
 image_cacher::image_t_s image_loader::createImage(const QString &key) const
 {
+    QUrl url(key);
+
+    const bool is_url = isProperVfs(url);
     image_t_s tmp;
+    tmp.data  = std::make_shared<QImage>();
+
     { //ensuring img will close file "key"
-        QImage img(key);
+
+        QImage img;
+
+        if (is_url)
+        {
+            //todo:videofs is expexted to be in form: videofs://file_path.mov#frame_number
+#ifdef USING_VIDEO_FS
+            if (url.scheme() == vfs_scheme)
+            {
+                const auto path = url.path();
+                VideoCapturePtr ptr = getVideoCapturer(path);
+
+                bool ok_num;
+                auto frame_num = std::max<long>(0, url.fragment().toLong(&ok_num, base_frames_to_string_numbering));
+                tmp.framesLoader = ptr;
+
+//#ifdef _DEBUG
+//                qDebug() << "Parsing video as frames: " << path << ", frame: "<<frame_num << "(String: " << url.fragment() << ")";
+//#endif
+                if (ok_num && frame_num < static_cast<decltype(frame_num)>(ptr->get(CV_CAP_PROP_FRAME_COUNT)))
+                {
+                    if (static_cast<decltype(frame_num)>(ptr->get(CV_CAP_PROP_POS_FRAMES)) != frame_num)
+                        ptr->set(CV_CAP_PROP_POS_FRAMES, frame_num);
+                    cv::Mat rgb;
+                    if (ptr->read(rgb))
+                    {
+                        //we have BGR888 and need RGB888 i think ..
+                        for (size_t pixel = 0, amount = static_cast<decltype(amount)>(rgb.cols * rgb.rows); pixel < amount; ++pixel)
+                        {
+                            uint8_t* p = static_cast<decltype (p)>(rgb.data) + pixel * 3;
+                            utility::swapPointed(p + 0, p + 2);
+                        }
+                        //cv::Mat must be kept while QImage is alive, so we do deep copy() here
+                        *tmp.data = QImage(static_cast<uint8_t*>(rgb.data), rgb.cols, rgb.rows, QImage::Format_RGB888).copy();
+                    }
+                }
+            }
+#endif
+            //todo: more schemes maybe added here (dont forget to fix initial condition is_url)
+        }
+        else
+        {
+            img = QImage(key);
+            *tmp.data = img.convertToFormat(QImage::Format_RGB888);
+        }
+
+
         if (isNewtoneTelescope())
-            img = img.mirrored(true, true);
-        tmp.data  = std::make_shared<QImage>();
-        *tmp.data = img.convertToFormat(QImage::Format_RGB888);
+            *tmp.data = tmp.data->mirrored(true, true);
     }
 
     //done: this should load exif too
+    if (!is_url) //loading exif only from files
     {
         tmp.meta.load(key);
     }
     return tmp;
+}
+
+void image_loader::gc(bool no_wait)
+{
+    std::lock_guard<std::recursive_mutex> guard(mutex);
+    image_cacher::gc(no_wait);
+#ifdef USING_VIDEO_FS
+    //Nth step erase expired video frame loaders
+    utility::erase_if(frameLoaders, [this](const auto& sp)
+    {
+        return sp.second.expired();
+    });
+#endif
+
+}
+
+void image_loader::wipe()
+{
+    std::lock_guard<std::recursive_mutex> guard(mutex);
+    image_cacher::wipe();
+#ifdef USING_VIDEO_FS
+    frameLoaders.clear();
+#endif
+}
+
+QStringList image_loader::getVideoFramesLinks(const QString &videoFileName)
+{
+    const static QChar filler('0');
+    QStringList res;
+#ifdef USING_VIDEO_FS
+    VideoCapturePtr ptr = getVideoCapturer(videoFileName);
+    int fcount = 0;
+    if (ptr)
+    {
+        std::lock_guard<std::recursive_mutex> guard(mutex);
+        fcount = static_cast<decltype(fcount)>(ptr->get(CV_CAP_PROP_FRAME_COUNT));
+    }
+
+    for (auto i = 0; i < fcount; ++i)
+        res << QString("%1://%2#%3").arg(vfs_scheme).arg(videoFileName).arg(i, 8, base_frames_to_string_numbering, filler);
+
+#else
+    Q_UNUSED(videoFileName)
+#endif
+    return res;
+}
+
+QString image_loader::getFileLinkForExternalTools(const QString &originalLink) const
+{
+    QString result = originalLink;
+#ifdef USING_VIDEO_FS
+    QUrl url(originalLink);
+    if (isProperVfs(url))
+    {
+        std::lock_guard<std::recursive_mutex> guard(mutex);
+        auto img = createImage(originalLink);
+        if (!img.tempFile)
+        {
+            img.tempFile.reset(new QTemporaryFile());
+            img.tempFile->setFileTemplate("dumped_frame_tmp_XXXXXX.png");
+            if (img.tempFile->open())
+            {
+                img.data->save(img.tempFile.get(), "png");
+                img.tempFile->flush();
+                img.tempFile->close();
+            }
+        }
+
+        //ensuring temp file will not be deleted for some time, even if cached image is cleared out by heavy GC (happens when user clicks during loading of movie)
+        auto fcopy = img.tempFile;
+        QTimer::singleShot(60000, [fcopy](){;});
+
+        result = img.tempFile->fileName();
+    }
+#endif
+    return result;
+}
+
+image_loader::~image_loader()
+{
+    wipe();
 }
 
 image_cacher::image_t_s image_preview_loader::createImage(const QString &key) const
@@ -158,32 +326,38 @@ image_cacher::image_t_s image_preview_loader::createImage(const QString &key) co
     image_t_s src;
     IMAGE_LOADER.findImage(key, src);
     //keeping aspect ratio
-    int width = static_cast<decltype(width)>(previewSize * src.data->width() / (double) src.data->height());
-    src.data = std::make_shared<QImage>(src.data->scaled(width, previewSize, Qt::KeepAspectRatio));
+    int width = static_cast<decltype(width)>(previewSize * src.data->width() / static_cast<double>(src.data->height()));
+    src.data  = std::make_shared<QImage>(src.data->scaled(width, previewSize, Qt::KeepAspectRatio));
     return src;
 }
 
+image_preview_loader::~image_preview_loader()
+{
+    wipe();
+}
+
 meta_t::meta_t():
+    wasLoaded(false),
     iso(0),
     exposure(0, 1),
     aperture(0, 1),
     optZoom(1)
 {
-
 }
 
 QString meta_t::getStringValue() const //should prepare human readable value
 {
+    if (!wasLoaded)
+        return QObject::tr("No meta tags");
+
     using namespace exiv2_helpers::exiv_rationals;
-    return QString("ISO: %1\nExposure: %2 s\nAperture: %3 mm\nOptical Zoom: x%4")
+    return QString(QObject::tr("ISO: %1\nExposure: %2 s\nAperture: %3 mm\nOptical Zoom: x%4"))
             .arg(iso)
             .arg(toDouble(exposure), 0, 'f', 2)
             .arg(toDouble(aperture), 0, 'f', 2)
             .arg(optZoom, 0, 'f', 2)
             ;
 }
-
-
 
 void meta_t::load(const QString &fileName)
 {
@@ -245,5 +419,7 @@ void meta_t::load(const QString &fileName)
         }
         if (lensSpec.size())
             optZoom = exiv_rationals::toDouble(exiv_rationals::div(actualFocus, lensSpec.at(0)));
+
+        wasLoaded = true;
     }
 }

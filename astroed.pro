@@ -20,6 +20,7 @@ QMAKE_CXXFLAGS +=  -Wctor-dtor-privacy -Werror=delete-non-virtual-dtor -Werror=s
 
 macx:QMAKE_LFLAGS+=-Wl,-map,mapfile
 CONFIG += c++14
+CONFIG += opencv
 
 #using new C++ libs for macos http://blog.michael.kuron-germany.de/2013/02/using-c11-on-mac-os-x-10-8/
 #that may not work with C++14 though, Apple is slow
@@ -40,7 +41,7 @@ else {
     QMAKE_CXXFLAGS += -O3
 }
 
-!macx:LIBS +=  -lrt
+!macx: LIBS +=  -lrt
 
 include($$PWD/lua/lua_vm.pri)
 include($$PWD/utils/utils.pri)
@@ -48,6 +49,7 @@ include($$PWD/memimage/memimage.pri)
 include($$PWD/logic/bl.pri)
 include($$PWD/singleapp/singleapplication.pri)
 include($$PWD/editor/codeeditor.pri)
+
 
 DEFINES += QAPPLICATION_CLASS=QApplication
 
