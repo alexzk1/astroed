@@ -43,6 +43,7 @@ else {
 
 !macx: LIBS +=  -lrt
 
+include($$PWD/config_ui/config_ui.pri)
 include($$PWD/lua/lua_vm.pri)
 include($$PWD/utils/utils.pri)
 include($$PWD/memimage/memimage.pri)

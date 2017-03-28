@@ -466,7 +466,7 @@ void PreviewsModel::setCurrentFolder(const QString &path, bool recursive)
                 subfolders.push_back(directories.filePath());
             }
         }
-
+        const static QString cachef(VFS_CACHED_FOLDER);
         QDirIterator it(absPath, filter, QDir::Files, QDirIterator::Subdirectories);
         while (it.hasNext() && !(*stop))
         {
@@ -478,6 +478,8 @@ void PreviewsModel::setCurrentFolder(const QString &path, bool recursive)
                 //darks must be always listed, even if "non-recursive" mode is, so "auto-guess" can work and it is more user friendly
                 if (!push)
                     push = !strcontains(it.filePath(), subfolders) || isDark(it.filePath());
+
+                push = push && !strcontains(it.filePath(), cachef); //excluding own cache from the list, will access it using regular URI
 
                 if (push)
                     pathes.push_back(QFileInfo(it.filePath()));
@@ -535,6 +537,7 @@ void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list, const util
         if (*stop)
             break;
         auto s = fi.absoluteFilePath();
+
 #ifdef USING_VIDEO_FS
         if (supportedVids.count(fi.suffix().toLower()))
         {
@@ -549,7 +552,8 @@ void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list, const util
         }
         else
 #endif
-        modelFiles.emplace_back(s);
+            modelFiles.emplace_back(s);
+
     }
     if (!*stop)
         sort_files();

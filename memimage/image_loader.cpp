@@ -12,6 +12,9 @@
 #include <exiv2/exif.hpp>
 #include <QUrl>
 #include <QTimer>
+#include <QFile>
+#include <QDir>
+#include "config_ui/globalsettings.h"
 
 using namespace imaging;
 
@@ -171,6 +174,25 @@ bool image_cacher::isProperVfs(const QUrl &url) const
     return url.isValid() && url.scheme() == vfs_scheme;;
 }
 
+bool image_cacher::isUsingCached() const
+{
+    return StaticSettingsMap::getGlobalSetts().readBool("Bool_cache_frames");
+}
+
+QString image_cacher::cachedFileName(const QUrl &url) const
+{
+    QStringList pathlst = url.path().split("/", QString::SplitBehavior::KeepEmptyParts);
+    pathlst.insert(pathlst.size() -1, VFS_CACHED_FOLDER);
+    auto dirp = pathlst.join("/");
+    QDir tmp;
+    if (tmp.mkpath(dirp))
+    {
+        auto frame_num = std::max<long>(0, url.fragment().toLong(nullptr, base_frames_to_string_numbering));
+        return QString("%1/frame_%2.png").arg(dirp).arg(frame_num);
+    }
+    return QString();
+}
+
 image_cacher::image_t_s image_loader::createImage(const QString &key) const
 {
     QUrl url(key);
@@ -183,10 +205,17 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
 
         QImage img;
 
+        const auto load_from_disk = [&img, &tmp](const QString& fn)
+        {
+            img = QImage(fn);
+            *tmp.data = img.convertToFormat(QImage::Format_RGB888);
+        };
+
         if (is_url)
         {
             //todo:videofs is expexted to be in form: videofs://file_path.mov#frame_number
 #ifdef USING_VIDEO_FS
+
             if (url.scheme() == vfs_scheme)
             {
                 const auto path = url.path();
@@ -196,24 +225,49 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
                 auto frame_num = std::max<long>(0, url.fragment().toLong(&ok_num, base_frames_to_string_numbering));
                 tmp.framesLoader = ptr;
 
-//#ifdef _DEBUG
-//                qDebug() << "Parsing video as frames: " << path << ", frame: "<<frame_num << "(String: " << url.fragment() << ")";
-//#endif
                 if (ok_num && frame_num < static_cast<decltype(frame_num)>(ptr->get(CV_CAP_PROP_FRAME_COUNT)))
                 {
-                    if (static_cast<decltype(frame_num)>(ptr->get(CV_CAP_PROP_POS_FRAMES)) != frame_num)
-                        ptr->set(CV_CAP_PROP_POS_FRAMES, frame_num);
-                    cv::Mat rgb;
-                    if (ptr->read(rgb))
+                    bool uc = isUsingCached();
+                    QString cfn;
+                    if (uc)
                     {
-                        //we have BGR888 and need RGB888 i think ..
-                        for (size_t pixel = 0, amount = static_cast<decltype(amount)>(rgb.cols * rgb.rows); pixel < amount; ++pixel)
+                        cfn = cachedFileName(url);
+                        if (QFile::exists(cfn))
+                            load_from_disk(cfn);
+
+                        uc = !tmp.data->isNull();
+                    }
+
+                    if (!uc)
+                    {
+                        if (static_cast<decltype(frame_num)>(ptr->get(CV_CAP_PROP_POS_FRAMES)) != frame_num)
+                            ptr->set(CV_CAP_PROP_POS_FRAMES, frame_num);
+                        cv::Mat rgb;
+                        if (ptr->read(rgb))
                         {
-                            uint8_t* p = static_cast<decltype (p)>(rgb.data) + pixel * 3;
-                            utility::swapPointed(p + 0, p + 2);
+                            //we have BGR888 and need RGB888 i think ..
+                            for (size_t pixel = 0, amount = static_cast<decltype(amount)>(rgb.cols * rgb.rows); pixel < amount; ++pixel)
+                            {
+                                uint8_t* p = static_cast<decltype (p)>(rgb.data) + pixel * 3;
+                                utility::swapPointed(p + 0, p + 2);
+                            }
+                            //cv::Mat must be kept while QImage is alive, so we do deep copy() here
+                            QImage implicit = QImage(static_cast<uint8_t*>(rgb.data), rgb.cols, rgb.rows, QImage::Format_RGB888);
+                            if (isUsingCached() && !cfn.isEmpty())
+                            {
+                                //ok, some optimization, will do save to disk on delete from memory
+                                tmp.data = std::shared_ptr<QImage>(new QImage(), [cfn, this](auto p)
+                                {
+                                   if (p)
+                                   {
+                                       if (!dctor) //on qt 5.8 if this lambda is called from destructor (by closing app) save makes sigsegv
+                                           p->save(cfn);
+                                       delete p;
+                                   }
+                                });
+                            }
+                            *tmp.data = implicit.copy();
                         }
-                        //cv::Mat must be kept while QImage is alive, so we do deep copy() here
-                        *tmp.data = QImage(static_cast<uint8_t*>(rgb.data), rgb.cols, rgb.rows, QImage::Format_RGB888).copy();
                     }
                 }
             }
@@ -222,8 +276,7 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
         }
         else
         {
-            img = QImage(key);
-            *tmp.data = img.convertToFormat(QImage::Format_RGB888);
+            load_from_disk(key);
         }
 
 
@@ -317,6 +370,7 @@ QString image_loader::getFileLinkForExternalTools(const QString &originalLink) c
 
 image_loader::~image_loader()
 {
+    dctor = true;
     wipe();
 }
 

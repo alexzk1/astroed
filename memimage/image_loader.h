@@ -20,6 +20,7 @@
 
 //videofs is expexted to be in form: videofs://file_path.mov?frame_number
 #define VFS_PREFIX "videofs"
+#define VFS_CACHED_FOLDER ".cached_frames"
 
 namespace imaging
 {
@@ -249,6 +250,8 @@ namespace imaging
         void    findImage(const QString& key, image_t_s &res);
 
         bool isProperVfs(const QUrl& url) const;
+        bool isUsingCached() const;
+        QString cachedFileName(const QUrl& url) const;
     public:
         image_cacher();
         image_buffer_ptr getImage(const QString& fileName);
@@ -269,10 +272,10 @@ namespace imaging
 #ifdef USING_VIDEO_FS
         using loaders_t = std::map<QString, VideoCapturePtrW>;
         mutable loaders_t frameLoaders;
+        std::atomic<bool> dctor;
         VideoCapturePtr getVideoCapturer(const QString &filePath) const;
 #endif
         virtual image_t_s createImage(const QString& key) const override;
-
 
     public:
         image_loader() = default;
