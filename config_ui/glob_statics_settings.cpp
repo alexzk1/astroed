@@ -13,8 +13,11 @@ const StaticSettingsMap &StaticSettingsMap::getGlobalSetts()
     //visual order depends on string sort of the keys
     const static StaticSettingsMap list({
 #ifdef USING_VIDEO_FS
-                                            DECL_SETT(GlobalStorableBool, "Bool_cache_frames", true, tr("Cache extracted Video Frames."),
-                                            tr("If enabled will store all extracted video frames in \".cached_frames\" subfolder.\nThis will consume significant HDD space (more then original video).")),
+                                            DECL_SETT(GlobalStorableBool, "Bool_cache_frames", false, tr("Cache extracted Video Frames."),
+                                            tr("If enabled will store all extracted video frames in \".cached_frames\" subfolder.\n"
+                                            "This will consume significant HDD space (much-much more then original video).\n"
+                                            "It is really slow on HDD (not SSD)."
+                                            )),
 
                                             DECL_SETT(GlobalStorableBool, "Bool_parse_frames", true, tr("Parse Videos into Frames"),
                                             tr("If enabled will split videos into frames, this may take significant time.")),

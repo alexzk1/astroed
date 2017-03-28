@@ -258,12 +258,12 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
                                 //ok, some optimization, will do save to disk on delete from memory
                                 tmp.data = std::shared_ptr<QImage>(new QImage(), [cfn, this](auto p)
                                 {
-                                   if (p)
-                                   {
-                                       if (!dctor) //on qt 5.8 if this lambda is called from destructor (by closing app) save makes sigsegv
-                                           p->save(cfn);
-                                       delete p;
-                                   }
+                                    if (p)
+                                    {
+                                        if (!dctor) //on qt 5.8 if this lambda is called from destructor (by closing app) save makes sigsegv
+                                            p->save(cfn);
+                                        delete p;
+                                    }
                                 });
                             }
                             *tmp.data = implicit.copy();
@@ -346,6 +346,14 @@ QString image_loader::getFileLinkForExternalTools(const QString &originalLink) c
     {
         std::lock_guard<std::recursive_mutex> guard(mutex);
         auto img = createImage(originalLink);
+
+        if (isUsingCached())
+        {
+            QString cfn = cachedFileName(url);
+            if (QFile::exists(cfn))
+                return cfn;
+        }
+
         if (!img.tempFile)
         {
             img.tempFile.reset(new QTemporaryFile());
