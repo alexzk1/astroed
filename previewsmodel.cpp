@@ -158,7 +158,8 @@ PreviewsModel::PreviewsModel(QObject *parent)
       loadPreviews(nullptr),
       listMut(),
       modelFiles(),
-      urgentRowScrolled(0)
+      urgentRowScrolled(0),
+      modelFilesAmount(0)
 {
     connect(this, &QAbstractTableModel::modelReset, this, [this]()
     {
@@ -218,8 +219,12 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
     QVariant res;
     if (index.isValid())
     {
-        int col  = index.column();
+        if (index.row() >= modelFilesAmount || index.row() < 0 || index.column() < 0 || index.column() > static_cast<int>(captions.size()))
+            return res;
+
+        size_t col  = static_cast<decltype (col)>(index.column());
         size_t row = static_cast<decltype (row)>(index.row());
+
         const auto col_mode = captions.at(col).mode;
         if (role == MyScrolledView || role == MyMouseCursorRole)
         {
@@ -243,6 +248,7 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
         }
 
         std::lock_guard<decltype (listMut)> grd(listMut);
+
 
         const auto& itm = modelFiles.at(row);
 
@@ -521,7 +527,7 @@ void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list, const util
         sort_files();
     else
         modelFiles.clear();
-    modelFilesAmount = modelFiles.size();
+    modelFilesAmount = static_cast<int64_t>(modelFiles.size());
     //qDebug() << "Files listed "<<modelFiles.size();
 }
 

@@ -9,6 +9,8 @@ SettingsDialog::SettingsDialog(QWidget *parent) :
     ui(new Ui::SettingsDialog)
 {
     ui->setupUi(this);
+    setAttribute( Qt::WA_DeleteOnClose, true );
+
     readSettings(this);
 
     const StaticSettingsMap& sett = StaticSettingsMap::getGlobalSetts();

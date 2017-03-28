@@ -12,6 +12,7 @@
 #include <QHeaderView>
 #include "clickablelabel.h"
 #include "editor/luaeditor.h"
+#include "config_ui/settingsdialog.h"
 
 const static auto ZOOMING_KB_VALUE = 2 * ScrollAreaPannable::WheelStep;
 
@@ -28,8 +29,10 @@ MainWindow::MainWindow(QWidget *parent) :
     originalStylesheet(qApp->styleSheet())
 {
     ui->setupUi(this);
-    ui->previewsTable->setItemDelegate(previewsDelegate);
+
     ui->previewsTable->setModel(previewsModel);
+    ui->previewsTable->setItemDelegate(previewsDelegate);
+
     ui->tabsWidget->setCurrentWidget(ui->tabFiles);
 
 
@@ -143,9 +146,6 @@ void MainWindow::selectPath(const QString &path, bool collapse)
                     index = index.parent();
                 }
             }
-            //need that, so it does "smooth start", window appears immediatly on startup
-            qApp->processEvents();
-            qApp->flush();
         }
     }
 }
@@ -263,9 +263,11 @@ void MainWindow::recurseRead(QSettings &settings, QObject *object)
         showNormal();
     this->ui->actionNewtone->setChecked(settings.value("newtone", false).toBool()); //load prior dir, so skip unneeded files list
     auto s = settings.value("LastDirSelection", QDir::homePath()).toString();
-    //qDebug() << "Read: "<<s;
-    selectPath(s);
 
+
+    QTimer::singleShot(500, [this, s](){
+       selectPath(s);
+    });
 }
 
 void MainWindow::currentDirChanged(const QString &dir)
@@ -333,4 +335,10 @@ void MainWindow::on_actionGuess_Darks_triggered()
 {
     if (previewsModel)
         previewsModel->guessDarks();
+}
+
+void MainWindow::on_actionSettings_triggered()
+{
+    auto sd = new SettingsDialog(this);
+    sd->show();
 }

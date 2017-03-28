@@ -4,6 +4,7 @@
         <file>icons/mirror-icon.png</file>
         <file>icons/spiral-icon.png</file>
         <file>icons/dark.png</file>
+        <file>icons/Settings-2-icon.png</file>
     </qresource>
     <qresource prefix="/styles">
         <file alias="darkorange">styles/darkorange.style</file>

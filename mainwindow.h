@@ -45,6 +45,8 @@ private slots:
     void on_actionNewtone_toggled(bool checked);
     void on_actionGuess_Darks_triggered();
 
+    void on_actionSettings_triggered();
+
 private:
     Ui::MainWindow *ui;
     QPointer<QFileSystemModel> dirsModel;
