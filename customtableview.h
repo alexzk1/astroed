@@ -7,6 +7,7 @@ class CustomTableView : public QTableView
 public:
     explicit CustomTableView(QWidget *parent);
 
+    void dataChangedInModel(const QModelIndex& index);
 private:
     QModelIndex m_lastIndex;
 protected:

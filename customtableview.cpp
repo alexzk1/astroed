@@ -9,6 +9,15 @@ CustomTableView::CustomTableView(QWidget *parent):
     setMouseTracking(true);
 }
 
+void CustomTableView::dataChangedInModel(const QModelIndex &index)
+{
+    if (index.isValid() && !isIndexHidden(index))
+    {
+        resizeColumnToContents(index.column());
+        resizeRowToContents(index.row());
+    }
+}
+
 void CustomTableView::mouseMoveEvent(QMouseEvent *event)
 {
     QAbstractItemModel *m(model());

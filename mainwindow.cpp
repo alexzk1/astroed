@@ -74,13 +74,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(previewsModel, &QAbstractTableModel::dataChanged, this, [this](const auto ind, const auto, const auto&)
     {
         if (ui->previewsTable)
-        {
-            if (ind.isValid())
-            {
-                ui->previewsTable->resizeColumnToContents(ind.column());
-                ui->previewsTable->resizeRowToContents(ind.row());
-            }
-        }
+           ui->previewsTable->dataChangedInModel(ind);
+
     }, Qt::QueuedConnection);
 
     setWindowTitle("");

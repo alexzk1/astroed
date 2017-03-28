@@ -149,12 +149,16 @@ void PreviewsModel::generateLuaCode(std::ostream &out) const
     out << "\n}" << std::endl;
 }
 
+const static QVector<int> roles = {Qt::DisplayRole};
+
 PreviewsModel::PreviewsModel(QObject *parent)
     : QAbstractTableModel(parent),
       luavm::LuaGenerator(),
       listFiles(nullptr),
       loadPreviews(nullptr),
-      listMut()
+      listMut(),
+      modelFiles(),
+      urgentRowScrolled(0)
 {
     connect(this, &QAbstractTableModel::modelReset, this, [this]()
     {
@@ -170,43 +174,63 @@ PreviewsModel::PreviewsModel(QObject *parent)
             std::this_thread::sleep_for(50ms);
 
 
-            const static QVector<int> roles = {Qt::DisplayRole};
 
-            size_t sz = 0;
-            {
-                //we still need all those lock_guards, because 3 threads access it, 2 are serialized (list files, load files) but 3rd is GUI and it is not
-                std::lock_guard<decltype (listMut)> grd(listMut);
-                sz = modelFiles.size();
-            }
 
+            size_t sz = modelFilesAmount;
             if (sz) //don't div by zero!
             {
                 const double mul = 100. / sz; //some optimization of the loop
                 const auto work = [&stop](){return !(*stop);}; //operations may take significant time during it thread could be stopped, so want to check latest always
 
+                const auto loaded_index = [&work, this](decltype (sz) i, bool loaded)
+                {
+                    if (loaded && work()) //stop check is important here, or GUI may stack if thread interrupted and signal is out
+                    {
+                        //updating preview
+                        QModelIndex k = this->index(static_cast<int>(i), 0);
+                        emit this->dataChanged(k, k, roles);
+                        std::this_thread::sleep_for(25ms); //allowing gui to process items
+                    }
+                };
+
                 for (decltype(sz) i = 0; i < sz && work(); ++i)
                 {
+                    size_t urs = i;
                     bool loaded = false;
+                    bool urgent_scrolled = false;
                     {
                         //we still need all those lock_guards, because 3 threads access it, 2 are serialized (list files, load files) but 3rd is GUI and it is not
                         std::lock_guard<decltype (listMut)> grd(listMut);
+                        urs = urgentRowScrolled;
+                        urgentRowScrolled = 0;
                         if (sz != modelFiles.size())
                             break;
                         loaded   = modelFiles.at(i).loadPreview();
-                    }
 
-                    if (loaded && work()) //stop check is important here, or GUI may stack if thread interrupted and signal is out
-                    {
                         //if cannot load preview - make it ignored (happened with 0th frame of the vids for me)
                         if (modelFiles.at(i).brokenPreview)
                             this->setData(this->index(i, 2), 1, Qt::EditRole);
-                        else
+
+                        if ((urgent_scrolled = (urs > i + 20)))
                         {
-                            //updating preview
-                            QModelIndex k = this->index(static_cast<int>(i), 0);
-                            emit this->dataChanged(k, k, roles);
-                            std::this_thread::sleep_for(25ms); //allowing gui to process items
+                            for (decltype(sz) j = urs, last = std::min(sz, urs + 10); j < last; ++j)
+                            {
+                                modelFiles.at(j).loadPreview();
+                                if (modelFiles.at(j).brokenPreview)
+                                    this->setData(this->index(i, 2), 1, Qt::EditRole);
+                            }
                         }
+                    }
+
+                    loaded_index(i, loaded);
+
+
+                    if (urgent_scrolled)
+                    {
+                        for (decltype(sz) j = urs, last = std::min(sz, urs + 10); j < last; ++j)
+                            loaded_index(j, true);
+
+                        std::this_thread::sleep_for(std::chrono::milliseconds(5 * (urs - i))); //allowing gui to process items
                     }
 
                     if (i)
@@ -218,7 +242,9 @@ PreviewsModel::PreviewsModel(QObject *parent)
                         {
                             IMAGE_LOADER.gc(true); //because of the hard pressure of loading many files for preview, need to cleanse cache asap
                             if (work())
-                                std::this_thread::sleep_for(100ms);
+                            {
+                                std::this_thread::sleep_for((urgent_scrolled)?350ms:100ms);
+                            }
                         }
                     }
                 }
@@ -264,8 +290,7 @@ bool PreviewsModel::setHeaderData(int section, Qt::Orientation orientation, cons
 int PreviewsModel::rowCount(const QModelIndex &parent) const
 {
     Q_UNUSED(parent);
-    std::lock_guard<decltype (listMut)> grd(utility::noconst(this)->listMut);
-    return static_cast<int>(modelFiles.size());
+    return static_cast<int>(modelFilesAmount);
 }
 
 int PreviewsModel::columnCount(const QModelIndex &parent) const
@@ -281,17 +306,32 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
     {
         int col  = index.column();
         size_t row = static_cast<decltype (row)>(index.row());
-        std::lock_guard<decltype (listMut)> grd(utility::noconst(this)->listMut);
+        const auto col_mode = captions.at(col).mode;
+
+        if (role == MyMouseCursorRole)
+        {
+            //if (col_mode == DelegateMode::FILE_HYPERLINK || col_mode == DelegateMode::IMAGE_PREVIEW)
+            urgentRowScrolled = row;
+            if (col_mode == DelegateMode::IMAGE_PREVIEW)
+                return static_cast<int>(Qt::PointingHandCursor);
+            return res;
+        }
+
+        if (role == Qt::ToolTipRole)
+        {
+            return captions.at(col).tooltip;
+        }
+
+        std::lock_guard<decltype (listMut)> grd(listMut);
 
         const auto& itm = modelFiles.at(row);
-        const auto col_mode = captions.at(col).mode;
+
 
         if (role == MyGetPathRole)
             res = itm.filePath;
 
         if (role == Qt::DisplayRole)
         {
-
             switch (col_mode)
             {
                 case DelegateMode::FILE_HYPERLINK:
@@ -347,15 +387,6 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
             }
         }
 
-        if (role == MyMouseCursorRole)
-        {
-            //if (col_mode == DelegateMode::FILE_HYPERLINK || col_mode == DelegateMode::IMAGE_PREVIEW)
-            if (col_mode == DelegateMode::IMAGE_PREVIEW)
-                return static_cast<int>(Qt::PointingHandCursor);
-        }
-
-        if (role == Qt::ToolTipRole)
-            return captions.at(col).tooltip;
     }
     return res;
 }
@@ -529,7 +560,9 @@ void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list, const util
 
     };
 
+
     modelFiles.clear();
+    modelFilesAmount = 0;
     modelFiles.reserve(list.size());
 
     for (const auto& fi : list)
@@ -559,6 +592,7 @@ void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list, const util
         sort_files();
     else
         modelFiles.clear();
+    modelFilesAmount = modelFiles.size();
     //qDebug() << "Files listed "<<modelFiles.size();
 }
 

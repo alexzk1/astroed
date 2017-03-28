@@ -3,7 +3,8 @@
 #include <vector>
 #include <mutex>
 #include <memory>
-
+#include <atomic>
+#include <queue>
 #include <QAbstractTableModel>
 #include <QStyledItemDelegate>
 
@@ -38,8 +39,7 @@ public:
 
     void setCurrentFolder(const QString& path, bool recursive = false);
     void simulateModelReset();
-
-     virtual void generateLuaCode(std::ostream& out) const;
+    virtual void generateLuaCode(std::ostream& out) const override;
 
     virtual ~PreviewsModel();
 private:
@@ -48,9 +48,10 @@ private:
 
     utility::runner_t listFiles;
     utility::runner_t loadPreviews;
-    std::recursive_mutex listMut;
+    mutable std::recursive_mutex listMut;
     mfiles_t  modelFiles;
-
+    mutable std::atomic<size_t> urgentRowScrolled;
+    std::atomic<size_t> modelFilesAmount;
     std::map<int, QStringList> fixedCombosLists; //wana to do generic solution
     void haveFilesList(const files_t& list, const utility::runnerint_t& stop);
 signals:
