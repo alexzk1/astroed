@@ -549,13 +549,14 @@ void PreviewsModel::loadCurrentInterval()
             decltype(sz) total_loaded = 0;
             const auto loaded_index = [&work, this, &total_loaded](decltype (sz) i, bool loaded)
             {
-                if (loaded && work()) //stop check is important here, or GUI may stack if thread interrupted and signal is out
+                if (loaded) //stop check is important here, or GUI may stack if thread interrupted and signal is out
                 {
                     //updating preview
                     QModelIndex k = this->index(static_cast<int>(i), 0);
                     emit this->dataChanged(k, k, roles);
                     ++total_loaded;
-                    std::this_thread::sleep_for(25ms); //allowing gui to process items
+                    if (work())
+                        std::this_thread::sleep_for(25ms); //allowing gui to process items
                 }
             };
 
@@ -609,7 +610,10 @@ bool PreviewsDelegate::showLastClickedPreview(int shift, bool reset)
     {
         QModelIndex ind = lastClickedPreview.model()->index(lastClickedPreview.row() + shift, lastClickedPreview.column());
         if ((res = ind.isValid()))
+        {
+            ind.data(MyScrolledView);
             THEAPI.showPreview(ind.data(MyGetPathRole).toString(), reset);
+        }
     }
     return res;
 }

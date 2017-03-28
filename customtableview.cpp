@@ -11,7 +11,7 @@ CustomTableView::CustomTableView(QWidget *parent):
 
 void CustomTableView::dataChangedInModel(const QModelIndex &index)
 {
-    if (index.isValid() && !isIndexHidden(index))
+    if (index.isValid())
     {
         resizeColumnToContents(index.column());
         resizeRowToContents(index.row());
