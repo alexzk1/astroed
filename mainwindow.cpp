@@ -49,8 +49,8 @@ MainWindow::MainWindow(QWidget *parent) :
         hdr->setStretchLastSection(true);
     }
 
-    connect(previewsModel, &PreviewsModel::startedPreviewsLoad, this, [this](){
-        if (ui->previewsTable)
+    connect(previewsModel, &PreviewsModel::startedPreviewsLoad, this, [this](bool scroll){
+        if (ui->previewsTable && scroll)
             ui->previewsTable->scrollToTop();
         if (loadingProgress)
         {

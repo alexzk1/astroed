@@ -39,6 +39,7 @@ public:
 
     void setCurrentFolder(const QString& path, bool recursive = false);
     void simulateModelReset();
+    void scrolledTo(int64_t row);
     virtual void generateLuaCode(std::ostream& out) const override;
 
     virtual ~PreviewsModel();
@@ -50,12 +51,13 @@ private:
     utility::runner_t loadPreviews;
     mutable std::recursive_mutex listMut;
     mfiles_t  modelFiles;
-    mutable std::atomic<size_t> urgentRowScrolled;
-    std::atomic<size_t> modelFilesAmount;
+    mutable std::atomic<int64_t> urgentRowScrolled;
+    std::atomic<int64_t> modelFilesAmount;
     std::map<int, QStringList> fixedCombosLists; //wana to do generic solution
     void haveFilesList(const files_t& list, const utility::runnerint_t& stop);
+    void loadCurrentInterval();
 signals:
-    void startedPreviewsLoad();
+    void startedPreviewsLoad(bool scroll);
     void finishedPreviewsLoad();
     void loadProgress(int percents);
 };
