@@ -9,8 +9,6 @@ SettingsDialog::SettingsDialog(QWidget *parent) :
     ui(new Ui::SettingsDialog)
 {
     ui->setupUi(this);
-    setAttribute( Qt::WA_DeleteOnClose, true );
-
     readSettings(this);
 
     const StaticSettingsMap& sett = StaticSettingsMap::getGlobalSetts();
@@ -23,6 +21,7 @@ SettingsDialog::SettingsDialog(QWidget *parent) :
     auto wl = sett.createWidgets();
     for (const auto& wi : wl)
     {
+        wi->setParent(this);
         layout->addWidget(wi);
     }
 }

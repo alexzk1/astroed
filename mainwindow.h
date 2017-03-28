@@ -18,6 +18,8 @@ class MainWindow;
 
 class ClickableLabel;
 class QSortFilterProxyModel;
+class SettingsDialog;
+
 class MainWindow : public QMainWindow, public utility::ItCanBeOnlyOne<MainWindow>, protected utility::SaveableWidget
 {
     Q_OBJECT
@@ -55,7 +57,7 @@ private:
     QPointer<ClickableLabel>   memoryLabel;
     QPointer<ClickableLabel>   fileNameLabel;
     QPointer<QProgressBar>     loadingProgress;
-
+    QPointer<SettingsDialog>   settDialog;
     int previewShift;
     const QString originalStylesheet;
 

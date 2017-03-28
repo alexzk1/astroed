@@ -31,6 +31,7 @@
 #include "utils/no_const.h"
 #include "utils/strutils.h"
 #include "utils/cont_utils.h"
+#include "config_ui/globalsettings.h"
 
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------CONFIG------------------------------------------------------------------------------------------------
@@ -149,6 +150,11 @@ void PreviewsModel::generateLuaCode(std::ostream &out) const
     out << "\n}" << std::endl;
 }
 
+bool PreviewsModel::isParsingVideo()
+{
+    return StaticSettingsMap::getGlobalSetts().readBool("Bool_parse_frames");
+}
+
 const static QVector<int> roles = {Qt::DisplayRole};
 
 PreviewsModel::PreviewsModel(QObject *parent)
@@ -219,7 +225,7 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
     QVariant res;
     if (index.isValid())
     {
-        if (index.row() >= modelFilesAmount || index.row() < 0 || index.column() < 0 || index.column() > static_cast<int>(captions.size()))
+        if (index.row() >= modelFilesAmount || index.row() < 0 || index.column() < 0 || index.column() >= static_cast<int>(captions.size()))
             return res;
 
         size_t col  = static_cast<decltype (col)>(index.column());
@@ -382,29 +388,28 @@ Qt::ItemFlags PreviewsModel::flags(const QModelIndex &index) const
 
 void PreviewsModel::setCurrentFolder(const QString &path, bool recursive)
 {
-    static QStringList filter;
-
-    if (filter.isEmpty())
-    {
-        for (const auto& s : supportedExt)
-        {
-            filter << "*."+s.toLower();
-            filter << "*."+s.toUpper();
-        }
-#ifdef USING_VIDEO_FS
-        for (const auto& s: supportedVids)
-        {
-            filter << "*."+s.toLower();
-            filter << "*."+s.toUpper();
-        }
-#endif
-    }
-
     loadPreviews.reset();
     listFiles.reset();
 
     listFiles = utility::startNewRunner([this, path, recursive](auto stop)
     {
+        QStringList filter;
+        for (const auto& s : supportedExt)
+        {
+            filter << "*."+s.toLower();
+            filter << "*."+s.toUpper();
+        }
+    #ifdef USING_VIDEO_FS
+        if (isParsingVideo())
+        {
+            for (const auto& s: supportedVids)
+            {
+                filter << "*."+s.toLower();
+                filter << "*."+s.toUpper();
+            }
+        }
+    #endif
+
         using namespace utility;
         std::vector<QFileInfo> pathes;
         std::vector<QString>  subfolders;
@@ -507,7 +512,8 @@ void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list, const util
         auto s = fi.absoluteFilePath();
 
 #ifdef USING_VIDEO_FS
-        if (supportedVids.count(fi.suffix().toLower()))
+        const bool ipv = isParsingVideo();
+        if (ipv && supportedVids.count(fi.suffix().toLower()))
         {
             auto frames = IMAGE_LOADER.getVideoFramesLinks(s);
             if (frames.size())
@@ -544,14 +550,11 @@ void PreviewsModel::loadCurrentInterval()
         //qDebug() << "Previews started load";
         emit this->startedPreviewsLoad(false);
         std::this_thread::sleep_for(50ms);
-
+        const auto work = [&stop](){return !(*stop);}; //operations may take significant time during it thread could be stopped, so want to check latest always
 
         if (sz) //don't div by zero!
         {
-
             const double mul = 100. / (to - from + 1); //some optimization of the loop
-
-            const auto work = [&stop](){return !(*stop);}; //operations may take significant time during it thread could be stopped, so want to check latest always
             decltype(sz) total_loaded = 0;
             const auto loaded_index = [&work, this, &total_loaded](decltype (sz) i, bool loaded)
             {
@@ -598,10 +601,9 @@ void PreviewsModel::loadCurrentInterval()
                     }
                 }
             }
-            if (work())
-                emit this->finishedPreviewsLoad();
         }
-        //qDebug() << "Previews loaded" << modelFiles.size();
+        if (work())
+            emit this->finishedPreviewsLoad();
     });
 }
 

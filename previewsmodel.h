@@ -42,6 +42,8 @@ public:
     void scrolledTo(int64_t row);
     virtual void generateLuaCode(std::ostream& out) const override;
 
+    bool static isParsingVideo();
+
     virtual ~PreviewsModel();
 private:
     using files_t  = std::vector<QFileInfo>;

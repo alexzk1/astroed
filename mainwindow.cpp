@@ -26,7 +26,8 @@ MainWindow::MainWindow(QWidget *parent) :
     fileNameLabel(new ClickableLabel(this)),
     loadingProgress(new QProgressBar(this)),
     previewShift(0),
-    originalStylesheet(qApp->styleSheet())
+    originalStylesheet(qApp->styleSheet()),
+    settDialog(new SettingsDialog(this))
 {
     ui->setupUi(this);
 
@@ -339,6 +340,6 @@ void MainWindow::on_actionGuess_Darks_triggered()
 
 void MainWindow::on_actionSettings_triggered()
 {
-    auto sd = new SettingsDialog(this);
-    sd->show();
+    if (settDialog)
+        settDialog->show();
 }
