@@ -422,6 +422,11 @@ QCheckBox::indicator{
     height: 9px;
 }
 
+QCheckBox::indicator:checked
+{
+    image:url(:/icons/icons/checkbox.png);
+}
+
 QRadioButton::indicator
 {
     border-radius: 6px;
