@@ -58,7 +58,8 @@ SOURCES += main.cpp\
         mainwindow.cpp \
     previewsmodel.cpp \
     customtableview.cpp \
-    scrollareapannable.cpp
+    scrollareapannable.cpp \
+    fixedcombowithshortcut.cpp
 
 HEADERS  += mainwindow.h \
     previewsmodel.h \
@@ -66,7 +67,8 @@ HEADERS  += mainwindow.h \
     customtableview.h \
     custom_roles.h \
     scrollareapannable.h \
-    clickablelabel.h
+    clickablelabel.h \
+    fixedcombowithshortcut.h
 
 FORMS    += mainwindow.ui
 

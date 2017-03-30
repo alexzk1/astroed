@@ -269,11 +269,6 @@ QHeaderView::section
     border: 1px solid #6c6c6c;
 }
 
-QCheckBox:disabled
-{
-color: #414141;
-}
-
 QDockWidget::title
 {
     text-align: center;
@@ -420,6 +415,11 @@ QCheckBox::indicator{
     border: 1px solid #b1b1b1;
     width: 9px;
     height: 9px;
+}
+
+QCheckBox:disabled
+{
+    color: #414141;
 }
 
 QCheckBox::indicator:checked

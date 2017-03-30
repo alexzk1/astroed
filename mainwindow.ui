@@ -238,6 +238,7 @@
     <bool>false</bool>
    </attribute>
    <addaction name="actionNewtone"/>
+   <addaction name="separator"/>
    <addaction name="actionGuess_Darks"/>
    <addaction name="separator"/>
    <addaction name="actionSettings"/>

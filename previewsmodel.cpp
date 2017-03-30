@@ -26,12 +26,13 @@
 #include "mainwindow.h"
 
 #include <QDebug>
-
+#include <QKeySequence>
 
 #include "utils/no_const.h"
 #include "utils/strutils.h"
 #include "utils/cont_utils.h"
 #include "config_ui/globalsettings.h"
+#include "fixedcombowithshortcut.h"
 
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------CONFIG------------------------------------------------------------------------------------------------
@@ -64,15 +65,16 @@ struct fileroles_t
 {
     const QString humanRole;
     const int     luaRole;
+    const QKeySequence seq;
 };
 
 //order is important here, lua-generator below relays on it
 //PreviewsModel::guessDarks() relays on it
 const static std::vector<fileroles_t> fileRoles =
 {
-    {QObject::tr("Stack source"), 0}, //must be 1st (1st will be set as default)
-    {QObject::tr("Ignored"), -1},
-    {QObject::tr("Dark"), 1},
+    {QObject::tr("Source"), 0, QKeySequence("=")}, //must be 1st (1st will be set as default)
+    {QObject::tr("Ignored"), -1, QKeySequence("-")},
+    {QObject::tr("Dark"), 1, QKeySequence("0")},
 };
 
 
@@ -88,9 +90,10 @@ const static std::vector<sectiondescr_t> captions =
      [](QWidget* parent, const QStyleOptionViewItem &option, const QModelIndex& index){
          Q_UNUSED(option);
          Q_UNUSED(index);
-         QComboBox *editor = new QComboBox(parent);
+         FixedComboWithShortcut *editor = new FixedComboWithShortcut(parent);
          editor->setEditable(false);
-         for (const auto& i : fileRoles) editor->addItem(i.humanRole);
+         for (const auto& i : fileRoles) editor->addItemWithShortcut(i.humanRole, i.seq);
+
          return editor;
      }, 0 //FIXED_COMBO_BOX stores indexes in model
     },
