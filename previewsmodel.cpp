@@ -27,12 +27,14 @@
 
 #include <QDebug>
 #include <QKeySequence>
+#include <QKeyEvent>
 
 #include "utils/no_const.h"
 #include "utils/strutils.h"
 #include "utils/cont_utils.h"
 #include "config_ui/globalsettings.h"
 #include "fixedcombowithshortcut.h"
+#include "../customtableview.h"
 
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------CONFIG------------------------------------------------------------------------------------------------
@@ -63,8 +65,8 @@ struct sectiondescr_t
 //texts can be translated, but for lua need to have some fixed values
 struct fileroles_t
 {
-    const QString humanRole;
-    const int     luaRole;
+    const QString      humanRole;
+    const int64_t      luaRole;
     const QKeySequence seq;
 };
 
@@ -402,7 +404,7 @@ void PreviewsModel::setCurrentFolder(const QString &path, bool recursive)
             filter << "*."+s.toLower();
             filter << "*."+s.toUpper();
         }
-    #ifdef USING_VIDEO_FS
+#ifdef USING_VIDEO_FS
         if (isParsingVideo())
         {
             for (const auto& s: supportedVids)
@@ -411,7 +413,7 @@ void PreviewsModel::setCurrentFolder(const QString &path, bool recursive)
                 filter << "*."+s.toUpper();
             }
         }
-    #endif
+#endif
 
         using namespace utility;
         std::vector<QFileInfo> pathes;
@@ -559,18 +561,8 @@ void PreviewsModel::loadCurrentInterval()
         {
             const double mul = 100. / (to - from + 1); //some optimization of the loop
             decltype(sz) total_loaded = 0;
-            const auto loaded_index = [&work, this, &total_loaded](decltype (sz) i, bool loaded)
-            {
-                if (loaded) //stop check is important here, or GUI may stack if thread interrupted and signal is out
-                {
-                    //updating preview
-                    QModelIndex k = this->index(static_cast<int>(i), 0);
-                    emit this->dataChanged(k, k, roles);
-                    ++total_loaded;
-                    if (work())
-                        std::this_thread::sleep_for(25ms); //allowing gui to process items
-                }
-            };
+            std::vector<decltype (from)> loaded_indexes;
+            loaded_indexes.reserve(to - from + 1);
 
             for (decltype(sz) i = from; i < to && work(); ++i)
             {
@@ -586,8 +578,11 @@ void PreviewsModel::loadCurrentInterval()
                     if (modelFiles.at(i).brokenPreview)
                         this->setData(this->index(i, 2), 1, Qt::EditRole);
                 }
-
-                loaded_index(i, loaded);
+                if (loaded)
+                {
+                    loaded_indexes.push_back(i);
+                    ++total_loaded;
+                }
 
                 if (total_loaded)
                 {
@@ -595,13 +590,26 @@ void PreviewsModel::loadCurrentInterval()
                         emit this->loadProgress(total_loaded * mul);
 
                     if (total_loaded % 25 == 0 && work())
-                    {
                         IMAGE_LOADER.gc(true); //because of the hard pressure of loading many files for preview, need to cleanse cache asap
-                        if (work())
-                        {
-                            std::this_thread::sleep_for(50ms);
-                        }
-                    }
+                }
+            }
+
+            for (size_t i = 0, tot = loaded_indexes.size(), start = 0, end = 0; i < tot; ++i)
+            {
+                bool c1 = loaded_indexes.at(i) - loaded_indexes.at(start) == i - start;
+                if (c1)
+                {
+                    end = i;
+                }
+
+                if (!c1 || i + 1 == tot)
+                {
+                    QModelIndex si = this->index(static_cast<int>(loaded_indexes.at(start)), 0);
+                    QModelIndex ei = this->index(static_cast<int>(loaded_indexes.at(end)), 0);
+                    emit this->dataChanged(si, ei, roles);
+                    start = end = i;
+                    if (work())
+                        std::this_thread::sleep_for(25ms);
                 }
             }
         }
@@ -696,24 +704,36 @@ QSize PreviewsDelegate::sizeHint(const QStyleOptionViewItem &option, const QMode
 
 bool PreviewsDelegate::editorEvent(QEvent *event, QAbstractItemModel *model, const QStyleOptionViewItem &option, const QModelIndex &index)
 {
-    auto me = dynamic_cast<QMouseEvent*>(event);
-    if (me && index.isValid())
+    if (index.isValid())
     {
-        if (me->button() == Qt::LeftButton && me->type() == QEvent::MouseButtonRelease)
+        auto me = dynamic_cast<QMouseEvent*>(event);
+        const auto mode = captions.at(index.column()).mode;
+        if (me)
         {
-            if (captions.at(index.column()).mode == DelegateMode::FILE_HYPERLINK)
-            {
-                QDesktopServices::openUrl(QString("file://%1").arg(IMAGE_LOADER.getFileLinkForExternalTools(index.data().toString())));
-                return true;
-            }
 
-            if (captions.at(index.column()).mode == DelegateMode::IMAGE_PREVIEW)
+            if (me->button() == Qt::LeftButton && me->type() == QEvent::MouseButtonRelease)
             {
-                lastClickedPreview = index;
-                showLastClickedPreview();
-                return true;
+                if (mode == DelegateMode::FILE_HYPERLINK)
+                {
+                    QDesktopServices::openUrl(QString("file://%1").arg(IMAGE_LOADER.getFileLinkForExternalTools(index.data().toString())));
+                    return true;
+                }
+
+                if (mode == DelegateMode::IMAGE_PREVIEW)
+                {
+                    lastClickedPreview = index;
+                    showLastClickedPreview();
+                    return true;
+                }
             }
         }
+
+        //        auto ke = dynamic_cast<QKeyEvent*>(event);
+        //        if (ke)
+        //        {
+        //            if (CustomTableView::getBrowseKeys().count(ke->key()))
+        //                return true;
+        //        }
     }
     return QStyledItemDelegate::editorEvent(event, model, option, index);
 }
@@ -726,7 +746,7 @@ QWidget *PreviewsDelegate::createEditor(QWidget *parent, const QStyleOptionViewI
         res = captions.at(index.column()).editor(parent, option, index);
         if (res)
         {
-            res->setFocusPolicy(Qt::StrongFocus); //otherwise tableview will get mouse events
+            res->setFocusPolicy(Qt::StrongFocus);
             //res->setAutoFillBackground(true); //if commented, view's background will be used
         }
     }
@@ -763,4 +783,35 @@ void PreviewsDelegate::setModelData(QWidget *editor, QAbstractItemModel *model, 
             }
         }
     }
+}
+
+bool PreviewsDelegate::eventFilter(QObject *t, QEvent *e)
+{
+    //it seems arrows should be intercepted here http://stackoverflow.com/questions/39290017/how-to-intercept-key-events-when-editing-a-cell-in-qtablewidget-qtableview
+    //but that may break shortcuts ...
+    //hard coding arrow keys to move between rows (lines), otherwise it's captured by embedded combos etc.
+    const static std::map<int, int> shifts
+    {
+        {Qt::Key_Up, -1},
+        {Qt::Key_Down, 1},
+    };
+
+    //    if(e->type() == QEvent::KeyPress)
+    //    {
+    //        const auto m  = model();
+    //        QKeyEvent *keyEvent = dynamic_cast<QKeyEvent*>(e);
+    //        if (m && keyEvent)
+    //        {
+    //            const auto key = keyEvent->key();
+    //            if (shifts.count(key))
+    //            {
+    //                const auto si =  currentIndex();
+    //                const auto ni = m->index(si.row() + shifts.at(key), si.column());
+    //                if (ni.isValid())
+    //                setCurrentIndex(ni);
+    //                return true;
+    //            }
+    //        }
+    //    }
+    return false;
 }

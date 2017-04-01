@@ -25,9 +25,9 @@ MainWindow::MainWindow(QWidget *parent) :
     memoryLabel(new ClickableLabel(this)),
     fileNameLabel(new ClickableLabel(this)),
     loadingProgress(new QProgressBar(this)),
+    settDialog(new SettingsDialog(this)),
     previewShift(0),
-    originalStylesheet(qApp->styleSheet()),
-    settDialog(new SettingsDialog(this))
+    originalStylesheet(qApp->styleSheet())
 {
     ui->setupUi(this);
 
@@ -75,10 +75,10 @@ MainWindow::MainWindow(QWidget *parent) :
       //qDebug() << ((PreviewsModel*)ui->previewsTable->model())->generateLuaString().c_str();
     }, Qt::QueuedConnection);
 
-    connect(previewsModel, &QAbstractTableModel::dataChanged, this, [this](const auto ind, const auto, const auto&)
+    connect(previewsModel, &QAbstractTableModel::dataChanged, this, [this](const auto start, const auto end, const auto&)
     {
         if (ui->previewsTable)
-           ui->previewsTable->dataChangedInModel(ind);
+           ui->previewsTable->dataChangedInModel(start, end);
 
     }, Qt::QueuedConnection);
 

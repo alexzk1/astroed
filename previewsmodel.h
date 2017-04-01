@@ -80,4 +80,5 @@ protected:
     virtual void setModelData(QWidget *editor, QAbstractItemModel *model, const QModelIndex &index) const override;
 private:
     QModelIndex lastClickedPreview;
+    bool eventFilter(QObject *t, QEvent *e);
 };

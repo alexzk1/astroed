@@ -1,21 +1,33 @@
 #include "customtableview.h"
 #include "custom_roles.h"
 #include <QMouseEvent>
+#include <QEvent>
+#include <QKeyEvent>
+#include <QModelIndex>
+#include <QAbstractTableModel>
+#include <map>
 
 CustomTableView::CustomTableView(QWidget *parent):
     QTableView (parent),
     m_lastIndex()
 {
     setMouseTracking(true);
+    installEventFilter(this);
 }
 
-void CustomTableView::dataChangedInModel(const QModelIndex &index)
+void CustomTableView::dataChangedInModel(const QModelIndex &start, const QModelIndex &end)
 {
-    if (index.isValid())
-    {
-        resizeColumnToContents(index.column());
-        resizeRowToContents(index.row());
-    }
+    QAbstractItemModel *m(model());
+    if (m)
+        for (int row = start.row(), rsz = end.row(); row < rsz; ++row)
+        {
+            QModelIndex index = m->index(row, start.column());
+            if (index.isValid())
+            {
+                resizeColumnToContents(index.column());
+                resizeRowToContents(index.row());
+            }
+        }
 }
 
 void CustomTableView::mouseMoveEvent(QMouseEvent *event)
