@@ -136,6 +136,8 @@ bool isDark(const T& path)
     return utility::strcontains(src, termsDark);
 }
 
+constexpr static int64_t previews_half_range = 10;
+
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------MODEL-------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
@@ -475,7 +477,7 @@ void PreviewsModel::simulateModelReset()
 
 void PreviewsModel::scrolledTo(int64_t row)
 {
-    if (std::abs(row - urgentRowScrolled) > 40)
+    if (std::abs(row - urgentRowScrolled) > static_cast<decltype(previews_half_range)>(0.9 * previews_half_range))
     {
         urgentRowScrolled = row;
         loadCurrentInterval();
@@ -547,14 +549,13 @@ void PreviewsModel::loadCurrentInterval()
     loadPreviews = utility::startNewRunner([this](auto stop)
     {
         auto sz   = static_cast<size_t>(modelFilesAmount);
-        auto from = static_cast<size_t>(std::max<int64_t>(0,  urgentRowScrolled - 50));
-        auto to   = static_cast<size_t>(std::min<int64_t>(static_cast<int64_t>(sz), urgentRowScrolled + 50));
+        auto from = static_cast<size_t>(std::max<int64_t>(0,  urgentRowScrolled - previews_half_range));
+        auto to   = static_cast<size_t>(std::min<int64_t>(static_cast<int64_t>(sz), urgentRowScrolled + previews_half_range));
 
         using namespace std::literals;
 
         //qDebug() << "Previews started load";
         emit this->startedPreviewsLoad(false);
-        std::this_thread::sleep_for(50ms);
         const auto work = [&stop](){return !(*stop);}; //operations may take significant time during it thread could be stopped, so want to check latest always
 
         if (sz) //don't div by zero!
@@ -602,7 +603,7 @@ void PreviewsModel::loadCurrentInterval()
                     end = i;
                 }
 
-                if (!c1 || i + 1 == tot)
+                if (!c1 || i + 1 >= tot)
                 {
                     QModelIndex si = this->index(static_cast<int>(loaded_indexes.at(start)), 0);
                     QModelIndex ei = this->index(static_cast<int>(loaded_indexes.at(end)), 0);

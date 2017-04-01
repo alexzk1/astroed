@@ -19,7 +19,7 @@ void CustomTableView::dataChangedInModel(const QModelIndex &start, const QModelI
 {
     QAbstractItemModel *m(model());
     if (m)
-        for (int row = start.row(), rsz = end.row(); row < rsz; ++row)
+        for (int row = start.row(), rsz = end.row(); row <= rsz; ++row)
         {
             QModelIndex index = m->index(row, start.column());
             if (index.isValid())
