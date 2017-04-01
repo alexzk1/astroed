@@ -277,10 +277,12 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
                     res = itm.filePath;
                     break;
                 case DelegateMode::IMAGE_PREVIEW:
-                    res = itm.getPreview();
+                    if (itm.wasLoaded)
+                        res = itm.getPreview();
                     break;
                 case DelegateMode::IMAGE_META:
-                    res = itm.getPreviewInfo();
+                    if (itm.wasLoaded)
+                        res = itm.getPreviewInfo();
                     break;
                 case DelegateMode::FIXED_COMBO_BOX:
                 {

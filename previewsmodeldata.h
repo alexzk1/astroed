@@ -15,12 +15,14 @@ public:
     QString  filePath;
     std::map<int, QVariant>          valuesPerColumn;
     bool brokenPreview;
+    bool wasLoaded;
 
     PreviewsModelData(const QString& path):
         preview(nullptr),
         filePath(path),
         valuesPerColumn(),
-        brokenPreview(false)
+        brokenPreview(false),
+        wasLoaded(false)
     {
     }
 
@@ -31,6 +33,7 @@ public:
         {
             preview = PREVIEW_LOADER.getImage(filePath);
             brokenPreview = preview == nullptr || preview->isNull();
+            wasLoaded = !brokenPreview;
         }
         return res;
     }
