@@ -17,11 +17,12 @@ CustomTableView::CustomTableView(QWidget *parent):
 
 void CustomTableView::dataChangedInModel(const QModelIndex &start, const QModelIndex &end)
 {
-    for (int row = start.row(), rsz = end.row(); row <= rsz; ++row)
-    {
-        resizeColumnToContents(start.column());
-        resizeRowToContents(row);
-    }
+    for (int column = start.column(), colsz = end.column(); column <= colsz; ++column)
+        for (int row = start.row(), rsz = end.row(); row <= rsz; ++row)
+        {
+            resizeColumnToContents(column);
+            resizeRowToContents(row);
+        }
 }
 
 void CustomTableView::mouseMoveEvent(QMouseEvent *event)
