@@ -41,67 +41,10 @@
            <enum>Qt::Horizontal</enum>
           </property>
           <widget class="QWidget" name="layoutWidget">
-           <layout class="QVBoxLayout" name="verticalLayout_2">
+           <layout class="QVBoxLayout" name="layoutFilesTree">
             <property name="spacing">
              <number>0</number>
             </property>
-            <item>
-             <widget class="QWidget" name="treeBtnsHost" native="true">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
-                <horstretch>0</horstretch>
-                <verstretch>1</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>0</height>
-               </size>
-              </property>
-              <layout class="QHBoxLayout" name="horizontalLayout">
-               <property name="spacing">
-                <number>7</number>
-               </property>
-               <property name="leftMargin">
-                <number>5</number>
-               </property>
-               <property name="topMargin">
-                <number>0</number>
-               </property>
-               <property name="rightMargin">
-                <number>5</number>
-               </property>
-               <property name="bottomMargin">
-                <number>0</number>
-               </property>
-               <item>
-                <widget class="QToolButton" name="btnRecurseList">
-                 <property name="toolTip">
-                  <string>Recurse read (list subfolders). Pathes which contain word &quot;dark&quot; will be always listed regardless switch.
-</string>
-                 </property>
-                 <property name="text">
-                  <string/>
-                 </property>
-                 <property name="icon">
-                  <iconset resource="resources.qrc">
-                   <normaloff>:/icons/icons/spiral-icon.png</normaloff>:/icons/icons/spiral-icon.png</iconset>
-                 </property>
-                 <property name="iconSize">
-                  <size>
-                   <width>24</width>
-                   <height>24</height>
-                  </size>
-                 </property>
-                 <property name="checkable">
-                  <bool>true</bool>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </widget>
-            </item>
             <item>
              <widget class="QTreeView" name="dirsTree">
               <property name="sizePolicy">
@@ -167,6 +110,21 @@
         <string>Zoom 1:1</string>
        </attribute>
        <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <property name="spacing">
+         <number>0</number>
+        </property>
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
         <item>
          <widget class="ScrollAreaPannable" name="scrollAreaZoom">
           <property name="frameShape">
@@ -183,8 +141,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>844</width>
-             <height>500</height>
+             <width>862</width>
+             <height>518</height>
             </rect>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -299,6 +257,21 @@
    </property>
    <property name="toolTip">
     <string>Exports current image to file.</string>
+   </property>
+  </action>
+  <action name="actionRecursive_Listing">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/icons/spiral-icon.png</normaloff>:/icons/icons/spiral-icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Recursive Listing</string>
+   </property>
+   <property name="toolTip">
+    <string>Recurse read (list subfolders). Pathes which contain word &quot;dark&quot; will be always listed regardless switch.</string>
    </property>
   </action>
  </widget>

@@ -123,6 +123,7 @@ MainWindow::MainWindow(QWidget *parent) :
         zoomToolbar->addAction(ui->actionSave_As);
     }
 
+
     //lexer must be created prior widget
     LuaEditor::createSharedLuaLexer({{"apiTest", "param", "test function"}});
     ui->tabScript->layout()->addWidget(new LuaEditor(this));
@@ -281,7 +282,7 @@ void MainWindow::recurseRead(QSettings &settings, QObject *object)
 void MainWindow::currentDirChanged(const QString &dir)
 {
     //qDebug() << "currentDirChanged: " << dir;
-    previewsModel->setCurrentFolder(dir, ui->btnRecurseList->isChecked());
+    previewsModel->setCurrentFolder(dir, ui->actionRecursive_Listing->isChecked());
 }
 
 QString MainWindow::getSelectedFolder()
@@ -312,7 +313,6 @@ void MainWindow::setupFsBrowsing()
     ui->dirsTree->hideColumn(2);
     ui->dirsTree->hideColumn(3);
 
-    ui->treeBtnsHost->layout()->setAlignment(Qt::AlignLeft);
 
     const std::shared_ptr<QString> lastFolder(new QString());
     connect(ui->dirsTree->selectionModel(), &QItemSelectionModel::currentChanged, this, [this, lastFolder](auto p1, auto p2)
@@ -325,9 +325,16 @@ void MainWindow::setupFsBrowsing()
         }
     }, Qt::QueuedConnection);
 
-    connect(ui->btnRecurseList, &QToolButton::clicked, this, [this, lastFolder](){
-        this->currentDirChanged(*lastFolder);
-    }, Qt::QueuedConnection);
+    auto toolBox = addToolbarToLayout(ui->layoutFilesTree);
+    if (toolBox)
+    {
+        toolBox->setToolButtonStyle(Qt::ToolButtonIconOnly);
+
+        toolBox->addAction(ui->actionRecursive_Listing);
+        connect(ui->actionRecursive_Listing, &QAction::triggered, this, [this, lastFolder](){
+            this->currentDirChanged(*lastFolder);
+        }, Qt::QueuedConnection);
+    }
 }
 
 QToolBar *MainWindow::addToolbarToLayout(QLayout *src, int pos)
@@ -347,7 +354,7 @@ QToolBar *MainWindow::addToolbarToLayout(QLayout *src, int pos)
         {
             result = new QToolBar(this);
             result->setOrientation(Qt::Horizontal);
-            hbox->insertWidget(pos, result);
+            vbox->insertWidget(pos, result);
         }
     }
 
