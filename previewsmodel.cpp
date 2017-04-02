@@ -137,7 +137,7 @@ bool isDark(const T& path)
 }
 
 constexpr static int64_t previews_half_range = 10;
-
+constexpr static int delayBeforeLoadOnScrollMs = 350;
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------MODEL-------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
@@ -172,7 +172,8 @@ PreviewsModel::PreviewsModel(QObject *parent)
       listMut(),
       modelFiles(),
       urgentRowScrolled(0),
-      modelFilesAmount(0)
+      modelFilesAmount(0),
+      scrollDelayedLoader()
 {
     connect(this, &QAbstractTableModel::modelReset, this, [this]()
     {
@@ -182,6 +183,9 @@ PreviewsModel::PreviewsModel(QObject *parent)
         urgentRowScrolled = 0;
         loadCurrentInterval();
     }, Qt::QueuedConnection);
+
+    scrollDelayedLoader.setSingleShot(true);
+    connect(&scrollDelayedLoader, &QTimer::timeout, this, &PreviewsModel::onTimerDelayedLoader, Qt::QueuedConnection);
 }
 
 QVariant PreviewsModel::headerData(int section, Qt::Orientation orientation, int role) const
@@ -481,8 +485,15 @@ void PreviewsModel::scrolledTo(int64_t row)
     if (std::abs(row - urgentRowScrolled) > static_cast<decltype(previews_half_range)>(0.9 * previews_half_range))
     {
         urgentRowScrolled = row;
-        loadCurrentInterval();
+
+        //this + onTimerDelayedLoader() allows fast and smooth list scroll by user
+        scrollDelayedLoader.start(delayBeforeLoadOnScrollMs);
     }
+}
+
+void PreviewsModel::onTimerDelayedLoader()
+{
+    loadCurrentInterval();
 }
 
 PreviewsModel::~PreviewsModel()
@@ -590,9 +601,6 @@ void PreviewsModel::loadCurrentInterval()
                 {
                     if (total_loaded % 10 == 0 && work())
                         emit this->loadProgress(total_loaded * mul);
-
-                    if (total_loaded % 25 == 0 && work())
-                        IMAGE_LOADER.gc(true); //because of the hard pressure of loading many files for preview, need to cleanse cache asap
                 }
             }
 
@@ -616,7 +624,10 @@ void PreviewsModel::loadCurrentInterval()
             }
         }
         if (work())
+        {
             emit this->finishedPreviewsLoad();
+            IMAGE_LOADER.gc(true);
+        }
     });
 }
 

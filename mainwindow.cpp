@@ -116,13 +116,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(timer, &QTimer::timeout, this, std::bind(updateMemoryLabel, false));
     timer->start(2000);
 
-    ui->scrollAreaZoom->installEventFilter(this);
-    auto zoomToolbar = addToolbarToLayout(ui->tabZoomed->layout());
-    if (zoomToolbar)
-    {
-        zoomToolbar->addAction(ui->actionSave_As);
-    }
-
+    setupZoomGui();
 
     //lexer must be created prior widget
     LuaEditor::createSharedLuaLexer({{"apiTest", "param", "test function"}});
@@ -331,9 +325,20 @@ void MainWindow::setupFsBrowsing()
         toolBox->setToolButtonStyle(Qt::ToolButtonIconOnly);
 
         toolBox->addAction(ui->actionRecursive_Listing);
-        connect(ui->actionRecursive_Listing, &QAction::triggered, this, [this, lastFolder](){
+        connect(ui->actionRecursive_Listing, &QAction::triggered, this, [this, lastFolder]()
+        {
             this->currentDirChanged(*lastFolder);
         }, Qt::QueuedConnection);
+    }
+}
+
+void MainWindow::setupZoomGui()
+{
+    ui->scrollAreaZoom->installEventFilter(this);
+    auto zoomToolbar = addToolbarToLayout(ui->tabZoomed->layout());
+    if (zoomToolbar)
+    {
+        zoomToolbar->addAction(ui->actionSave_As);
     }
 }
 

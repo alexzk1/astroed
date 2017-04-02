@@ -67,6 +67,8 @@ private:
     QString lastPreviewFileName;
 
     void setupFsBrowsing();
+    void setupZoomGui();
+
     const static QString zoomKbHintText;
     QToolBar* addToolbarToLayout(QLayout* src, int pos = 0);
 };

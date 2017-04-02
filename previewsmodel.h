@@ -7,6 +7,7 @@
 #include <queue>
 #include <QAbstractTableModel>
 #include <QStyledItemDelegate>
+#include <QTimer>
 
 #include "lua/lua_gen.h"
 #include "utils/runners.h"
@@ -40,11 +41,14 @@ public:
     void setCurrentFolder(const QString& path, bool recursive = false);
     void simulateModelReset();
     void scrolledTo(int64_t row);
+
     virtual void generateLuaCode(std::ostream& out) const override;
 
     bool static isParsingVideo();
 
     virtual ~PreviewsModel();
+private slots:
+    void onTimerDelayedLoader();
 private:
     using files_t  = std::vector<QFileInfo>;
     using mfiles_t = std::vector<PreviewsModelData>;
@@ -56,6 +60,7 @@ private:
     mutable std::atomic<int64_t> urgentRowScrolled;
     std::atomic<int64_t> modelFilesAmount;
     std::map<int, QStringList> fixedCombosLists; //wana to do generic solution
+    QTimer scrollDelayedLoader;
     void haveFilesList(const files_t& list, const utility::runnerint_t& stop);
     void loadCurrentInterval();
 signals:
