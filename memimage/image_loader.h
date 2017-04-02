@@ -256,6 +256,7 @@ namespace imaging
         image_cacher();
         image_buffer_ptr getImage(const QString& fileName);
         meta_t           getExif(const QString& fileName);
+        bool             isLoaded(const QString& fileName) const;
 
         virtual void gc(bool no_wait = false);
         virtual void wipe();

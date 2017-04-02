@@ -63,6 +63,14 @@ meta_t image_cacher::getExif(const QString &fileName)
     return t.meta;
 }
 
+bool image_cacher::isLoaded(const QString &fileName) const
+{
+    std::lock_guard<std::recursive_mutex> guard(mutex);
+    if (!wcache.count(fileName))
+        return false;
+    return !wcache.at(fileName).second.data.expired();
+}
+
 void image_cacher::findImage(const QString& key, image_t_s& res)
 {
     std::lock_guard<std::recursive_mutex> guard(mutex);
@@ -424,64 +432,67 @@ QString meta_t::getStringValue() const //should prepare human readable value
 void meta_t::load(const QString &fileName)
 {
     using namespace exiv2_helpers;
-    auto image = Exiv2::ImageFactory::open(fileName.toStdString());
-    if (image.get() != nullptr)
+    if (QFile::exists(fileName))
     {
-        image->readMetadata();
-        const auto test_all_metas = [&image](const std::vector<keys_t>& e_x_i, auto& result)
+        auto image = Exiv2::ImageFactory::open(fileName.toStdString());
+        if (image.get() != nullptr)
         {
-            if (!getValueOneOf(image->exifData(),    e_x_i.at(0), result))
-                if (!getValueOneOf(image->xmpData(), e_x_i.at(1), result))
-                    getValueOneOf(image->iptcData(), e_x_i.at(2), result);
-        };
+            image->readMetadata();
+            const auto test_all_metas = [&image](const std::vector<keys_t>& e_x_i, auto& result)
+            {
+                if (!getValueOneOf(image->exifData(),    e_x_i.at(0), result))
+                    if (!getValueOneOf(image->xmpData(), e_x_i.at(1), result))
+                        getValueOneOf(image->iptcData(), e_x_i.at(2), result);
+            };
 
-        //todo: add keys to read values from xmp/iptc http://www.exiv2.org/tags.html
-        test_all_metas({
-                           {"Exif.Photo.ISOSpeedRatings", "Exif.Image.ISOSpeedRatings"}, //exif keys
-                           {}, //xmp keys
-                           {}, //iptc keys
-                       }, iso);
-
-        test_all_metas({
-                           {"Exif.Photo.ExposureTime", "Exif.Image.ExposureTime"}, //exif keys
-                           {}, //xmp keys
-                           {}, //iptc keys
-                       }, exposure);
-
-        test_all_metas({
-                           {"Exif.Photo.ApertureValue", "Exif.Image.ApertureValue", "Exif.Image.FNumber"}, //exif keys
-                           {"Xmp.exif.ApertureValue", "Xmp.exif.FNumber"}, //xmp keys
-                           {}, //iptc keys
-                       }, aperture);
-        Exiv2::Rational actualFocus;
-        test_all_metas({
-                           {"Exif.Photo.FocalLength", "Exif.Image.FocalLength"}, //exif keys
-                           {"Xmp.exif.FocalLength"}, //xmp keys
-                           {}, //iptc keys
-                       }, actualFocus);
-        RationalArray lensSpec;
-        test_all_metas({
-                           {"Exif.Photo.LensSpecification", "Exif.Image.LensSpecification"}, //exif keys
-                           {}, //xmp keys
-                           {}, //iptc keys
-                       }, lensSpec);
-
-        if (!lensSpec.size())
-        {
-            std::vector<uint16_t> sf;
+            //todo: add keys to read values from xmp/iptc http://www.exiv2.org/tags.html
             test_all_metas({
-                               {"Exif.CanonCs.Lens"}, //exif keys
+                               {"Exif.Photo.ISOSpeedRatings", "Exif.Image.ISOSpeedRatings"}, //exif keys
                                {}, //xmp keys
                                {}, //iptc keys
-                           }, sf);
-            if (sf.size() == 3)
-            {
-                lensSpec.push_back({sf.at(1), sf.at(2)});
-            }
-        }
-        if (lensSpec.size())
-            optZoom = exiv_rationals::toDouble(exiv_rationals::div(actualFocus, lensSpec.at(0)));
+                           }, iso);
 
-        wasLoaded = true;
+            test_all_metas({
+                               {"Exif.Photo.ExposureTime", "Exif.Image.ExposureTime"}, //exif keys
+                               {}, //xmp keys
+                               {}, //iptc keys
+                           }, exposure);
+
+            test_all_metas({
+                               {"Exif.Photo.ApertureValue", "Exif.Image.ApertureValue", "Exif.Image.FNumber"}, //exif keys
+                               {"Xmp.exif.ApertureValue", "Xmp.exif.FNumber"}, //xmp keys
+                               {}, //iptc keys
+                           }, aperture);
+            Exiv2::Rational actualFocus;
+            test_all_metas({
+                               {"Exif.Photo.FocalLength", "Exif.Image.FocalLength"}, //exif keys
+                               {"Xmp.exif.FocalLength"}, //xmp keys
+                               {}, //iptc keys
+                           }, actualFocus);
+            RationalArray lensSpec;
+            test_all_metas({
+                               {"Exif.Photo.LensSpecification", "Exif.Image.LensSpecification"}, //exif keys
+                               {}, //xmp keys
+                               {}, //iptc keys
+                           }, lensSpec);
+
+            if (!lensSpec.size())
+            {
+                std::vector<uint16_t> sf;
+                test_all_metas({
+                                   {"Exif.CanonCs.Lens"}, //exif keys
+                                   {}, //xmp keys
+                                   {}, //iptc keys
+                               }, sf);
+                if (sf.size() == 3)
+                {
+                    lensSpec.push_back({sf.at(1), sf.at(2)});
+                }
+            }
+            if (lensSpec.size())
+                optZoom = exiv_rationals::toDouble(exiv_rationals::div(actualFocus, lensSpec.at(0)));
+
+            wasLoaded = true;
+        }
     }
 }

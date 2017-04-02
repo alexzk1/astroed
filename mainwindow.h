@@ -6,6 +6,8 @@
 #include <QFileSystemModel>
 #include <QLabel>
 #include <QProgressBar>
+#include <QLayout>
+#include <QToolBar>
 
 #include "utils/inst_once.h"
 #include "utils/saveable_widget.h"
@@ -49,6 +51,8 @@ private slots:
 
     void on_actionSettings_triggered();
 
+    void on_actionSave_As_triggered();
+
 private:
     Ui::MainWindow *ui;
     QPointer<QFileSystemModel> dirsModel;
@@ -60,9 +64,11 @@ private:
     QPointer<SettingsDialog>   settDialog;
     int previewShift;
     const QString originalStylesheet;
+    QString lastPreviewFileName;
 
     void setupFsBrowsing();
     const static QString zoomKbHintText;
+    QToolBar* addToolbarToLayout(QLayout* src, int pos = 0);
 };
 
 #endif // MAINWINDOW_H

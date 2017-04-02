@@ -10,6 +10,7 @@
 #include <QTimer>
 #include <QFileInfo>
 #include <QHeaderView>
+#include <QFileDialog>
 #include "clickablelabel.h"
 #include "editor/luaeditor.h"
 #include "config_ui/settingsdialog.h"
@@ -27,7 +28,8 @@ MainWindow::MainWindow(QWidget *parent) :
     loadingProgress(new QProgressBar(this)),
     settDialog(new SettingsDialog(this)),
     previewShift(0),
-    originalStylesheet(qApp->styleSheet())
+    originalStylesheet(qApp->styleSheet()),
+    lastPreviewFileName()
 {
     ui->setupUi(this);
 
@@ -65,20 +67,20 @@ MainWindow::MainWindow(QWidget *parent) :
     }, Qt::QueuedConnection);
 
     connect(previewsModel, &PreviewsModel::loadProgress, this, [this](int pr){
-      if (loadingProgress)
-          loadingProgress->setValue(pr);
+        if (loadingProgress)
+            loadingProgress->setValue(pr);
     }, Qt::QueuedConnection);
 
     connect(previewsModel, &PreviewsModel::finishedPreviewsLoad, this, [this](){
-      if (loadingProgress)
-          loadingProgress->setVisible(false);
-      //qDebug() << ((PreviewsModel*)ui->previewsTable->model())->generateLuaString().c_str();
+        if (loadingProgress)
+            loadingProgress->setVisible(false);
+        //qDebug() << ((PreviewsModel*)ui->previewsTable->model())->generateLuaString().c_str();
     }, Qt::QueuedConnection);
 
     connect(previewsModel, &QAbstractTableModel::dataChanged, this, [this](const auto start, const auto end, const auto&)
     {
         if (ui->previewsTable)
-           ui->previewsTable->dataChangedInModel(start, end);
+            ui->previewsTable->dataChangedInModel(start, end);
 
     }, Qt::QueuedConnection);
 
@@ -115,10 +117,14 @@ MainWindow::MainWindow(QWidget *parent) :
     timer->start(2000);
 
     ui->scrollAreaZoom->installEventFilter(this);
+    auto zoomToolbar = addToolbarToLayout(ui->tabZoomed->layout());
+    if (zoomToolbar)
+    {
+        zoomToolbar->addAction(ui->actionSave_As);
+    }
 
     //lexer must be created prior widget
     LuaEditor::createSharedLuaLexer({{"apiTest", "param", "test function"}});
-
     ui->tabScript->layout()->addWidget(new LuaEditor(this));
 }
 
@@ -153,6 +159,7 @@ void MainWindow::selectPath(const QString &path, bool collapse)
 
 QLabel &MainWindow::openPreviewTab(const QSize& maxSize, const QString& fileName)
 {
+    lastPreviewFileName = fileName;
     const auto txt = (fileName.isEmpty())? "":QString(tr("File: %1")).arg(QFileInfo(fileName).fileName());
     ui->tabsWidget->setCurrentWidget(ui->tabZoomed);
     ui->scrollAreaZoom->setMaxZoom(maxSize);
@@ -267,7 +274,7 @@ void MainWindow::recurseRead(QSettings &settings, QObject *object)
 
 
     QTimer::singleShot(500, [this, s](){
-       selectPath(s);
+        selectPath(s);
     });
 }
 
@@ -323,6 +330,36 @@ void MainWindow::setupFsBrowsing()
     }, Qt::QueuedConnection);
 }
 
+QToolBar *MainWindow::addToolbarToLayout(QLayout *src, int pos)
+{
+    QToolBar* result = nullptr;
+    auto hbox = qobject_cast<QHBoxLayout*>(src);
+    if (hbox)
+    {
+        result = new QToolBar(this);
+        result->setOrientation(Qt::Vertical);
+        hbox->insertWidget(pos, result);
+    }
+    else
+    {
+        auto vbox = qobject_cast<QVBoxLayout*>(src);
+        if (vbox)
+        {
+            result = new QToolBar(this);
+            result->setOrientation(Qt::Horizontal);
+            hbox->insertWidget(pos, result);
+        }
+    }
+
+    if (result)
+    {
+        auto st = (ui->mainToolBar)?ui->mainToolBar->toolButtonStyle():Qt::ToolButtonFollowStyle;
+        result->setToolButtonStyle(st);
+    }
+
+    return result;
+}
+
 void MainWindow::on_actionNewtone_toggled(bool checked)
 {
     QString lastFolder = getSelectedFolder();
@@ -342,4 +379,28 @@ void MainWindow::on_actionSettings_triggered()
 {
     if (settDialog)
         settDialog->show();
+}
+
+void MainWindow::on_actionSave_As_triggered()
+{
+    auto img = IMAGE_LOADER.getImage(lastPreviewFileName);
+    if (img && !img->isNull())
+    {
+        QSettings sett;
+
+        QString lastFolder = sett.value("LastExportFolder", QDir::homePath()).toString();
+        if (!QDir(lastFolder).exists())
+            lastFolder = QDir::homePath();
+
+        auto name = QFileDialog::getSaveFileName(this, tr("Export Image"), lastFolder, "png (*.png)");
+        if (!name.isEmpty())
+        {
+            QFileInfo tmp(name);
+            sett.setValue("LastExportFolder", tmp.absolutePath());
+            if (tmp.suffix().isEmpty())
+                name = name +".png";
+            img->save(name);
+            sett.sync();
+        }
+    }
 }

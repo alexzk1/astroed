@@ -28,7 +28,7 @@
 #include <QDebug>
 #include <QKeySequence>
 #include <QKeyEvent>
-
+#include <QMenu>
 #include "utils/no_const.h"
 #include "utils/strutils.h"
 #include "utils/cont_utils.h"
@@ -254,17 +254,16 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
         }
 
 
-
         if (role == Qt::ToolTipRole)
         {
             return captions.at(col).tooltip;
         }
-
-        std::lock_guard<decltype (listMut)> grd(listMut);
-
-
-        const auto& itm = modelFiles.at(row);
-
+        PreviewsModelData itm;
+        {
+            std::lock_guard<decltype (listMut)> grd(listMut);
+            itm = modelFiles.at(row);
+        }
+        const bool wasLoaded = itm.isLoaded();
 
         if (role == MyGetPathRole)
             res = itm.filePath;
@@ -277,11 +276,11 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
                     res = itm.filePath;
                     break;
                 case DelegateMode::IMAGE_PREVIEW:
-                    if (itm.wasLoaded)
+                    if (wasLoaded)
                         res = itm.getPreview();
                     break;
                 case DelegateMode::IMAGE_META:
-                    if (itm.wasLoaded)
+                    if (wasLoaded)
                         res = itm.getPreviewInfo();
                     break;
                 case DelegateMode::FIXED_COMBO_BOX:
@@ -711,10 +710,10 @@ bool PreviewsDelegate::editorEvent(QEvent *event, QAbstractItemModel *model, con
     {
         auto me = dynamic_cast<QMouseEvent*>(event);
         const auto mode = captions.at(index.column()).mode;
-        if (me)
+        if (me && me->type() == QEvent::MouseButtonRelease)
         {
 
-            if (me->button() == Qt::LeftButton && me->type() == QEvent::MouseButtonRelease)
+            if (me->button() == Qt::LeftButton)
             {
                 if (mode == DelegateMode::FILE_HYPERLINK)
                 {
