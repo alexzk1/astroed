@@ -14,6 +14,7 @@
 #include "clickablelabel.h"
 #include "editor/luaeditor.h"
 #include "config_ui/settingsdialog.h"
+#include "custom_roles.h"
 
 const static auto ZOOMING_KB_VALUE = 2 * ScrollAreaPannable::WheelStep;
 
@@ -196,7 +197,6 @@ void MainWindow::on_tabsWidget_currentChanged(int index)
 {
     //active tab changed slot
     Q_UNUSED(index);
-    qApp->setStyleSheet(originalStylesheet);
     if (ui->tabsWidget->currentWidget() == ui->tabZoomed)
     {
         //making all dark on big preview, because it's bad for eyes when around black space u see white window borders
@@ -209,8 +209,19 @@ void MainWindow::on_tabsWidget_currentChanged(int index)
         }
     }
     else
+    {
         fileNameLabel->setText("");
+        qApp->setStyleSheet(originalStylesheet);
+    }
 
+    if (ui->tabsWidget->currentWidget() == ui->tabFiles && !lastPreviewFileName.isEmpty() && ui->previewsTable && ui->previewsTable->model())
+    {
+        //synchronizing list to current zoomed image
+        auto m = ui->previewsTable->model();
+        auto lst = m->match(m->index(0, 0), MyGetPathRole, lastPreviewFileName);
+        if (lst.size())
+            ui->previewsTable->scrollTo(lst.at(0));
+    }
 }
 
 bool MainWindow::eventFilter(QObject *src, QEvent *e)

@@ -740,13 +740,6 @@ bool PreviewsDelegate::editorEvent(QEvent *event, QAbstractItemModel *model, con
                 }
             }
         }
-
-        //        auto ke = dynamic_cast<QKeyEvent*>(event);
-        //        if (ke)
-        //        {
-        //            if (CustomTableView::getBrowseKeys().count(ke->key()))
-        //                return true;
-        //        }
     }
     return QStyledItemDelegate::editorEvent(event, model, option, index);
 }
