@@ -214,13 +214,16 @@ void MainWindow::on_tabsWidget_currentChanged(int index)
         qApp->setStyleSheet(originalStylesheet);
     }
 
-    if (ui->tabsWidget->currentWidget() == ui->tabFiles && !lastPreviewFileName.isEmpty() && ui->previewsTable && ui->previewsTable->model())
+    if (ui->tabsWidget->currentWidget() == ui->tabFiles && !lastPreviewFileName.isEmpty() && ui->previewsTable)
     {
         //synchronizing list to current zoomed image
         auto m = ui->previewsTable->model();
-        auto lst = m->match(m->index(0, 0), MyGetPathRole, lastPreviewFileName);
-        if (lst.size())
-            ui->previewsTable->scrollTo(lst.at(0));
+        if (m)
+        {
+            auto lst = m->match(m->index(0, 0), MyGetPathRole, lastPreviewFileName);
+            if (lst.size())
+                ui->previewsTable->scrollTo(lst.at(0));
+        }
     }
 }
 
@@ -414,6 +417,13 @@ void MainWindow::on_actionSave_As_triggered()
         QString lastFolder = sett.value("LastExportFolder", QDir::homePath()).toString();
         if (!QDir(lastFolder).exists())
             lastFolder = QDir::homePath();
+
+        QUrl tmpu(lastPreviewFileName);
+        if (IMAGE_LOADER.isProperVfs(tmpu))
+        {
+            //if we have movie frame, lets name it so as original
+            lastFolder = QString("%3/%1_%2.png").arg(tmpu.fileName().replace('.','_')).arg(tmpu.fragment()).arg(lastFolder);
+        }
 
         auto name = QFileDialog::getSaveFileName(this, tr("Export Image"), lastFolder, "png (*.png)");
         if (!name.isEmpty())

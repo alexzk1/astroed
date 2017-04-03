@@ -249,7 +249,6 @@ namespace imaging
         virtual image_t_s createImage(const QString& key) const = 0;
         void    findImage(const QString& key, image_t_s &res);
 
-        bool isProperVfs(const QUrl& url) const;
         bool isUsingCached() const;
         QString cachedFileName(const QUrl& url) const;
     public:
@@ -265,6 +264,8 @@ namespace imaging
         void setNewtoneTelescope(bool isNewtone); //if true, applies mirror transformation to all images on load
         bool isNewtoneTelescope() const;
         virtual ~image_cacher();
+
+        static bool isProperVfs(const QUrl& url);
     };
 
     class image_loader : public utility::ItCanBeOnlyOne<image_loader>, public image_cacher

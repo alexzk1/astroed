@@ -176,7 +176,7 @@ VideoCapturePtr image_loader::getVideoCapturer(const QString& filePath) const
     return ptr;
 }
 
-bool image_cacher::isProperVfs(const QUrl &url) const
+bool image_cacher::isProperVfs(const QUrl &url)
 {
     //such a condition for now, isValid == true for simple file-names too
     return url.isValid() && url.scheme() == vfs_scheme;;

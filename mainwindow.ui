@@ -220,7 +220,7 @@
     <string>Newtone</string>
    </property>
    <property name="toolTip">
-    <string>Assumes pictures made by newtone (mirrored).</string>
+    <string>Assumes pictures are made using newtone telescope (mirrored).</string>
    </property>
   </action>
   <action name="actionGuess_Darks">
