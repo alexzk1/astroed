@@ -477,7 +477,7 @@ void PreviewsModel::setCurrentFolder(const QString &path, bool recursive)
                 const auto fp = directories.filePath();
                 const auto ls = fp.split("/", QString::SkipEmptyParts);
                 //darks must be always listed, even if "non-recursive" mode is, so "auto-guess" can work and it is more user friendly
-                if (ls.size() && isDark(ls.at(ls.size() - 1)))
+                if (ls.size() && isDark(ls.back()))
                     continue;
                 subfolders.push_back(fp);
             }

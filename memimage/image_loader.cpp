@@ -207,7 +207,9 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
 
     const bool is_url = isProperVfs(url);
     image_t_s tmp;
-    tmp.data  = std::make_shared<QImage>();
+    //http://stackoverflow.com/questions/20895648/difference-in-make-shared-and-normal-shared-ptr-in-c
+    //weak_ptr will keep make_shared result live forever!
+    tmp.data  = decltype(tmp.data)(new QImage());
 
     { //ensuring img will close file "key"
 
@@ -397,7 +399,7 @@ image_cacher::image_t_s image_preview_loader::createImage(const QString &key) co
     IMAGE_LOADER.findImage(key, src);
     //keeping aspect ratio
     int width = static_cast<decltype(width)>(previewSize * src.data->width() / static_cast<double>(src.data->height()));
-    src.data  = std::make_shared<QImage>(src.data->scaled(width, previewSize, Qt::KeepAspectRatio));
+    src.data  = decltype (src.data)(new QImage(src.data->scaled(width, previewSize, Qt::KeepAspectRatio)));
     return src;
 }
 
