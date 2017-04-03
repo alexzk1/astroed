@@ -474,7 +474,12 @@ void PreviewsModel::setCurrentFolder(const QString &path, bool recursive)
             while(directories.hasNext())
             {
                 directories.next();
-                subfolders.push_back(directories.filePath());
+                const auto fp = directories.filePath();
+                const auto ls = fp.split("/", QString::SkipEmptyParts);
+                //darks must be always listed, even if "non-recursive" mode is, so "auto-guess" can work and it is more user friendly
+                if (ls.size() && isDark(ls.at(ls.size() - 1)))
+                    continue;
+                subfolders.push_back(fp);
             }
         }
         const static QString cachef(VFS_CACHED_FOLDER);
@@ -486,9 +491,9 @@ void PreviewsModel::setCurrentFolder(const QString &path, bool recursive)
             {
                 bool push = recursive;
 
-                //darks must be always listed, even if "non-recursive" mode is, so "auto-guess" can work and it is more user friendly
+
                 if (!push)
-                    push = !strcontains(it.filePath(), subfolders) || isDark(it.filePath());
+                    push = !strcontains(it.filePath(), subfolders);
 
                 push = push && !strcontains(it.filePath(), cachef); //excluding own cache from the list, will access it using regular URI
 
