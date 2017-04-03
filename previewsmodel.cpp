@@ -632,7 +632,7 @@ void PreviewsModel::loadCurrentInterval()
 
                     //if cannot load preview - make it ignored (happened with 0th frame of the vids for me)
                     if (modelFiles.at(i).brokenPreview)
-                        this->setData(this->index(i, 2), 1, Qt::EditRole);
+                        this->setData(this->index(static_cast<int>(i), 2), 1, Qt::EditRole);
                 }
                 if (loaded)
                 {
@@ -643,7 +643,7 @@ void PreviewsModel::loadCurrentInterval()
                 if (total_loaded)
                 {
                     if (total_loaded % 10 == 0 && work())
-                        emit this->loadProgress(total_loaded * mul);
+                        emit this->loadProgress(static_cast<int>(total_loaded * mul));
                 }
             }
 
@@ -669,7 +669,7 @@ void PreviewsModel::loadCurrentInterval()
         if (work())
         {
             emit this->finishedPreviewsLoad();
-            IMAGE_LOADER.gc(true);
+            IMAGE_LOADER.gc(true); //not sure, maybe better to call it outside IF, but this one works smoother as for me
         }
     });
 }

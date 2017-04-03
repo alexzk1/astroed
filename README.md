@@ -11,7 +11,7 @@ Implemented:
 * lua editor - made LUA text editor with autocomplete, highlights, indents.
 * zoomable preview of original image
 * EXIF reading from JPEGS
-
+* smooth scroll/preview, fast scroll with HDD (magnetic) + i7 cpu + 8Gb ram of 33000 jpeg pictures 20MPx each (half of them are frames from videos, so less resolution, but encoder used, also smooth in backward scroll)
 
 TODO / Ideas:
 * lua project - everything user do must be logged and saved as LUA code. And can be "replayed" using this code.
