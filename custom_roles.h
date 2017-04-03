@@ -6,5 +6,5 @@
 #define MyMouseCursorRole (Qt::UserRole + 1)
 #define MyGetPathRole     (Qt::UserRole + 2)
 #define MyScrolledView    (Qt::UserRole + 3)
-#define MyGetUserRoleCol  (Qt::UserRole + 4)
+
 #endif // CUSTOM_ROLES_H
