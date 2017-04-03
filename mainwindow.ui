@@ -203,8 +203,6 @@
    </attribute>
    <addaction name="actionNewtone"/>
    <addaction name="separator"/>
-   <addaction name="actionGuess_Darks"/>
-   <addaction name="separator"/>
    <addaction name="actionSettings"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
@@ -272,6 +270,42 @@
    </property>
    <property name="toolTip">
     <string>Recurse read (list subfolders). Pathes which contain word &quot;dark&quot; will be always listed regardless switch.</string>
+   </property>
+  </action>
+  <action name="actionSet_All_Source">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/icons/Add-icon.png</normaloff>:/icons/icons/Add-icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Set All Source</string>
+   </property>
+   <property name="toolTip">
+    <string>Set everything in list as &quot;Source&quot;</string>
+   </property>
+  </action>
+  <action name="actionSet_All_Ignored">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/icons/Remove-icon.png</normaloff>:/icons/icons/Remove-icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Set All Ignored</string>
+   </property>
+   <property name="toolTip">
+    <string>Set everything in list as &quot;Ignored&quot;.</string>
+   </property>
+  </action>
+  <action name="actionSet_All_Darks">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/icons/Cloud-Camera-icon.png</normaloff>:/icons/icons/Cloud-Camera-icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Set All Darks</string>
+   </property>
+   <property name="toolTip">
+    <string>Set everything in list as &quot;Darks&quot;</string>
    </property>
   </action>
  </widget>

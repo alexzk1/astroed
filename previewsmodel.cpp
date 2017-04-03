@@ -162,6 +162,11 @@ bool PreviewsModel::isParsingVideo()
     return StaticSettingsMap::getGlobalSetts().readBool("Bool_parse_frames");
 }
 
+int PreviewsModel::getSpecialColumnId()
+{
+    return 2;
+}
+
 const static QVector<int> roles = {Qt::DisplayRole};
 
 PreviewsModel::PreviewsModel(QObject *parent)
@@ -175,6 +180,12 @@ PreviewsModel::PreviewsModel(QObject *parent)
       modelFilesAmount(0),
       scrollDelayedLoader()
 {
+    /*
+     * QObject::connect: Cannot queue arguments of type 'Qt::Orientation'
+(Make sure 'Qt::Orientation' is registered using qRegisterMetaType().)
+     * */
+    qRegisterMetaType<Qt::Orientation>("Qt::Orientation");
+
     connect(this, &QAbstractTableModel::modelReset, this, [this]()
     {
         //it's kinda limitation of qt-gui, same thread cannot list files & load files, bcs list is model reset and load is fillup of the model,
@@ -186,6 +197,7 @@ PreviewsModel::PreviewsModel(QObject *parent)
 
     scrollDelayedLoader.setSingleShot(true);
     connect(&scrollDelayedLoader, &QTimer::timeout, this, &PreviewsModel::onTimerDelayedLoader, Qt::QueuedConnection);
+
 }
 
 QVariant PreviewsModel::headerData(int section, Qt::Orientation orientation, int role) const
@@ -197,7 +209,11 @@ QVariant PreviewsModel::headerData(int section, Qt::Orientation orientation, int
         {
             auto index = static_cast<size_t>(section);
             if (role == Qt::DisplayRole)
+            {
                 res = captions.at(index).text;
+                if (index == 0 && modelFilesAmount > 0)
+                    res = QString("%1 (%2)").arg(res.toString()).arg(modelFilesAmount);
+            }
         }
     }
     else
@@ -234,6 +250,7 @@ int PreviewsModel::columnCount(const QModelIndex &parent) const
 QVariant PreviewsModel::data(const QModelIndex &index, int role) const
 {
     QVariant res;
+
     if (index.isValid())
     {
         if (index.row() >= modelFilesAmount || index.row() < 0 || index.column() < 0 || index.column() >= static_cast<int>(captions.size()))
@@ -256,7 +273,6 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
             }
             return res;
         }
-
 
         if (role == Qt::ToolTipRole)
         {
@@ -337,6 +353,16 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
 
 bool PreviewsModel::setData(const QModelIndex &index, const QVariant &value, int role)
 {
+    std::lock_guard<decltype (this->listMut)> grd(this->listMut);
+    bool changed = setDataPriv(index, value, role);
+    if (changed)
+        emit dataChanged(index, index, QVector<int>() << role);
+    return changed;
+}
+
+bool PreviewsModel::setDataPriv(const QModelIndex &index, const QVariant &value, int role)
+{
+    //warning!!! it's not locked here and do not emit "dataChanged"
     bool changed = false;
     if (index.isValid())
     {
@@ -345,7 +371,6 @@ bool PreviewsModel::setData(const QModelIndex &index, const QVariant &value, int
         auto set = [&col, &index, &changed, this](const QVariant& v)
         {
             size_t row = static_cast<decltype (row)>(index.row());
-            std::lock_guard<decltype (this->listMut)> grd(this->listMut);
             auto& itm = modelFiles.at(row);
             itm.valuesPerColumn[col] = v;
             changed = true;
@@ -360,9 +385,6 @@ bool PreviewsModel::setData(const QModelIndex &index, const QVariant &value, int
         {
             set(value);
         }
-
-        if (changed)
-            emit dataChanged(index, index, QVector<int>() << role);
     }
     return changed;
 }
@@ -375,7 +397,20 @@ void PreviewsModel::guessDarks()
     {
         const auto& itm = modelFiles.at(static_cast<size_t>(row));
         if (isDark(itm.getFilePath()))
-            setData(index(row, 2), 2, Qt::EditRole);
+            setData(index(row, getSpecialColumnId()), 2, Qt::EditRole);
+    }
+}
+
+void PreviewsModel::setAllRole(int role_id)
+{
+    if (role_id > -1 && static_cast<size_t>(role_id) < fileRoles.size())
+    {
+        const QVariant val(role_id);
+        std::lock_guard<decltype (this->listMut)> grd(this->listMut);
+        for (int row = 0, size = rowCount(); row < size; ++row)
+            setDataPriv(index(row, getSpecialColumnId()), val, Qt::EditRole);
+
+        emit dataChanged(index(0, getSpecialColumnId()), index(rowCount() - 1, getSpecialColumnId()), QVector<int>() << Qt::EditRole);
     }
 }
 
@@ -553,6 +588,7 @@ void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list, const util
     else
         modelFiles.clear();
     modelFilesAmount = static_cast<int64_t>(modelFiles.size());
+    emit headerDataChanged(Qt::Horizontal, 0, 0);
     //qDebug() << "Files listed "<<modelFiles.size();
 }
 

@@ -343,6 +343,15 @@ void MainWindow::setupFsBrowsing()
         {
             this->currentDirChanged(*lastFolder);
         }, Qt::QueuedConnection);
+
+        //fixme: ok, that is really wrong placement, better to make 1 new toolbar, but then I need layout ... couldn't click it proper in editor,
+        //any way, I want next buttons be on 1st tab (and hidden when tab switched)
+        toolBox->addSeparator();
+        toolBox->addAction(ui->actionSet_All_Source);
+        toolBox->addAction(ui->actionSet_All_Ignored);
+        toolBox->addSeparator();
+        toolBox->addAction(ui->actionGuess_Darks);
+        toolBox->addAction(ui->actionSet_All_Darks);
     }
 }
 
@@ -436,4 +445,25 @@ void MainWindow::on_actionSave_As_triggered()
             sett.sync();
         }
     }
+}
+
+void MainWindow::on_actionSet_All_Source_triggered()
+{
+    //this magic number is hardly bound to fileRoles inside model's cpp (it is index in list)
+    if (previewsModel)
+        previewsModel->setAllRole(0);
+}
+
+void MainWindow::on_actionSet_All_Ignored_triggered()
+{
+    //this magic number is hardly bound to fileRoles inside model's cpp (it is index in list)
+    if (previewsModel)
+        previewsModel->setAllRole(1);
+}
+
+void MainWindow::on_actionSet_All_Darks_triggered()
+{
+    //this magic number is hardly bound to fileRoles inside model's cpp (it is index in list)
+    if (previewsModel)
+        previewsModel->setAllRole(2);
 }

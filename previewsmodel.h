@@ -32,9 +32,10 @@ public:
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 
     // Editable:
-    bool setData(const QModelIndex &index, const QVariant &value,
-                 int role = Qt::EditRole) override;
+    bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
+
     void guessDarks();
+    void setAllRole(int role_id); //should be same order as in fileRoles
 
     Qt::ItemFlags flags(const QModelIndex& index) const override;
 
@@ -45,7 +46,7 @@ public:
     virtual void generateLuaCode(std::ostream& out) const override;
 
     bool static isParsingVideo();
-
+    int  static getSpecialColumnId(); //this column may have automatic changes in loop
     virtual ~PreviewsModel();
 private slots:
     void onTimerDelayedLoader();
@@ -63,6 +64,7 @@ private:
     QTimer scrollDelayedLoader;
     void haveFilesList(const files_t& list, const utility::runnerint_t& stop);
     void loadCurrentInterval();
+    bool setDataPriv(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole);
 signals:
     void startedPreviewsLoad(bool scroll);
     void finishedPreviewsLoad();

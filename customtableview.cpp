@@ -6,6 +6,7 @@
 #include <QModelIndex>
 #include <QAbstractTableModel>
 #include <map>
+#include "previewsmodel.h"
 
 CustomTableView::CustomTableView(QWidget *parent):
     QTableView (parent),
@@ -17,11 +18,16 @@ CustomTableView::CustomTableView(QWidget *parent):
 
 void CustomTableView::dataChangedInModel(const QModelIndex &start, const QModelIndex &end)
 {
+    //optimization for the mass processing like "set all ignored"
+    if (start.column() == end.column() && start.column() == PreviewsModel::getSpecialColumnId())
+        return;
+
     for (int column = start.column(), colsz = end.column(); column <= colsz; ++column)
         for (int row = start.row(), rsz = end.row(); row <= rsz; ++row)
         {
             resizeColumnToContents(column);
-            resizeRowToContents(row);
+            if (column == 0)
+                resizeRowToContents(row);
         }
 }
 

@@ -53,6 +53,12 @@ private slots:
 
     void on_actionSave_As_triggered();
 
+    void on_actionSet_All_Source_triggered();
+
+    void on_actionSet_All_Ignored_triggered();
+
+    void on_actionSet_All_Darks_triggered();
+
 private:
     Ui::MainWindow *ui;
     QPointer<QFileSystemModel> dirsModel;
