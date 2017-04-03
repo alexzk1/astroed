@@ -210,9 +210,11 @@ QVariant PreviewsModel::headerData(int section, Qt::Orientation orientation, int
             auto index = static_cast<size_t>(section);
             if (role == Qt::DisplayRole)
             {
-                res = captions.at(index).text;
+                const auto& t = captions.at(index).text;
                 if (index == 0 && modelFilesAmount > 0)
-                    res = QString("%1 (%2)").arg(res.toString()).arg(modelFilesAmount);
+                    res = QString("%1 (%2)").arg(t).arg(modelFilesAmount);
+                else
+                    res = t;
             }
         }
     }
