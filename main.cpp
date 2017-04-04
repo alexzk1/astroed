@@ -1,5 +1,4 @@
 #include "mainwindow.h"
-#include "logic/theapi.h"
 
 #include <QApplication>
 #include <QVector>
@@ -13,8 +12,6 @@ int main(int argc, char *argv[])
 {
     qRegisterMetaType<QVector<int>>("QVector<int>");
     SingleApplication a(argc, argv, false, SingleApplication::Mode::SecondaryNotification | SingleApplication::Mode::User);
-
-    THEAPI; //ensuring global is created
 
     a.setApplicationName("AstroEd");
     a.setApplicationVersion("0.1");

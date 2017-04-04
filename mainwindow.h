@@ -30,12 +30,12 @@ public:
 
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
-
     QString getSelectedFolder();
-    void selectPath(const QString &path, bool collapse = true);
-    QLabel &openPreviewTab(const QSize &maxSize, const QString &fileName);
-    void showTempNotify(const QString& text, int delay = 10000);
+public slots:
+    void openPreviewTab(const imaging::image_buffer_ptr &image, const QString &fileName);
     void resetPreview();
+    void selectPath(const QString &path, bool collapse = true);
+    void showTempNotify(const QString& text, int delay = 10000);
 protected:
     virtual void changeEvent(QEvent *e) override;
     virtual bool eventFilter(QObject *src, QEvent *e) override;

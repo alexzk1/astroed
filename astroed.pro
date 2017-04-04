@@ -47,7 +47,6 @@ include($$PWD/config_ui/config_ui.pri)
 include($$PWD/lua/lua_vm.pri)
 include($$PWD/utils/utils.pri)
 include($$PWD/memimage/memimage.pri)
-include($$PWD/logic/bl.pri)
 include($$PWD/singleapp/singleapplication.pri)
 include($$PWD/editor/codeeditor.pri)
 

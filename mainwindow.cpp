@@ -153,15 +153,19 @@ void MainWindow::selectPath(const QString &path, bool collapse)
     }
 }
 
-QLabel &MainWindow::openPreviewTab(const QSize& maxSize, const QString& fileName)
+void MainWindow::openPreviewTab(const imaging::image_buffer_ptr& image, const QString& fileName)
 {
     lastPreviewFileName = fileName;
     const auto txt = (fileName.isEmpty())? "":QString(tr("File: %1")).arg(QFileInfo(fileName).fileName());
     ui->tabsWidget->setCurrentWidget(ui->tabZoomed);
-    ui->scrollAreaZoom->setMaxZoom(maxSize);
-    //qDebug()  <<"openPreviewTab()";
+    ui->scrollAreaZoom->setMaxZoom(image->size());
     fileNameLabel->setText(txt);
-    return *ui->lblZoomPix;
+    if (!fileName.isEmpty())
+    {
+        auto meta = IMAGE_LOADER.getExif(fileName);
+        ui->lblZoomPix->setStatusTip(meta.getStringValue());
+    }
+    ui->lblZoomPix->setPixmap(QPixmap::fromImage(*image));
 }
 
 void MainWindow::showTempNotify(const QString &text, int delay)

@@ -1,6 +1,5 @@
 #include "previewsmodel.h"
 #include "custom_roles.h"
-#include "logic/theapi.h"
 
 #include <vector>
 #include <queue>
@@ -686,8 +685,16 @@ bool PreviewsDelegate::showLastClickedPreview(int shift, bool reset)
         QModelIndex ind = lastClickedPreview.model()->index(lastClickedPreview.row() + shift, lastClickedPreview.column());
         if ((res = ind.isValid()))
         {
-            ind.data(MyScrolledView);
-            THEAPI.showPreview(ind.data(MyGetPathRole).toString(), reset);
+            if (MainWindow::instance())
+            {
+                ind.data(MyScrolledView); //tipping model, need to load previews
+                const auto fileName = ind.data(MyGetPathRole).toString();
+                const auto img      = IMAGE_LOADER.getImage(fileName);
+
+                MainWindow::instance()->openPreviewTab(img, fileName); //fixme: maybe do some signal/ slot for that
+                if (reset)
+                    MainWindow::instance()->resetPreview();//fixme: maybe do some signal/ slot for that
+            }
         }
     }
     return res;
