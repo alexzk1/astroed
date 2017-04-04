@@ -488,7 +488,7 @@ void MainWindow::on_actionSaveProject_triggered()
         std::fstream fs(name.toStdString(), std::ios_base::out);
 
         if (previewsModel)
-            previewsModel->generateLuaCode(fs);
+            previewsModel->generateProjectCode(fs);
 
         //todo: add more things to save as project
 

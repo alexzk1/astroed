@@ -6,19 +6,28 @@
 
 namespace luavm
 {
-    class LuaGenerator
+    class ProjectSaver
     {
     protected:
-        LuaGenerator() = default;
-        virtual ~LuaGenerator(){}
+        ProjectSaver() = default;
+        virtual ~ProjectSaver(){}
     public:
-        virtual void generateLuaCode(std::ostream& out) const = 0;
-        std::string generateLuaString() const
+        virtual void generateProjectCode(std::ostream& out) const = 0;
+        std::string generateProjectString() const
         {
             std::stringstream os(std::ios_base::out);
-            generateLuaCode(os);
+            generateProjectCode(os);
             return os.str();
         }
+    };
+
+    class ProjectLoader
+    {
+    protected:
+        ProjectLoader() = default;
+        virtual ~ProjectLoader(){}
+    public:
+        virtual void loadProjectCode(std::ostream& inp) const = 0;
     };
 }
 

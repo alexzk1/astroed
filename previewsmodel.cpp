@@ -140,18 +140,19 @@ constexpr static int delayBeforeLoadOnScrollMs = 350;
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------MODEL-------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
-void PreviewsModel::generateLuaCode(std::ostream &out) const
+void PreviewsModel::generateProjectCode(std::ostream &out) const
 {
     std::lock_guard<decltype (listMut)> (utility::noconst(this)->listMut);//that will break code if original model object is created as const, but who will do it ?!
     //generating lua code from internal state, hardly bound to arrays above (to their indexes, values, etc)
 
+    const auto spid = static_cast<size_t>(getSpecialColumnId());
     out << "guiSelectedFilesBase = '" << currentFolder.toStdString()<<"'"<<std::endl;
     QDir dir(currentFolder);
 
     out << "guiSelectedFilesList = {";
     for (const auto& file : modelFiles)
     {
-        const auto& role = fileRoles.at(file.getValue(getSpecialColumnId(), captions.at(getSpecialColumnId()).initialValue).toInt());
+        const auto& role = fileRoles.at(file.getValue(spid, captions.at(spid).initialValue).toInt());
             //out << "\n\t{\n\t\tfileName=utf8.format('%s/%s', guiSelectedFilesBase, '"<<dir.relativeFilePath(file.filePath).toStdString()<<"'),\n\t\tfileMode="<<role.luaRole<< ", --" << role.humanRole.toStdString() << "\n\t},";
             //lets append things on load from C++ code, so user has less control over how they can break it
         out << "\n\t{\n\t\tfileName = '"<<dir.relativeFilePath(file.filePath).toStdString()<<"',\n\t\tfileMode = "<<role.luaRole<< ", --" << role.humanRole.toStdString() << "\n\t},";
@@ -173,7 +174,7 @@ const static QVector<int> roles = {Qt::DisplayRole};
 
 PreviewsModel::PreviewsModel(QObject *parent)
     : QAbstractTableModel(parent),
-      luavm::LuaGenerator(),
+      luavm::ProjectSaver(),
       listFiles(nullptr),
       loadPreviews(nullptr),
       listMut(),

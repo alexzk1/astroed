@@ -14,7 +14,7 @@
 #include "previewsmodeldata.h"
 
 class QFileInfo;
-class PreviewsModel : public QAbstractTableModel, public luavm::LuaGenerator
+class PreviewsModel : public QAbstractTableModel, public luavm::ProjectSaver
 {
     Q_OBJECT
 public:
@@ -43,7 +43,7 @@ public:
     void simulateModelReset();
     void scrolledTo(int64_t row);
 
-    virtual void generateLuaCode(std::ostream& out) const override;
+    virtual void generateProjectCode(std::ostream& out) const override;
 
     bool static isParsingVideo();
     int  static getSpecialColumnId(); //this column may have automatic changes in loop
