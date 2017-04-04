@@ -471,3 +471,28 @@ void MainWindow::on_actionSet_All_Darks_triggered()
     if (previewsModel)
         previewsModel->setAllRole(2);
 }
+
+void MainWindow::on_actionSaveProject_triggered()
+{
+    QSettings sett;
+    QString lastFolder = sett.value("LastSaveProjectFolder", QDir::homePath()).toString() + "/ae_project.luap";
+    auto name = QFileDialog::getSaveFileName(this, tr("Export Image"), lastFolder, "luap (*.luap)");
+    if (!name.isEmpty())
+    {
+        QFileInfo tmp(name);
+        sett.setValue("LastSaveProjectFolder", tmp.absolutePath());
+        if (tmp.suffix().isEmpty())
+            name = name +".luap";
+        sett.sync();
+
+        std::fstream fs(name.toStdString(), std::ios_base::out);
+
+        if (previewsModel)
+            previewsModel->generateLuaCode(fs);
+
+        //todo: add more things to save as project
+
+        fs.flush();
+        fs.close();
+    }
+}

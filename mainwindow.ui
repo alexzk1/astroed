@@ -201,8 +201,9 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
-   <addaction name="actionNewtone"/>
+   <addaction name="actionSaveProject"/>
    <addaction name="separator"/>
+   <addaction name="actionNewtone"/>
    <addaction name="actionSettings"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
@@ -306,6 +307,18 @@
    </property>
    <property name="toolTip">
     <string>Set everything in list as &quot;Darks&quot;</string>
+   </property>
+  </action>
+  <action name="actionSaveProject">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/icons/save-as-icon.png</normaloff>:/icons/icons/save-as-icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Save Project</string>
+   </property>
+   <property name="toolTip">
+    <string>Save current GUI as project</string>
    </property>
   </action>
  </widget>

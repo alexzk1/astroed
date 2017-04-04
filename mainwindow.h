@@ -59,6 +59,8 @@ private slots:
 
     void on_actionSet_All_Darks_triggered();
 
+    void on_actionSaveProject_triggered();
+
 private:
     Ui::MainWindow *ui;
     QPointer<QFileSystemModel> dirsModel;

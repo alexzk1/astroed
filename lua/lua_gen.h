@@ -8,11 +8,11 @@ namespace luavm
 {
     class LuaGenerator
     {
-    public:
+    protected:
         LuaGenerator() = default;
-        virtual ~LuaGenerator(){};
+        virtual ~LuaGenerator(){}
+    public:
         virtual void generateLuaCode(std::ostream& out) const = 0;
-
         std::string generateLuaString() const
         {
             std::stringstream os(std::ios_base::out);

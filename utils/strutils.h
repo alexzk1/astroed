@@ -10,6 +10,7 @@
 
 #ifdef QT_CORE_LIB
 #include <QString>
+#include <QStringList>
 #endif
 
 //usage std::string s = string_format() << "Operation with id = " << id << " failed, because data1 (" << data1 << ") is incompatible with data2 (" << data2 << ")"

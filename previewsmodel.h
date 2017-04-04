@@ -62,6 +62,8 @@ private:
     std::atomic<int64_t> modelFilesAmount;
     std::map<int, QStringList> fixedCombosLists; //wana to do generic solution
     QTimer scrollDelayedLoader;
+    QString currentFolder;
+
     void haveFilesList(const files_t& list, const utility::runnerint_t& stop);
     void loadCurrentInterval();
     bool setDataPriv(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole);

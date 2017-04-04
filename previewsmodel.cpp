@@ -74,8 +74,8 @@ struct fileroles_t
 const static std::vector<fileroles_t> fileRoles =
 {
     {QObject::tr("Source"), 0, QKeySequence("=")}, //must be 1st (1st will be set as default)
-    {QObject::tr("Ignored"), -1, QKeySequence("-")},
-    {QObject::tr("Dark"), 1, QKeySequence("0")},
+    {QObject::tr("Ignored"), 1, QKeySequence("-")},
+    {QObject::tr("Dark"), 2, QKeySequence("0")},
 };
 
 
@@ -144,14 +144,17 @@ void PreviewsModel::generateLuaCode(std::ostream &out) const
 {
     std::lock_guard<decltype (listMut)> (utility::noconst(this)->listMut);//that will break code if original model object is created as const, but who will do it ?!
     //generating lua code from internal state, hardly bound to arrays above (to their indexes, values, etc)
-    out << "local guiSelectedFiles = {";
+
+    out << "guiSelectedFilesBase = '" << currentFolder.toStdString()<<"'"<<std::endl;
+    QDir dir(currentFolder);
+
+    out << "guiSelectedFilesList = {";
     for (const auto& file : modelFiles)
     {
-        const auto& role = fileRoles.at(file.getValue(2, captions.at(2).initialValue).toInt());
-        if (role.luaRole > -1)
-        {
-            out << "\n\t{\n\t\tfileName='"<<file.filePath.toStdString()<<"',\n\t\tfileMode="<<role.luaRole<< ", --" << role.humanRole.toStdString() << "\n\t},";
-        }
+        const auto& role = fileRoles.at(file.getValue(getSpecialColumnId(), captions.at(getSpecialColumnId()).initialValue).toInt());
+            //out << "\n\t{\n\t\tfileName=utf8.format('%s/%s', guiSelectedFilesBase, '"<<dir.relativeFilePath(file.filePath).toStdString()<<"'),\n\t\tfileMode="<<role.luaRole<< ", --" << role.humanRole.toStdString() << "\n\t},";
+            //lets append things on load from C++ code, so user has less control over how they can break it
+        out << "\n\t{\n\t\tfileName = '"<<dir.relativeFilePath(file.filePath).toStdString()<<"',\n\t\tfileMode = "<<role.luaRole<< ", --" << role.humanRole.toStdString() << "\n\t},";
     }
     out << "\n}" << std::endl;
 }
@@ -177,7 +180,8 @@ PreviewsModel::PreviewsModel(QObject *parent)
       modelFiles(),
       urgentRowScrolled(0),
       modelFilesAmount(0),
-      scrollDelayedLoader()
+      scrollDelayedLoader(),
+      currentFolder()
 {
     /*
      * QObject::connect: Cannot queue arguments of type 'Qt::Orientation'
@@ -438,8 +442,11 @@ void PreviewsModel::setCurrentFolder(const QString &path, bool recursive)
 {
     loadPreviews.reset();
     listFiles.reset();
+    QDir dir(path);
+    const auto absPath = dir.absolutePath();
+    currentFolder = absPath;
 
-    listFiles = utility::startNewRunner([this, path, recursive](auto stop)
+    listFiles = utility::startNewRunner([this, absPath, recursive](auto stop)
     {
         QStringList filter;
         for (const auto& s : supportedExt)
@@ -463,8 +470,6 @@ void PreviewsModel::setCurrentFolder(const QString &path, bool recursive)
         std::vector<QString>  subfolders;
         subfolders.reserve(50);
         pathes.reserve(500);
-        QDir dir(path);
-        const auto absPath = dir.absolutePath();
 
         //if not recursive we still must add "darks" recursive
         if (!recursive)
