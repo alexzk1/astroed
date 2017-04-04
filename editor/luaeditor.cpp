@@ -15,6 +15,7 @@ LuaEditor::LuaEditor(QWidget *parent, const LuaLexerPtr &lexer):
     isUntitled(true),
     currentFile()
 {
+    //font should be set prior lexer, because lexer defines font there
     setLexer(lexer.get());
 
     setAutoCompletionSource(QsciScintilla::AcsAll);
@@ -28,7 +29,7 @@ LuaEditor::LuaEditor(QWidget *parent, const LuaLexerPtr &lexer):
     setUtf8(true);
 
     setMarginLineNumbers(1, true);
-    setMarginWidth(1, 35);
+    setMarginWidth(1, 55);
 
     setTabIndents(true);
     setIndentationGuides(true);

@@ -120,9 +120,11 @@ const char *LuaLexer::keywords(int set) const
 
 QFont LuaLexer::defaultFont(int style) const
 {
+    //fixme: do something nicer looking here with fonts
     auto f = QsciLexerLua::defaultFont(style);
-    if (f.pointSize() < 12)
-        f.setPointSize(12);
+    if (f.pointSize() < 11)
+        f.setPointSize(11);
+
     if (style == KeywordSet5 || style == KeywordSet6)
         f.setItalic(true);
 

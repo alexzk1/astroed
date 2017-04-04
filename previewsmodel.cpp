@@ -73,8 +73,9 @@ struct fileroles_t
 //PreviewsModel::guessDarks() relays on it
 const static std::vector<fileroles_t> fileRoles =
 {
-    {QObject::tr("Source"), 0, QKeySequence("=")}, //must be 1st (1st will be set as default)
+    //1st will be set as default, also GUI actions are bound to index in this list
     {QObject::tr("Ignored"), 1, QKeySequence("-")},
+    {QObject::tr("Source"), 0, QKeySequence("=")},
     {QObject::tr("Dark"), 2, QKeySequence("0")},
 };
 
@@ -153,8 +154,11 @@ void PreviewsModel::generateProjectCode(std::ostream &out) const
     for (const auto& file : modelFiles)
     {
         const auto& role = fileRoles.at(file.getValue(spid, captions.at(spid).initialValue).toInt());
-            //out << "\n\t{\n\t\tfileName=utf8.format('%s/%s', guiSelectedFilesBase, '"<<dir.relativeFilePath(file.filePath).toStdString()<<"'),\n\t\tfileMode="<<role.luaRole<< ", --" << role.humanRole.toStdString() << "\n\t},";
-            //lets append things on load from C++ code, so user has less control over how they can break it
+        //out << "\n\t{\n\t\tfileName=utf8.format('%s/%s', guiSelectedFilesBase, '"<<dir.relativeFilePath(file.filePath).toStdString()<<"'),\n\t\tfileMode="<<role.luaRole<< ", --" << role.humanRole.toStdString() << "\n\t},";
+        //lets append things on load from C++ code, so user has less control over how they can break it
+        if (1 == role.luaRole)
+            continue;
+
         out << "\n\t{\n\t\tfileName = '"<<dir.relativeFilePath(file.filePath).toStdString()<<"',\n\t\tfileMode = "<<role.luaRole<< ", --" << role.humanRole.toStdString() << "\n\t},";
     }
     out << "\n}" << std::endl;
@@ -810,6 +814,16 @@ QWidget *PreviewsDelegate::createEditor(QWidget *parent, const QStyleOptionViewI
         {
             res->setFocusPolicy(Qt::StrongFocus);
             //res->setAutoFillBackground(true); //if commented, view's background will be used
+            auto tmp = qobject_cast<QComboBox*>(res);
+            if (tmp)
+            {
+                connect(tmp, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
+                     [this, tmp](int)
+                {
+                    emit utility::noconst(this)->commitData(tmp);
+                    emit utility::noconst(this)->closeEditor(tmp);
+                });
+            }
         }
     }
     return res;
@@ -825,7 +839,9 @@ void PreviewsDelegate::setEditorData(QWidget *editor, const QModelIndex &index) 
             if (p)
             {
                 int ind= index.data(Qt::EditRole).toInt();
+                p->blockSignals(true);
                 p->setCurrentIndex(ind);
+                p->blockSignals(false);
             }
         }
     }
@@ -833,7 +849,6 @@ void PreviewsDelegate::setEditorData(QWidget *editor, const QModelIndex &index) 
 
 void PreviewsDelegate::setModelData(QWidget *editor, QAbstractItemModel *model, const QModelIndex &index) const
 {
-    Q_UNUSED(model);
     if (index.isValid() && editor)
     {
         if (captions.at(index.column()).mode == DelegateMode::FIXED_COMBO_BOX)

@@ -13,7 +13,7 @@ namespace luavm
         virtual ~ProjectSaver(){}
     public:
         virtual void generateProjectCode(std::ostream& out) const = 0;
-        std::string generateProjectString() const
+        std::string generateProjectCodeString() const
         {
             std::stringstream os(std::ios_base::out);
             generateProjectCode(os);

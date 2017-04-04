@@ -25,14 +25,14 @@
        <enum>QTabWidget::West</enum>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="tabFiles">
        <property name="focusPolicy">
         <enum>Qt::StrongFocus</enum>
        </property>
        <attribute name="title">
-        <string>File System</string>
+        <string>&amp;1. File System</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_5">
         <item>
@@ -107,7 +107,7 @@
       </widget>
       <widget class="QWidget" name="tabZoomed">
        <attribute name="title">
-        <string>Zoom 1:1</string>
+        <string>&amp;2. Zoom 1:1</string>
        </attribute>
        <layout class="QHBoxLayout" name="horizontalLayout_2">
         <property name="spacing">
@@ -141,8 +141,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>862</width>
-             <height>518</height>
+             <width>86</width>
+             <height>35</height>
             </rect>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -170,7 +170,7 @@
       </widget>
       <widget class="QWidget" name="tabScript">
        <attribute name="title">
-        <string>Script</string>
+        <string>&amp;3. Script</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_6"/>
       </widget>
@@ -319,6 +319,18 @@
    </property>
    <property name="toolTip">
     <string>Save current GUI as project</string>
+   </property>
+  </action>
+  <action name="actionCopy_as_Lua">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/icons/copy-icon.png</normaloff>:/icons/icons/copy-icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Copy as Lua</string>
+   </property>
+   <property name="toolTip">
+    <string>Copy current list as LUA code (ommitting ignored).</string>
    </property>
   </action>
  </widget>

@@ -11,6 +11,7 @@
 #include <QFileInfo>
 #include <QHeaderView>
 #include <QFileDialog>
+#include <QClipboard>
 #include "clickablelabel.h"
 #include "editor/luaeditor.h"
 #include "config_ui/settingsdialog.h"
@@ -120,6 +121,7 @@ MainWindow::MainWindow(QWidget *parent) :
     setupZoomGui();
 
     //lexer must be created prior widget
+    //todo: add complete api list here to lexer
     LuaEditor::createSharedLuaLexer({{"apiTest", "param", "test function"}});
     ui->tabScript->layout()->addWidget(new LuaEditor(this));
 }
@@ -356,6 +358,8 @@ void MainWindow::setupFsBrowsing()
         toolBox->addSeparator();
         toolBox->addAction(ui->actionGuess_Darks);
         toolBox->addAction(ui->actionSet_All_Darks);
+        toolBox->addSeparator();
+        toolBox->addAction(ui->actionCopy_as_Lua);
     }
 }
 
@@ -455,14 +459,14 @@ void MainWindow::on_actionSet_All_Source_triggered()
 {
     //this magic number is hardly bound to fileRoles inside model's cpp (it is index in list)
     if (previewsModel)
-        previewsModel->setAllRole(0);
+        previewsModel->setAllRole(1);
 }
 
 void MainWindow::on_actionSet_All_Ignored_triggered()
 {
     //this magic number is hardly bound to fileRoles inside model's cpp (it is index in list)
     if (previewsModel)
-        previewsModel->setAllRole(1);
+        previewsModel->setAllRole(0);
 }
 
 void MainWindow::on_actionSet_All_Darks_triggered()
@@ -494,5 +498,14 @@ void MainWindow::on_actionSaveProject_triggered()
 
         fs.flush();
         fs.close();
+    }
+}
+
+void MainWindow::on_actionCopy_as_Lua_triggered()
+{
+    if (previewsModel)
+    {
+        auto str = previewsModel->generateProjectCodeString();
+        QApplication::clipboard()->setText(str.c_str(), QClipboard::Clipboard);
     }
 }
