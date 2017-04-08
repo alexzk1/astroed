@@ -16,6 +16,7 @@
 #include "editor/luaeditor.h"
 #include "config_ui/settingsdialog.h"
 #include "custom_roles.h"
+#include "utils/strutils.h"
 
 const static auto ZOOMING_KB_VALUE = 2 * ScrollAreaPannable::WheelStep;
 
@@ -355,10 +356,10 @@ void MainWindow::setupFsBrowsing()
         toolBox->addSeparator();
         toolBox->addAction(ui->actionSet_All_Source);
         toolBox->addAction(ui->actionSet_All_Ignored);
+        toolBox->addAction(ui->actionSet_All_Darks);
+
         toolBox->addSeparator();
         toolBox->addAction(ui->actionGuess_Darks);
-        toolBox->addAction(ui->actionSet_All_Darks);
-        toolBox->addSeparator();
         toolBox->addAction(ui->actionCopy_as_Lua);
     }
 }
@@ -480,7 +481,7 @@ void MainWindow::on_actionSaveProject_triggered()
 {
     QSettings sett;
     QString lastFolder = sett.value("LastSaveProjectFolder", QDir::homePath()).toString() + "/ae_project.luap";
-    auto name = QFileDialog::getSaveFileName(this, tr("Export Image"), lastFolder, "luap (*.luap)");
+    auto name = QFileDialog::getSaveFileName(this, tr("Save Project"), lastFolder, "luap (*.luap)");
     if (!name.isEmpty())
     {
         QFileInfo tmp(name);
@@ -507,5 +508,32 @@ void MainWindow::on_actionCopy_as_Lua_triggered()
     {
         auto str = previewsModel->generateProjectCodeString();
         QApplication::clipboard()->setText(str.c_str(), QClipboard::Clipboard);
+    }
+}
+
+void MainWindow::on_actionLoad_project_triggered()
+{
+    if (previewsModel)
+    {
+        QSettings sett;
+        QString lastFolder = sett.value("LastSaveProjectFolder", QDir::homePath()).toString();
+        auto name = QFileDialog::getOpenFileName(this, tr("Load Project"), lastFolder, "luap (*.luap)");
+        if (!name.isEmpty())
+        {
+            QFileInfo tmp(name);
+            sett.setValue("LastSaveProjectFolder", tmp.absolutePath());
+            sett.sync();
+
+            std::fstream fs(name.toStdString(), std::ios_base::in);
+            std::string src = utility::read_stream_into_container(fs);
+            fs.close();
+
+            if (previewsModel)
+                previewsModel->loadProjectCode(src);
+
+            //todo: add more things to load as project
+
+
+        }
     }
 }

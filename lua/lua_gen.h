@@ -3,6 +3,8 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include "lua_params.h"
+#include "luasrc/customlua.h"
 
 namespace luavm
 {
@@ -27,7 +29,7 @@ namespace luavm
         ProjectLoader() = default;
         virtual ~ProjectLoader(){}
     public:
-        virtual void loadProjectCode(std::ostream& inp) const = 0;
+        virtual void loadProjectCode(const std::string& src) = 0;
     };
 }
 

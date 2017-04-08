@@ -6,12 +6,26 @@
 #include <QWindow>
 #include <QStyleFactory>
 #include <QObject>
+#include <QMessageBox>
 #include "singleapp/singleapplication.h"
+
+static QMessageBox* noMemoryBox = nullptr;
+[[ noreturn ]] static void no_memory ()
+{
+  std::cerr << "Failed to allocate memory!\n";
+  if (noMemoryBox)
+      noMemoryBox->exec();
+  std::exit (1);
+}
+
 
 int main(int argc, char *argv[])
 {
     qRegisterMetaType<QVector<int>>("QVector<int>");
     SingleApplication a(argc, argv, false, SingleApplication::Mode::SecondaryNotification | SingleApplication::Mode::User);
+
+    noMemoryBox = new QMessageBox(QMessageBox::Critical, "AstroEd", "AstroEd failed to allocate memory.\nPlease close some applications.");
+    std::set_new_handler(no_memory);
 
     a.setApplicationName("AstroEd");
     a.setApplicationVersion("0.1");
@@ -31,6 +45,10 @@ int main(int argc, char *argv[])
     });
 
     w.show();
+    int r = a.exec();
 
-    return a.exec();
+    if (noMemoryBox)
+        delete noMemoryBox;
+
+    return r;
 }

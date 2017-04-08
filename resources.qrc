@@ -14,6 +14,10 @@
         <file>icons/Refresh-icon.png</file>
         <file>icons/Refresh-Window-icon.png</file>
         <file>icons/copy-icon.png</file>
+        <file>icons/Cancer-2-2-icon.png</file>
+        <file>icons/Books-2-icon.png</file>
+        <file>icons/Candle-icon.png</file>
+        <file>icons/load-upload-icon.png</file>
     </qresource>
     <qresource prefix="/styles">
         <file alias="darkorange">styles/darkorange.style</file>

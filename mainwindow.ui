@@ -141,8 +141,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>86</width>
-             <height>35</height>
+             <width>862</width>
+             <height>518</height>
             </rect>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -202,6 +202,7 @@
     <bool>false</bool>
    </attribute>
    <addaction name="actionSaveProject"/>
+   <addaction name="actionLoad_project"/>
    <addaction name="separator"/>
    <addaction name="actionNewtone"/>
    <addaction name="actionSettings"/>
@@ -225,13 +226,13 @@
   <action name="actionGuess_Darks">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/icons/dark.png</normaloff>:/icons/icons/dark.png</iconset>
+     <normaloff>:/icons/icons/Candle-icon.png</normaloff>:/icons/icons/Candle-icon.png</iconset>
    </property>
    <property name="text">
     <string>Guess Darks</string>
    </property>
    <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Trying to guess darks using file path (should contain word like &amp;quot;dark&amp;quot;, works with current list).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    <string>Try to guess darks using file path (should contain word like &quot;dark&quot;, works with current list).</string>
    </property>
   </action>
   <action name="actionSettings">
@@ -264,7 +265,7 @@
    </property>
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/icons/spiral-icon.png</normaloff>:/icons/icons/spiral-icon.png</iconset>
+     <normaloff>:/icons/icons/Books-2-icon.png</normaloff>:/icons/icons/Books-2-icon.png</iconset>
    </property>
    <property name="text">
     <string>Recursive Listing</string>
@@ -324,13 +325,25 @@
   <action name="actionCopy_as_Lua">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/icons/copy-icon.png</normaloff>:/icons/icons/copy-icon.png</iconset>
+     <normaloff>:/icons/icons/Cancer-2-2-icon.png</normaloff>:/icons/icons/Cancer-2-2-icon.png</iconset>
    </property>
    <property name="text">
     <string>Copy as Lua</string>
    </property>
    <property name="toolTip">
     <string>Copy current list as LUA code (ommitting ignored).</string>
+   </property>
+  </action>
+  <action name="actionLoad_project">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/icons/load-upload-icon.png</normaloff>:/icons/icons/load-upload-icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Load project</string>
+   </property>
+   <property name="toolTip">
+    <string>Loads current selection, etc. from the project file.</string>
    </property>
   </action>
  </widget>

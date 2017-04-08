@@ -34,6 +34,8 @@
 #include "config_ui/globalsettings.h"
 #include "fixedcombowithshortcut.h"
 #include "../customtableview.h"
+#include "lua/luasrc/customlua.h"
+#include "lua/lua_params.h"
 
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------CONFIG------------------------------------------------------------------------------------------------
@@ -143,7 +145,7 @@ constexpr static int delayBeforeLoadOnScrollMs = 350;
 //----------------------------------------------------------------------------------------------------------------------------
 void PreviewsModel::generateProjectCode(std::ostream &out) const
 {
-    std::lock_guard<decltype (listMut)> (utility::noconst(this)->listMut);//that will break code if original model object is created as const, but who will do it ?!
+    std::lock_guard<decltype (listMut)> grd(listMut);
     //generating lua code from internal state, hardly bound to arrays above (to their indexes, values, etc)
 
     const auto spid = static_cast<size_t>(getSpecialColumnId());
@@ -164,12 +166,41 @@ void PreviewsModel::generateProjectCode(std::ostream &out) const
     out << "\n}" << std::endl;
 }
 
+void PreviewsModel::loadProjectCode(const std::string &src)
+{
+    using namespace luavm;
+    using namespace lua_templ;
+
+    std::lock_guard<decltype (listMut)> grd(listMut);
+    auto vm = std::make_shared<luavm::LuaVM>();
+    vm->doString(src);
+    auto root = testGetGlobal<QString>(*vm, "guiSelectedFilesBase");
+
+    auto conn = std::make_shared<QMetaObject::Connection>();
+    *conn     = connect(this, &PreviewsModel::filesAreListed, this, [this, conn, vm](const QString& dir)
+    {
+        //here is 3rd stage: gui starts list -> thread does list -> gui need update list from lua
+        std::lock_guard<decltype (listMut)> grd(listMut);
+        disconnect(*conn);
+        if (currentFolder == dir) //check if user was clicking all around while project loads
+        {
+            lua_State *L = *vm;
+            lua_getglobal(L, "guiSelectedFilesList");
+
+            lua_pop(L, 1);
+        }
+
+    }, Qt::QueuedConnection); //important, resolves cross-thread
+
+    setCurrentFolder(root, false); //fixme: recursivness is not stored, do some signal/slot to reflect that in GUI
+}
+
 bool PreviewsModel::isParsingVideo()
 {
     return StaticSettingsMap::getGlobalSetts().readBool("Bool_parse_frames");
 }
 
-int PreviewsModel::getSpecialColumnId()
+int PreviewsModel::getSpecialColumnId() //dunno how to name it really
 {
     return 2;
 }
@@ -522,6 +553,7 @@ void PreviewsModel::setCurrentFolder(const QString &path, bool recursive)
             this->haveFilesList(pathes, stop);
             this->endResetModel();
         }
+        emit this->filesAreListed(absPath); //that will be needed by project loader mainly
     });
 }
 
@@ -860,35 +892,4 @@ void PreviewsDelegate::setModelData(QWidget *editor, QAbstractItemModel *model, 
             }
         }
     }
-}
-
-bool PreviewsDelegate::eventFilter(QObject *t, QEvent *e)
-{
-    //it seems arrows should be intercepted here http://stackoverflow.com/questions/39290017/how-to-intercept-key-events-when-editing-a-cell-in-qtablewidget-qtableview
-    //but that may break shortcuts ...
-    //hard coding arrow keys to move between rows (lines), otherwise it's captured by embedded combos etc.
-    const static std::map<int, int> shifts
-    {
-        {Qt::Key_Up, -1},
-        {Qt::Key_Down, 1},
-    };
-
-    //    if(e->type() == QEvent::KeyPress)
-    //    {
-    //        const auto m  = model();
-    //        QKeyEvent *keyEvent = dynamic_cast<QKeyEvent*>(e);
-    //        if (m && keyEvent)
-    //        {
-    //            const auto key = keyEvent->key();
-    //            if (shifts.count(key))
-    //            {
-    //                const auto si =  currentIndex();
-    //                const auto ni = m->index(si.row() + shifts.at(key), si.column());
-    //                if (ni.isValid())
-    //                setCurrentIndex(ni);
-    //                return true;
-    //            }
-    //        }
-    //    }
-    return false;
 }

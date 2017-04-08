@@ -101,7 +101,6 @@ namespace luavm
         template <class Src>
         int load(const Src& src, const std::string& chunkName = "defchunk", const std::string& mode = "bt") const
         {
-            //FIXME: that may work for 1 plugin only - please re-think it because it is STATIC in fact
             bool done = false;
             auto reader = [&src, &done](lua_State *L,
                           void *data,
@@ -313,6 +312,7 @@ namespace luavm
             return res;
         }
     };
+    using LuaVMPtr = std::shared_ptr<LuaVM>;
 }
 
 #endif // CUSTOMLUA_H

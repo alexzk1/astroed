@@ -63,6 +63,8 @@ private slots:
 
     void on_actionCopy_as_Lua_triggered();
 
+    void on_actionLoad_project_triggered();
+
 private:
     Ui::MainWindow *ui;
     QPointer<QFileSystemModel> dirsModel;

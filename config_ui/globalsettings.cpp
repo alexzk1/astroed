@@ -117,6 +117,7 @@ QList<QWidget *> StaticSettingsMap::createWidgets() const
     for (const auto& p : sets)
     {
         r.push_back(p.second->createWidget());
+        r.back()->setProperty("SettKey", p.first); //this is settings name/key bound with this widget, just in case we want it ever later
     }
 
     return r;

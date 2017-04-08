@@ -14,7 +14,7 @@
 #include "previewsmodeldata.h"
 
 class QFileInfo;
-class PreviewsModel : public QAbstractTableModel, public luavm::ProjectSaver
+class PreviewsModel : public QAbstractTableModel, public luavm::ProjectSaver, public luavm::ProjectLoader
 {
     Q_OBJECT
 public:
@@ -44,6 +44,7 @@ public:
     void scrolledTo(int64_t row);
 
     virtual void generateProjectCode(std::ostream& out) const override;
+    virtual void loadProjectCode(const std::string& src) override;
 
     bool static isParsingVideo();
     int  static getSpecialColumnId(); //this column may have automatic changes in loop
@@ -71,6 +72,7 @@ signals:
     void startedPreviewsLoad(bool scroll);
     void finishedPreviewsLoad();
     void loadProgress(int percents);
+    void filesAreListed(const QString& rootPath);
 };
 
 
@@ -89,5 +91,4 @@ protected:
     virtual void setModelData(QWidget *editor, QAbstractItemModel *model, const QModelIndex &index) const override;
 private:
     QModelIndex lastClickedPreview;
-    bool eventFilter(QObject *t, QEvent *e);
 };
