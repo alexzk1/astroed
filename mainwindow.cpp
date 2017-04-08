@@ -12,6 +12,7 @@
 #include <QHeaderView>
 #include <QFileDialog>
 #include <QClipboard>
+#include <QActionGroup>
 #include "clickablelabel.h"
 #include "editor/luaeditor.h"
 #include "config_ui/settingsdialog.h"
@@ -32,7 +33,9 @@ MainWindow::MainWindow(QWidget *parent) :
     settDialog(new SettingsDialog(this)),
     previewShift(0),
     originalStylesheet(qApp->styleSheet()),
-    lastPreviewFileName()
+    lastPreviewFileName(),
+    zoomPicModeActions(),
+    zoomPicModeActionsGroup()
 {
     ui->setupUi(this);
 
@@ -156,7 +159,7 @@ void MainWindow::selectPath(const QString &path, bool collapse)
     }
 }
 
-void MainWindow::openPreviewTab(const imaging::image_buffer_ptr& image, const QString& fileName)
+void MainWindow::openPreviewTab(const imaging::image_buffer_ptr& image, const QString& fileName, size_t pictureRole)
 {
     lastPreviewFileName = fileName;
     const auto txt = (fileName.isEmpty())? "":QString(tr("File: %1")).arg(QFileInfo(fileName).fileName());
@@ -169,6 +172,14 @@ void MainWindow::openPreviewTab(const imaging::image_buffer_ptr& image, const QS
         ui->lblZoomPix->setStatusTip(meta.getStringValue());
     }
     ui->lblZoomPix->setPixmap(QPixmap::fromImage(*image));
+    if (zoomPicModeActions.size() > pictureRole && zoomPicModeActions.at(pictureRole))
+    {
+        if (zoomPicModeActionsGroup)
+            zoomPicModeActionsGroup->blockSignals(true);
+        zoomPicModeActions.at(pictureRole)->setChecked(true);
+        if (zoomPicModeActionsGroup)
+            zoomPicModeActionsGroup->blockSignals(false);
+    }
 }
 
 void MainWindow::showTempNotify(const QString &text, int delay)
@@ -181,7 +192,14 @@ void MainWindow::resetPreview()
     previewShift = 0;
     ui->scrollAreaZoom->zoomFitWindow();
     ui->scrollAreaZoom->ensureVisible(0,0);
-
+    if (zoomPicModeActions.size() && zoomPicModeActions.at(0))
+    {
+        if (zoomPicModeActionsGroup)
+            zoomPicModeActionsGroup->blockSignals(true);
+        zoomPicModeActions.at(0)->setChecked(true);
+        if (zoomPicModeActionsGroup)
+            zoomPicModeActionsGroup->blockSignals(false);
+    }
     //qDebug()  <<"resetPreview()";
 }
 
@@ -213,6 +231,7 @@ void MainWindow::on_tabsWidget_currentChanged(int index)
         {
             showTempNotify(zoomKbHintText, 15000);
             session_once = false;
+            statusBar()->setToolTip(zoomKbHintText);
         }
     }
     else
@@ -370,7 +389,30 @@ void MainWindow::setupZoomGui()
     auto zoomToolbar = addToolbarToLayout(ui->tabZoomed->layout());
     if (zoomToolbar)
     {
+        zoomToolbar->setToolButtonStyle(Qt::ToolButtonIconOnly);
         zoomToolbar->addAction(ui->actionSave_As);
+        zoomToolbar->addSeparator();
+        zoomPicModeActions = {
+            zoomToolbar->addAction(QIcon(":/icons/icons/Science-Minus2-Math-icon.png"), "Ignored"),
+            zoomToolbar->addAction(QIcon(":/icons/icons/Science-Plus2-Math-icon.png"), "Source"),
+            zoomToolbar->addAction(QIcon(":/icons/icons/Cloud-app-icon.png"), "Dark")
+        };
+        zoomPicModeActionsGroup = new QActionGroup(this); //have to use class-member because will need to block signals, so will not fall into recursion model->group->model->group
+        zoomPicModeActionsGroup->setExclusive(true);
+        for (size_t i = 0, sz = zoomPicModeActions.size(); i < sz; ++i)
+        {
+            const auto& a = zoomPicModeActions.at(i);
+            a->setCheckable(true);
+            a->setToolTip(a->text());
+            a->setProperty("model_role", static_cast<int>(i));
+            zoomPicModeActionsGroup->addAction(a);
+        }
+
+        connect(zoomPicModeActionsGroup, &QActionGroup::triggered, this, [this](QAction *a)
+        {
+            if (previewsModel && a)
+                previewsModel->setRoleFor(lastPreviewFileName, a->property("model_role").toInt());
+        }, Qt::QueuedConnection);
     }
 }
 
@@ -391,6 +433,7 @@ QToolBar *MainWindow::addToolbarToLayout(QLayout *src, int pos)
         {
             result = new QToolBar(this);
             result->setOrientation(Qt::Horizontal);
+
             vbox->insertWidget(pos, result);
         }
     }

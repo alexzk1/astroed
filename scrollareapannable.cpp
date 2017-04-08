@@ -84,10 +84,6 @@ void ScrollAreaPannable::mousePressEvent(QMouseEvent *e)
         //todo: button will be used to make selection
         //possibly will need option to fit content to viewport, so user can draw selection easier
         setCursor(Qt::CrossCursor);
-        //        if (widgetResizable())
-        //            zoomFitWindow();
-        //        else
-        //            zoom1_1();
     }
 }
 

@@ -36,6 +36,7 @@ public:
 
     void guessDarks();
     void setAllRole(int role_id); //should be same order as in fileRoles
+    void setRoleFor(const QString& fileName, int role_id);
 
     Qt::ItemFlags flags(const QModelIndex& index) const override;
 

@@ -455,6 +455,20 @@ void PreviewsModel::setAllRole(int role_id)
     }
 }
 
+void PreviewsModel::setRoleFor(const QString &fileName, int role_id)
+{
+    const QVariant val(role_id);
+    std::lock_guard<decltype (listMut)> grd(listMut);
+    for (size_t row = 0, sz = modelFiles.size(); row < sz; ++row)
+    {
+        if (fileName == modelFiles.at(row).getFilePath())
+        {
+            setDataPriv(index(static_cast<int>(row), getSpecialColumnId()), val, Qt::EditRole);
+            break;
+        }
+    }
+}
+
 Qt::ItemFlags PreviewsModel::flags(const QModelIndex &index) const
 {
     QFlags<Qt::ItemFlag> res = Qt::NoItemFlags;
@@ -729,11 +743,15 @@ bool PreviewsDelegate::showLastClickedPreview(int shift, bool reset)
         {
             if (MainWindow::instance())
             {
+                //that what happens when we have MVD and want to connect something trivial, like radiobuttons, do I really need to implement view with 3 buttons
+                //which can be bound to toolbar ?!?!gosh...hate those ideas in fact
+                //(i just want field from "model" be visible as 3 buttons on toolbar, for such simple thing so many code all around)
+                QModelIndex index = lastClickedPreview.model()->index(ind.row(), PreviewsModel::getSpecialColumnId());
                 ind.data(MyScrolledView); //tipping model, need to load previews
                 const auto fileName = ind.data(MyGetPathRole).toString();
                 const auto img      = IMAGE_LOADER.getImage(fileName);
 
-                MainWindow::instance()->openPreviewTab(img, fileName); //fixme: maybe do some signal/ slot for that
+                MainWindow::instance()->openPreviewTab(img, fileName, static_cast<size_t>(index.data(Qt::EditRole).toInt())); //fixme: maybe do some signal/ slot for that
                 if (reset)
                     MainWindow::instance()->resetPreview();//fixme: maybe do some signal/ slot for that
             }

@@ -8,6 +8,7 @@
 #include <QProgressBar>
 #include <QLayout>
 #include <QToolBar>
+#include <QActionGroup>
 
 #include "utils/inst_once.h"
 #include "utils/saveable_widget.h"
@@ -32,7 +33,7 @@ public:
     ~MainWindow();
     QString getSelectedFolder();
 public slots:
-    void openPreviewTab(const imaging::image_buffer_ptr &image, const QString &fileName);
+    void openPreviewTab(const imaging::image_buffer_ptr &image, const QString &fileName, size_t pictureRole);
     void resetPreview();
     void selectPath(const QString &path, bool collapse = true);
     void showTempNotify(const QString& text, int delay = 10000);
@@ -77,11 +78,14 @@ private:
     int previewShift;
     const QString originalStylesheet;
     QString lastPreviewFileName;
-
+    std::vector<QPointer<QAction>> zoomPicModeActions;
+    QPointer<QActionGroup> zoomPicModeActionsGroup;
     void setupFsBrowsing();
     void setupZoomGui();
 
     const static QString zoomKbHintText;
+
+
     QToolBar* addToolbarToLayout(QLayout* src, int pos = 0);
 };
 
