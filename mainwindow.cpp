@@ -523,7 +523,12 @@ void MainWindow::on_actionSet_All_Darks_triggered()
 void MainWindow::on_actionSaveProject_triggered()
 {
     QSettings sett;
-    QString lastFolder = sett.value("LastSaveProjectFolder", QDir::homePath()).toString() + "/ae_project.luap";
+
+    QString lastFolder = getSelectedFolder();
+    if (lastFolder.isEmpty())
+        sett.value("LastSaveProjectFolder", QDir::homePath()).toString();
+
+    lastFolder =lastFolder + "/ae_project.luap";
     auto name = QFileDialog::getSaveFileName(this, tr("Save Project"), lastFolder, "luap (*.luap)");
     if (!name.isEmpty())
     {
@@ -554,6 +559,20 @@ void MainWindow::on_actionCopy_as_Lua_triggered()
     }
 }
 
+void MainWindow::loadProjectFromFile(const QString &name)
+{
+    std::fstream fs(name.toStdString(), std::ios_base::in);
+    std::string src = utility::read_stream_into_container(fs);
+    fs.close();
+
+    if (previewsModel)
+        previewsModel->loadProjectCode(src);
+
+    //todo: add more things to load as project
+
+}
+
+
 void MainWindow::on_actionLoad_project_triggered()
 {
     if (previewsModel)
@@ -566,17 +585,7 @@ void MainWindow::on_actionLoad_project_triggered()
             QFileInfo tmp(name);
             sett.setValue("LastSaveProjectFolder", tmp.absolutePath());
             sett.sync();
-
-            std::fstream fs(name.toStdString(), std::ios_base::in);
-            std::string src = utility::read_stream_into_container(fs);
-            fs.close();
-
-            if (previewsModel)
-                previewsModel->loadProjectCode(src);
-
-            //todo: add more things to load as project
-
-
+            loadProjectFromFile(name);
         }
     }
 }

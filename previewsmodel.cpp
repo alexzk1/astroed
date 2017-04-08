@@ -4,6 +4,7 @@
 #include <vector>
 #include <queue>
 #include <set>
+#include <map>
 #include <algorithm>
 
 #include <QDirIterator>
@@ -170,6 +171,14 @@ void PreviewsModel::loadProjectCode(const std::string &src)
 {
     using namespace luavm;
     using namespace lua_templ;
+    using internal_map = std::map<QString, QString>;
+
+    static std::map<int64_t, int> lua2index_map;
+    if (!lua2index_map.size())
+    {
+        for (size_t i = 0, sz = fileRoles.size(); i < sz; ++i)
+            lua2index_map[fileRoles.at(i).luaRole] = static_cast<int>(i);
+    }
 
     std::lock_guard<decltype (listMut)> grd(listMut);
     auto vm = std::make_shared<luavm::LuaVM>();
@@ -185,9 +194,20 @@ void PreviewsModel::loadProjectCode(const std::string &src)
         if (currentFolder == dir) //check if user was clicking all around while project loads
         {
             lua_State *L = *vm;
-            lua_getglobal(L, "guiSelectedFilesList");
-
-            lua_pop(L, 1);
+            int stack = lua_gettop(L);
+            auto proj = testGetGlobal<std::vector<internal_map>>(L, "guiSelectedFilesList");
+            for (const auto& itm : proj)
+            {
+                if (itm.count("fileName") && itm.count("fileMode"))
+                {
+                    auto fp   = QString("%1/%2").arg(dir).arg(itm.at("fileName"));
+                    int  mode = itm.at("fileMode").toInt();
+                    if (lua2index_map.count(mode))
+                        setRoleForPriv(fp, lua2index_map.at(mode));
+                }
+            }
+            if (stack!=lua_gettop(L))
+                FATAL_RISE("Broken stack on project loading.");
         }
 
     }, Qt::QueuedConnection); //important, resolves cross-thread
@@ -430,6 +450,19 @@ bool PreviewsModel::setDataPriv(const QModelIndex &index, const QVariant &value,
     return changed;
 }
 
+void PreviewsModel::setRoleForPriv(const QString &fileName, int role_id)
+{
+    const QVariant val(role_id);
+    for (size_t row = 0, sz = modelFiles.size(); row < sz; ++row)
+    {
+        if (fileName == modelFiles.at(row).getFilePath())
+        {
+            setDataPriv(index(static_cast<int>(row), getSpecialColumnId()), val, Qt::EditRole);
+            break;
+        }
+    }
+}
+
 
 void PreviewsModel::guessDarks()
 {
@@ -457,16 +490,8 @@ void PreviewsModel::setAllRole(int role_id)
 
 void PreviewsModel::setRoleFor(const QString &fileName, int role_id)
 {
-    const QVariant val(role_id);
     std::lock_guard<decltype (listMut)> grd(listMut);
-    for (size_t row = 0, sz = modelFiles.size(); row < sz; ++row)
-    {
-        if (fileName == modelFiles.at(row).getFilePath())
-        {
-            setDataPriv(index(static_cast<int>(row), getSpecialColumnId()), val, Qt::EditRole);
-            break;
-        }
-    }
+    setRoleForPriv(fileName, role_id);
 }
 
 Qt::ItemFlags PreviewsModel::flags(const QModelIndex &index) const

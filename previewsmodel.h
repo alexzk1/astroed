@@ -69,6 +69,7 @@ private:
     void haveFilesList(const files_t& list, const utility::runnerint_t& stop);
     void loadCurrentInterval();
     bool setDataPriv(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole);
+    void setRoleForPriv(const QString &fileName, int role_id);
 signals:
     void startedPreviewsLoad(bool scroll);
     void finishedPreviewsLoad();

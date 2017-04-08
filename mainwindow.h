@@ -32,6 +32,7 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
     QString getSelectedFolder();
+    void loadProjectFromFile(const QString& name);
 public slots:
     void openPreviewTab(const imaging::image_buffer_ptr &image, const QString &fileName, size_t pictureRole);
     void resetPreview();

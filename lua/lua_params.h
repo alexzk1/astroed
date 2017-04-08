@@ -193,69 +193,7 @@ namespace luavm
             return static_cast<typename T::element_type*>(lua_touserdata(L, index))->shared_from_this(); //a bit unsafe ...
         }
         //--------------------------------------------------------------------------
-        //support for hashes, if key's or value's type differes from C++ declared - that will be skipped
-        template <class T>
-        inline typename std::enable_if<checker<T>::isMap, T>::type
-        luaParam(lua_State *L, int index)
-        {
-            T result;
-            typename T::key_type key;
 
-            lua_pushnil(L);  /* first key */
-            while (lua_next(L, index) != 0)
-            {
-                if (luaTestType<typename T::key_type>(L, -2))
-                {
-                    lua_pushvalue(L, -2);
-                    key = luaParam<typename T::key_type>(L, -1);
-                    lua_pop(L, 1);
-
-                    if (luaTestType<typename T::mapped_type>(L, -1))
-                        result[key] = luaParam<typename T::mapped_type>(L, -1);
-                }
-                lua_pop(L, 1);
-            }
-
-            return result;
-        }
-        //--------------------------------------------------------------------------
-        //making vector out of number-keyed map
-        template<class T>
-        inline typename std::enable_if<checker<T>::isVector, T>::type
-        luaParam(lua_State *L, int index)
-        {
-            auto m = luaParam<lua_arrayhash_t<typename T::value_type>>(L, index);
-            T result;
-            result.reserve(m.size());
-            //map is already sorted by key
-            std::for_each(m.cbegin(), m.cend(), [&result]
-                          (const typename lua_arrayhash_t<typename T::value_type>::value_type &v)
-            {
-                result.push_back(v.second);
-            });
-            return result;
-        }
-        //--------------------------------------------------------------------------
-
-        //making set out of lua's values ignoring keys
-        template<class T>
-        inline
-        typename std::enable_if<checker<T>::isSet, T>::type
-        luaParam(lua_State *L, int index)
-        {
-            T result;
-
-            lua_pushnil(L);  /* first key */
-            while (lua_next(L, index) != 0)
-            {
-                if (luaTestType<typename T::key_type>(L, -1))
-                    result.insert(luaParam<typename T::key_type>(L, -1));
-                lua_pop(L, 1);
-            }
-
-            return result;
-        }
-        //--------------------------------------------------------------------------
 
         template<>
         inline bool luaTestType<lua_State*>(lua_State* L, int index)
@@ -314,6 +252,78 @@ namespace luavm
         luaTestType(lua_State* L, int index)
         {
             return !lua_isnil(L, index) && lua_islightuserdata(L, index);
+        }
+        //--------------------------------------------------------------------------
+        //support for hashes, if key's or value's type differes from C++ declared - that will be skipped
+        inline int updateIndexForLooping(int index)
+        {
+            if (index > 0 ) //not sure about 0 actually
+                return index;
+            return index - 1;
+        }
+
+        template <class T>
+        inline typename std::enable_if<checker<T>::isMap, T>::type
+        luaParam(lua_State *L, int index)
+        {
+            T result;
+            typename T::key_type key;
+
+            lua_pushnil(L);  /* first key */
+            index = updateIndexForLooping(index);
+            while (lua_next(L, index) != 0)
+            {
+                if (luaTestType<typename T::key_type>(L, -2))
+                {
+                    lua_pushvalue(L, -2);
+                    key = luaParam<typename T::key_type>(L, -1);
+                    lua_pop(L, 1);
+
+                    if (luaTestType<typename T::mapped_type>(L, -1))
+                        result[key] = luaParam<typename T::mapped_type>(L, -1);
+                }
+                lua_pop(L, 1);
+            }
+
+            return result;
+        }
+        //--------------------------------------------------------------------------
+        //making vector out of number-keyed map
+        template<class T>
+        inline typename std::enable_if<checker<T>::isVector, T>::type
+        luaParam(lua_State *L, int index)
+        {
+            auto m = luaParam<lua_arrayhash_t<typename T::value_type>>(L, index);
+            T result;
+            result.reserve(m.size());
+            //map is already sorted by key
+            std::for_each(m.cbegin(), m.cend(), [&result]
+                          (const typename lua_arrayhash_t<typename T::value_type>::value_type &v)
+            {
+                result.push_back(v.second);
+            });
+            return result;
+        }
+        //--------------------------------------------------------------------------
+
+        //making set out of lua's values ignoring keys
+        template<class T>
+        inline
+        typename std::enable_if<checker<T>::isSet, T>::type
+        luaParam(lua_State *L, int index)
+        {
+            T result;
+
+            index = updateIndexForLooping(index);
+            lua_pushnil(L);  /* first key */
+            while (lua_next(L, index) != 0)
+            {
+                if (luaTestType<typename T::key_type>(L, -1))
+                    result.insert(luaParam<typename T::key_type>(L, -1));
+                lua_pop(L, 1);
+            }
+
+            return result;
         }
         //--------------------------------------------------------------------------
         template <class T>
@@ -466,6 +476,21 @@ namespace luavm
                 lua_settable(L, -3);
             }
         }
+        //differs from luaPush - this one has check to skip empty strings, used in couple places
+        template <class T>
+        inline void luaPushStringArray(lua_State *L, const T& what, bool skipEmpty = false)
+        {
+            lua_newtable(L);
+            for (int i = 0, index = 1, sz = what.size(); i < sz; i++)
+            {
+                if (!skipEmpty || what.at(i).size() > 0)
+                {
+                    lua_pushinteger(L, index++);
+                    luaPush(L, what.at(i));
+                    lua_settable(L, -3);
+                }
+            }
+        }
 
 #ifdef QT_CORE_LIB
         inline void luaPushVariant(lua_State* L, const QVariant& var)
@@ -550,5 +575,8 @@ namespace luavm
 #define NILP std::shared_ptr<char>(nullptr)
     }
 }
+//intresting bug may happen, if u do luaPush(L, "") it will compile as boolean ...
+#define PUSH_ES(VM_L) luaPush<std::string>(VM_L, std::string())
+
 #endif // LUA_PARAMS
 
