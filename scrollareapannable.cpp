@@ -38,17 +38,14 @@ void ScrollAreaPannable::zoomBy(double times)
     int w = static_cast<decltype(w)>(widget()->width() + widget()->width()  * times);
     int h = static_cast<decltype(h)>(widget()->height()+ widget()->height() * times);
 
+
+
     if (w < min_width || h < min_height)
         zoomSize(min_width, min_height);
     else
     {
         if (w > maxZoom.width() || h > maxZoom.height())
-        {
-            if (maxZoom.width() > width() || maxZoom.height() > height())
-                zoom1_1();
-            else
-                zoomSize(maxZoom.width(), maxZoom.height());
-        }
+            zoomSize(maxZoom.width(), maxZoom.height());
         else
             zoomSize(w, h);
     }
@@ -56,13 +53,13 @@ void ScrollAreaPannable::zoomBy(double times)
 
 void ScrollAreaPannable::setMaxZoom(const QSize &maxz)
 {
-    double p = (double) maxz.width() / maxz.height();
-    auto mh  = std::max(height(), maxz.height());
-    auto mw  = std::max(static_cast<decltype(mh)>(mh * p), maxz.width());
-    maxZoom  = QSize(mw, mh);
+    double p   = static_cast<double>(maxz.width()) / maxz.height();
+    auto mh    = std::max(height(), maxz.height());
+    auto mw    = std::max(static_cast<decltype(mh)>(mh * p), maxz.width());
+    maxZoom    = QSize(mw, mh);
 
     min_height = std::min(height(), maxz.height());
-    min_width = p * min_height;
+    min_width  = static_cast<decltype(min_width)>(p * min_height);
 }
 
 QSize ScrollAreaPannable::getCurrentZoomedSize() const
