@@ -22,8 +22,9 @@ const StaticSettingsMap &StaticSettingsMap::getGlobalSetts()
                                             DECL_SETT(GlobalStorableBool, "Bool_parse_frames", true, tr("Parse Videos into Frames"),
                                             tr("If enabled will split videos into frames, this may take significant time.")),
 #endif
-                                            DECL_SETT(GlobalStorableBool, "Bool_autoloadproj", true, tr("If folder has single project file - load it."),
-                                            tr("If enabled it will automatically load projects when folder is switched (only if there is 1 exactly project file found).")),
+                                            //fixme: not too clean with this, loading project will trigger switchFolder, which will trigger loading etc...
+//                                            DECL_SETT(GlobalStorableBool, "Bool_autoloadproj", true, tr("If folder has single project file - load it."),
+//                                            tr("If enabled it will automatically load projects when folder is switched (only if there is 1 exactly project file found).")),
                                         });
     return list;
 }

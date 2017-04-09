@@ -139,6 +139,7 @@ bool isDark(const T& path)
     return utility::strcontains(src, termsDark);
 }
 
+
 constexpr static int64_t previews_half_range = 10;
 constexpr static int delayBeforeLoadOnScrollMs = 150;
 //----------------------------------------------------------------------------------------------------------------------------
