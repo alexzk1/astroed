@@ -181,16 +181,16 @@ void PreviewsModel::loadProjectCode(const std::string &src)
     }
 
     std::lock_guard<decltype (listMut)> grd(listMut);
-    auto vm = std::make_shared<luavm::LuaVM>();
+    auto conn = std::make_shared<QMetaObject::Connection>();
+    auto vm   = std::make_shared<luavm::LuaVM>();
+
     vm->doString(src);
     auto root = testGetGlobal<QString>(*vm, "guiSelectedFilesBase");
 
-    auto conn = std::make_shared<QMetaObject::Connection>();
     *conn     = connect(this, &PreviewsModel::filesAreListed, this, [this, conn, vm](const QString& dir)
     {
         //here is 3rd stage: gui starts list -> thread does list -> gui need update list from lua
         std::lock_guard<decltype (listMut)> grd(listMut);
-        disconnect(*conn);
         if (currentFolder == dir) //check if user was clicking all around while project loads
         {
             lua_State *L = *vm;
@@ -210,6 +210,7 @@ void PreviewsModel::loadProjectCode(const std::string &src)
                 FATAL_RISE("Broken stack on project loading.");
         }
 
+        disconnect(*conn); //self-deleting, releasing captures
     }, Qt::QueuedConnection); //important, resolves cross-thread
 
     setCurrentFolder(root, false); //fixme: recursivness is not stored, do some signal/slot to reflect that in GUI

@@ -12,9 +12,10 @@ Implemented:
 * zoomable preview of original image
 * EXIF reading from JPEGS
 * smooth scroll/preview, fast scroll with HDD (magnetic) + i7 cpu + 8Gb ram of 33000 jpeg pictures 20MPx each (half of them are frames from videos, so less resolution, but encoder used, also smooth in backward scroll)
+* lua project - okey, initial idea does not look cool. So what I think. It will be "project" savable, but file-format of this will be lua, nothing special, just parsing globals using separated VM.
+Basic project support is ready, it saves/loads user selection, file paths. 
 
 TODO / Ideas:
-* lua project - okey, initial idea does not look cool. So what I think. It will be "project" savable, but file-format of this will be lua, nothing special, just parsing globals using separated VM.
+
 * lua_code - this part will have own VM and API like getGUIFilesListed(), also it will have access to math & algos. I think that will work like assembler. I.e. it will be "accumulator" image which is
 1 of operands and keeps result. That can be shown as preview additionally (possibly, in separated window).
-
