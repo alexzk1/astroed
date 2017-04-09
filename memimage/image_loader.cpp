@@ -155,6 +155,7 @@ image_cacher::~image_cacher()
 {
 }
 
+#ifdef USING_VIDEO_FS
 VideoCapturePtr image_loader::getVideoCapturer(const QString& filePath) const
 {
     //function must be called in locked state
@@ -177,6 +178,7 @@ VideoCapturePtr image_loader::getVideoCapturer(const QString& filePath) const
     }
     return ptr;
 }
+#endif
 
 bool image_cacher::isProperVfs(const QUrl &url)
 {
