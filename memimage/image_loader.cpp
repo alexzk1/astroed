@@ -157,13 +157,15 @@ image_cacher::~image_cacher()
 
 VideoCapturePtr image_loader::getVideoCapturer(const QString& filePath) const
 {
-    std::lock_guard<std::recursive_mutex> guard(mutex);
+    //function must be called in locked state
+    //std::lock_guard<std::recursive_mutex> guard(mutex);
     VideoCapturePtr ptr(nullptr);
     if (frameLoaders.count(filePath))
         ptr = frameLoaders.at(filePath).lock();
 
     if (!ptr)
     {
+
         ptr.reset(new cv::VideoCapture());
         frameLoaders[filePath] = ptr;
     }
@@ -230,10 +232,10 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
             {
                 const auto path = url.path();
                 VideoCapturePtr ptr = getVideoCapturer(path);
+                tmp.framesLoader = ptr;
 
                 bool ok_num;
                 auto frame_num = std::max<long>(0, url.fragment().toLong(&ok_num, base_frames_to_string_numbering));
-                tmp.framesLoader = ptr;
 
                 if (ok_num && frame_num < static_cast<decltype(frame_num)>(ptr->get(CV_CAP_PROP_FRAME_COUNT)))
                 {
@@ -330,14 +332,14 @@ QStringList image_loader::getVideoFramesLinks(const QString &videoFileName)
     const static QChar filler('0');
     QStringList res;
 #ifdef USING_VIDEO_FS
-    VideoCapturePtr ptr = getVideoCapturer(videoFileName);
+    VideoCapturePtr ptr;
     int fcount = 0;
-    if (ptr)
     {
         std::lock_guard<std::recursive_mutex> guard(mutex);
-        fcount = static_cast<decltype(fcount)>(ptr->get(CV_CAP_PROP_FRAME_COUNT));
+        ptr = getVideoCapturer(videoFileName);
+        if (ptr)
+            fcount = static_cast<decltype(fcount)>(ptr->get(CV_CAP_PROP_FRAME_COUNT));
     }
-
     for (auto i = 0; i < fcount; ++i)
         res << QString("%1://%2#%3").arg(vfs_scheme).arg(videoFileName).arg(i, 8, base_frames_to_string_numbering, filler);
 

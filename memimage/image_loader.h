@@ -194,7 +194,8 @@ namespace imaging
             Ptr data;
             meta_t meta;
 #ifdef USING_VIDEO_FS
-            VideoCapturePtr framesLoader; //we want to keep same loader for all frames in same file
+            //we want to keep same loader for all frames in same file
+            VideoCapturePtr framesLoader;
             std::shared_ptr<QTemporaryFile> tempFile;
 #endif
             operator bool() const
