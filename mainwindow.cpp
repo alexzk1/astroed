@@ -21,6 +21,8 @@
 
 const static auto ZOOMING_KB_VALUE = 2 * ScrollAreaPannable::WheelStep;
 
+const static QString defaultProjFile = "/ae_project.luap";
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
@@ -528,7 +530,7 @@ void MainWindow::on_actionSaveProject_triggered()
     if (lastFolder.isEmpty())
         sett.value("LastSaveProjectFolder", QDir::homePath()).toString();
 
-    lastFolder =lastFolder + "/ae_project.luap";
+    lastFolder =lastFolder + defaultProjFile;
     auto name = QFileDialog::getSaveFileName(this, tr("Save Project"), lastFolder, "luap (*.luap)");
     if (!name.isEmpty())
     {
@@ -578,7 +580,15 @@ void MainWindow::on_actionLoad_project_triggered()
     if (previewsModel)
     {
         QSettings sett;
-        QString lastFolder = sett.value("LastSaveProjectFolder", QDir::homePath()).toString();
+        QString lastFolder = getSelectedFolder();
+        if (lastFolder.isEmpty())
+            sett.value("LastSaveProjectFolder", QDir::homePath()).toString();
+        else
+        {
+            auto tmp = lastFolder + defaultProjFile;
+            if (QFile::exists(tmp))
+                lastFolder = tmp;
+        }
         auto name = QFileDialog::getOpenFileName(this, tr("Load Project"), lastFolder, "luap (*.luap)");
         if (!name.isEmpty())
         {
