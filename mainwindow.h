@@ -77,6 +77,7 @@ private:
     QPointer<QProgressBar>     loadingProgress;
     QPointer<SettingsDialog>   settDialog;
     int previewShift;
+    QSize lastPreviewSize;
     const QString originalStylesheet;
     QString lastPreviewFileName;
     std::vector<QPointer<QAction>> zoomPicModeActions;

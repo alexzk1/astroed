@@ -83,7 +83,7 @@ class PreviewsDelegate : public QStyledItemDelegate
 public:
     PreviewsDelegate(QWidget *parent = 0) : QStyledItemDelegate(parent) {}
 
-    bool showLastClickedPreview(int shift = 0, bool reset = true);
+    bool showLastClickedPreview(int shift, const QSize &lastSize);
 protected:
     virtual void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
     virtual QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override;

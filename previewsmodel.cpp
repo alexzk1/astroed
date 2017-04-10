@@ -760,7 +760,7 @@ void PreviewsModel::loadCurrentInterval()
 //----------------------DELEGATE----------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
 
-bool PreviewsDelegate::showLastClickedPreview(int shift, bool reset)
+bool PreviewsDelegate::showLastClickedPreview(int shift, const QSize& lastSize)
 {
     bool res = false;
     if (lastClickedPreview.isValid())
@@ -777,10 +777,13 @@ bool PreviewsDelegate::showLastClickedPreview(int shift, bool reset)
                 ind.data(MyScrolledView); //tipping model, need to load previews
                 const auto fileName = ind.data(MyGetPathRole).toString();
                 const auto img      = IMAGE_LOADER.getImage(fileName);
-
-                MainWindow::instance()->openPreviewTab(img, fileName, static_cast<size_t>(index.data(Qt::EditRole).toInt())); //fixme: maybe do some signal/ slot for that
-                if (reset)
-                    MainWindow::instance()->resetPreview();//fixme: maybe do some signal/ slot for that
+                if (img != nullptr)
+                {
+                    const bool reset = lastSize != img->size(); //next line (openPreview) will change referenced lastSize to current
+                    MainWindow::instance()->openPreviewTab(img, fileName, static_cast<size_t>(index.data(Qt::EditRole).toInt())); //fixme: maybe do some signal/ slot for that
+                    if (reset)
+                        MainWindow::instance()->resetPreview();//fixme: maybe do some signal/ slot for that
+                }
             }
         }
     }
@@ -871,8 +874,9 @@ bool PreviewsDelegate::editorEvent(QEvent *event, QAbstractItemModel *model, con
 
                 if (mode == DelegateMode::IMAGE_PREVIEW)
                 {
+                    const static QSize reset(-1, -1);
                     lastClickedPreview = index;
-                    showLastClickedPreview();
+                    showLastClickedPreview(0, reset);
                     return true;
                 }
             }
@@ -895,7 +899,7 @@ QWidget *PreviewsDelegate::createEditor(QWidget *parent, const QStyleOptionViewI
             if (tmp)
             {
                 connect(tmp, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
-                     [this, tmp](int)
+                        [this, tmp](int)
                 {
                     emit utility::noconst(this)->commitData(tmp);
                     emit utility::noconst(this)->closeEditor(tmp);

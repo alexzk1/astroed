@@ -34,6 +34,7 @@ MainWindow::MainWindow(QWidget *parent) :
     loadingProgress(new QProgressBar(this)),
     settDialog(new SettingsDialog(this)),
     previewShift(0),
+    lastPreviewSize(-1, -1),
     originalStylesheet(qApp->styleSheet()),
     lastPreviewFileName(),
     zoomPicModeActions(),
@@ -166,7 +167,7 @@ void MainWindow::openPreviewTab(const imaging::image_buffer_ptr& image, const QS
     lastPreviewFileName = fileName;
     const auto txt = (fileName.isEmpty())? "":QString(tr("File: %1")).arg(QFileInfo(fileName).fileName());
     ui->tabsWidget->setCurrentWidget(ui->tabZoomed);
-    ui->scrollAreaZoom->setMaxZoom(image->size());
+    ui->scrollAreaZoom->setMaxZoom(lastPreviewSize = image->size());
     fileNameLabel->setText(txt);
     if (!fileName.isEmpty())
     {
@@ -269,7 +270,7 @@ bool MainWindow::eventFilter(QObject *src, QEvent *e)
             auto dele = dynamic_cast<PreviewsDelegate*>(ui->previewsTable->itemDelegate());
             if (dele)
             {
-                if (dele->showLastClickedPreview(s, false))
+                if (dele->showLastClickedPreview(s, lastPreviewSize))
                 {
                     previewShift = s;
                     //qDebug() << "set shift "<<s;
