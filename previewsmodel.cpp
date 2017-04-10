@@ -142,8 +142,6 @@ bool isDark(const T& path)
 
 constexpr static int64_t previews_half_range = 10;
 
-//150ms = too hard pressure on my HDD, 350ms = too slow reaction as for me...
-constexpr static int delayBeforeLoadOnScrollMs = 250;
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------MODEL-------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
@@ -613,7 +611,7 @@ void PreviewsModel::scrolledTo(int64_t row)
         urgentRowScrolled = row;
 
         //this + onTimerDelayedLoader() allows fast and smooth list scroll by user
-        scrollDelayedLoader.start(delayBeforeLoadOnScrollMs);
+        scrollDelayedLoader.start(StaticSettingsMap::getGlobalSetts().readInt("Int_scroll_delay"));
     }
 }
 

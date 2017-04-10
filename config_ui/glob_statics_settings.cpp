@@ -25,6 +25,8 @@ const StaticSettingsMap &StaticSettingsMap::getGlobalSetts()
                                             //fixme: not too clean with this, loading project will trigger switchFolder, which will trigger loading etc...
 //                                            DECL_SETT(GlobalStorableBool, "Bool_autoloadproj", true, tr("If folder has single project file - load it."),
 //                                            tr("If enabled it will automatically load projects when folder is switched (only if there is 1 exactly project file found).")),
+                                            DECL_SETT(GlobalStorableInt, "Int_scroll_delay", 50, tr("Scroll delay (ms)"), tr("This value defines delay-on-scroll before actual previews will be loaded.\n"
+                                            "You can set value depend on how fast is your storage to pick best reaction/device pressure ratio."), 25, 500),
                                         });
     return list;
 }
