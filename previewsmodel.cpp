@@ -141,7 +141,9 @@ bool isDark(const T& path)
 
 
 constexpr static int64_t previews_half_range = 10;
-constexpr static int delayBeforeLoadOnScrollMs = 150;
+
+//150ms = too hard pressure on my HDD, 350ms = too slow reaction as for me...
+constexpr static int delayBeforeLoadOnScrollMs = 250;
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------MODEL-------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------

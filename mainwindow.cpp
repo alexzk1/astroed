@@ -34,7 +34,7 @@ MainWindow::MainWindow(QWidget *parent) :
     loadingProgress(new QProgressBar(this)),
     settDialog(new SettingsDialog(this)),
     previewShift(0),
-    lastPreviewSize(-1, -1),
+    lastPreviewSize(-2, -2), //i think this should differ from what delegate has (-1, -1) to ensure initial reset
     originalStylesheet(qApp->styleSheet()),
     lastPreviewFileName(),
     zoomPicModeActions(),
