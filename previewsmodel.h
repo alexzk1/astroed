@@ -42,6 +42,7 @@ public:
 
     void setCurrentFolder(const QString& path, bool recursive = false);
     void simulateModelReset();
+    void resetModel();
     void scrolledTo(int64_t row);
 
     virtual void generateProjectCode(std::ostream& out) const override;

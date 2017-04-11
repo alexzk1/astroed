@@ -1,0 +1,6 @@
+<!DOCTYPE RCC><RCC version="1.0">
+  <qresource prefix="/">
+	<file>./luarc/inc/readme.txt</file>
+	<file>./luarc/inc/object.lua</file>
+  </qresource>
+</RCC>

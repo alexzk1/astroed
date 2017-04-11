@@ -10,23 +10,13 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include "lexer_types.h"
 
-struct CppExport
-{
-   const QString& funcName;
-   const QString& paramsNames;
-   const QString& hint;
-
-   QString buildApiText() const
-   {
-       return QString("%1(%2) %3").arg(funcName).arg(paramsNames).arg(hint);
-   }
-};
 
 class LuaLexer : public QsciLexerLua
 {
 public:
-    LuaLexer(QObject* parent = nullptr, const std::vector<CppExport> &exports = std::vector<CppExport>());
+    LuaLexer(QObject* parent = nullptr, const FunctionsListForLexer &exports = FunctionsListForLexer());
 
 protected:
     virtual const char *keywords(int set) const override;
@@ -38,8 +28,8 @@ protected:
     virtual const char* blockEnd(int* style = 0)const override;
     virtual int  blockLookback() const override;
 private:
-    static std::string genExportedKw(const std::vector<CppExport>& exports);
-    void installCppExports(const std::vector<CppExport>& exports);
+    static std::string genExportedKw(const FunctionsListForLexer& exports);
+    void installCppExports(const FunctionsListForLexer& exports);
     QStringList getAllKeywords() const;
     const std::string lastJoinedApis;
 };

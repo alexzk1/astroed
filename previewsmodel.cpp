@@ -604,6 +604,18 @@ void PreviewsModel::simulateModelReset()
     endResetModel();
 }
 
+void PreviewsModel::resetModel()
+{
+    listFiles.reset();
+    loadPreviews.reset();
+
+    std::lock_guard<decltype (listMut)> grd(listMut);
+    beginResetModel();
+    modelFilesAmount = 0;
+    modelFiles.clear();
+    endResetModel();
+}
+
 void PreviewsModel::scrolledTo(int64_t row)
 {
     if (std::abs(row - urgentRowScrolled) > static_cast<decltype(previews_half_range)>(0.9 * previews_half_range))

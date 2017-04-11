@@ -2,7 +2,7 @@
 #include <QString>
 #include <sstream>
 
-LuaLexer::LuaLexer(QObject *parent, const std::vector<CppExport> &exports):
+LuaLexer::LuaLexer(QObject *parent, const FunctionsListForLexer &exports):
     QsciLexerLua(parent),
     lastJoinedApis(genExportedKw(exports))
 {
@@ -29,7 +29,7 @@ QStringList LuaLexer::getAllKeywords() const
     return res;
 }
 
-void LuaLexer::installCppExports(const std::vector<CppExport> &exports)
+void LuaLexer::installCppExports(const FunctionsListForLexer &exports)
 {
     auto apis = qobject_cast<QsciAPIs*>(this->apis());
     if (apis)
@@ -139,7 +139,7 @@ int LuaLexer::blockLookback() const
     return 200;
 }
 
-std::string LuaLexer::genExportedKw(const std::vector<CppExport> &exports)
+std::string LuaLexer::genExportedKw(const FunctionsListForLexer &exports)
 {
     std::vector<std::string> lastApis;
     for (const auto& f : exports)

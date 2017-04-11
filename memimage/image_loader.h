@@ -177,7 +177,7 @@ namespace imaging
         meta_t();
         bool wasLoaded;
         long  iso;
-        Exiv2::URational exposure;
+        double exposure;
         Exiv2::URational aperture;
         double optZoom;
         QString getStringValue() const;

@@ -67,6 +67,8 @@ private slots:
 
     void on_actionLoad_project_triggered();
 
+    void on_actionReload_triggered();
+
 private:
     Ui::MainWindow *ui;
     QPointer<QFileSystemModel> dirsModel;

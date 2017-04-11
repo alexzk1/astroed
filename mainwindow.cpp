@@ -366,7 +366,7 @@ void MainWindow::setupFsBrowsing()
     if (toolBox)
     {
         toolBox->setToolButtonStyle(Qt::ToolButtonIconOnly);
-
+        toolBox->addAction(ui->actionReload);
         toolBox->addAction(ui->actionRecursive_Listing);
         connect(ui->actionRecursive_Listing, &QAction::triggered, this, [this, lastFolder]()
         {
@@ -599,4 +599,16 @@ void MainWindow::on_actionLoad_project_triggered()
             loadProjectFromFile(name);
         }
     }
+}
+
+void MainWindow::on_actionReload_triggered()
+{
+    auto p = getSelectedFolder();
+    if (previewsModel)
+        previewsModel->resetModel();
+
+    IMAGE_LOADER.wipe();
+    PREVIEW_LOADER.wipe();
+
+    currentDirChanged(p);
 }

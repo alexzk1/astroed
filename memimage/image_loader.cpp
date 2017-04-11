@@ -415,7 +415,7 @@ image_preview_loader::~image_preview_loader()
 meta_t::meta_t():
     wasLoaded(false),
     iso(0),
-    exposure(0, 1),
+    exposure(0),
     aperture(0, 1),
     optZoom(1)
 {
@@ -429,7 +429,8 @@ QString meta_t::getStringValue() const //should prepare human readable value
     using namespace exiv2_helpers::exiv_rationals;
     return QString(QObject::tr("ISO: %1\nExposure: %2 s\nAperture: %3 mm\nOptical Zoom: x%4"))
             .arg(iso)
-            .arg(toDouble(exposure), 0, 'f', 2)
+            //.arg(toDouble(exposure), 0, 'f', 4)
+            .arg(exposure, 0, 'f', 4)
             .arg(toDouble(aperture), 0, 'f', 2)
             .arg(optZoom, 0, 'f', 2)
             ;

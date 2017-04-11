@@ -25,7 +25,7 @@
        <enum>QTabWidget::West</enum>
       </property>
       <property name="currentIndex">
-       <number>2</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tabFiles">
        <property name="focusPolicy">
@@ -344,6 +344,18 @@
    </property>
    <property name="toolTip">
     <string>Loads current selection, etc. from the project file.</string>
+   </property>
+  </action>
+  <action name="actionReload">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/icons/Reload-2-2-icon.png</normaloff>:/icons/icons/Reload-2-2-icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Reload</string>
+   </property>
+   <property name="toolTip">
+    <string>Reload current folder</string>
    </property>
   </action>
  </widget>

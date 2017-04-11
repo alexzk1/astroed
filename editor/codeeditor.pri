@@ -1,6 +1,7 @@
 HEADERS += \
     $$PWD/luaeditor.h \
-    $$PWD/lualexer.h
+    $$PWD/lualexer.h \
+    $$PWD/lexer_types.h
 
 SOURCES += \
     $$PWD/luaeditor.cpp \
