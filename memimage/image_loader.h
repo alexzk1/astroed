@@ -59,6 +59,28 @@ namespace imaging
                 res.second = up.second * down.first;
                 return res;
             }
+
+            //next dumb functions allow to change variable declaration (double/rational) and keep all other code the same
+            inline double toDouble(double v)
+            {
+                return v;
+            }
+
+
+            template <class T>
+            typename std::enable_if<ispair<T>::value, const T&>::type
+            varInit()
+            {
+                const static T def(0, 1); //rationals default init
+                return def;
+            }
+
+            template <class T>
+            typename std::enable_if<std::is_integral<T>::value || std::is_floating_point<T>::value, T>::type
+            varInit()
+            {
+                return 0;
+            }
         }
         using keys_t = std::vector<std::string>;
         template <class T, class R>

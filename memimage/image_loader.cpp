@@ -412,14 +412,18 @@ image_preview_loader::~image_preview_loader()
     wipe();
 }
 
+#define INIT(VAR) exiv2_helpers::exiv_rationals::varInit<decltype (VAR)>()
+
 meta_t::meta_t():
     wasLoaded(false),
-    iso(0),
-    exposure(0),
-    aperture(0, 1),
+    iso(INIT(iso)),
+    exposure(INIT(exposure)),
+    aperture(INIT(aperture)),
     optZoom(1)
 {
 }
+
+#undef INIT
 
 QString meta_t::getStringValue() const //should prepare human readable value
 {
@@ -429,8 +433,7 @@ QString meta_t::getStringValue() const //should prepare human readable value
     using namespace exiv2_helpers::exiv_rationals;
     return QString(QObject::tr("ISO: %1\nExposure: %2 s\nAperture: %3 mm\nOptical Zoom: x%4"))
             .arg(iso)
-            //.arg(toDouble(exposure), 0, 'f', 4)
-            .arg(exposure, 0, 'f', 4)
+            .arg(toDouble(exposure), 0, 'f', 4)
             .arg(toDouble(aperture), 0, 'f', 2)
             .arg(optZoom, 0, 'f', 2)
             ;
@@ -459,6 +462,8 @@ void meta_t::load(const QString &fileName)
                                {}, //iptc keys
                            }, iso);
 
+            //fixme: not really sure, if it is rational or double, from my camera it comes as double in .Photo. field
+            //possibly .Image. field will be rational
             test_all_metas({
                                {"Exif.Photo.ExposureTime", "Exif.Image.ExposureTime"}, //exif keys
                                {}, //xmp keys
