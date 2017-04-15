@@ -114,7 +114,7 @@ namespace luavm
                 return r;
             };
 
-            return lua_load(state.get(), (lua_Reader)lambdacb::to_callback<LUA_UNIQUE_CB_BEGIN + 1>(reader), nullptr, chunkName.c_str(), mode.c_str());
+            return lua_load(state.get(), reinterpret_cast<lua_Reader>(lambdacb::to_callback<LUA_UNIQUE_CB_BEGIN + 1>(reader)), nullptr, chunkName.c_str(), mode.c_str());
         }
 
         //dont use it for short living things like lambda, use for class-methods ...because internal vector is never grows down

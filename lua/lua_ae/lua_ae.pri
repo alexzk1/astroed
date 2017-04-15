@@ -3,8 +3,10 @@ system(cd $$PWD; perl makeqrc.pl > luaqrc.qrc)
 RESOURCES += $$PWD/luaqrc.qrc
 
 HEADERS += \
-    $$PWD/luaqrcpackager.h
+    $$PWD/luaqrcpackager.h \
+    $$PWD/luaaevm.h
 
 SOURCES += \
-    $$PWD/luaqrcpackager.cpp
+    $$PWD/luaqrcpackager.cpp \
+    $$PWD/luaaevm.cpp
 

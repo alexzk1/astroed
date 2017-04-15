@@ -4,6 +4,8 @@
 #include "utils/fatal_err.h"
 #include <QDebug>
 #include <QFile>
+#include <QDirIterator>
+#include <QFileInfo>
 
 const QString LuaQrcPackager::defaultPrefix = ":/luarc";
 
@@ -31,6 +33,20 @@ QByteArray LuaQrcPackager::loadResource(const QString &res) const
 QString LuaQrcPackager::buildLoadDir(const QString &resPrefix)
 {
     return resPrefix;
+}
+
+QStringList LuaQrcPackager::getEmbeddedScriptsList() const
+{
+    QStringList res;
+    QDirIterator it(getDefaultPrefix(), QDirIterator::Subdirectories);
+    while (it.hasNext())
+    {
+        auto fp = it.next();
+        auto fi = it.fileInfo();
+        if (fi.suffix().toLower() == "lua")
+            res.push_back(fp);
+    }
+    return res;
 }
 
 const QString& LuaQrcPackager::getDefaultPrefix()

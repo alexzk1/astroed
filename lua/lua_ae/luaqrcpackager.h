@@ -22,6 +22,7 @@ public:
     QByteArray     loadResource(const QString& res) const;
 
     static QString buildLoadDir(const QString& resPrefix = getDefaultPrefix());
+    QStringList getEmbeddedScriptsList() const;
 };
 
 #endif // LUAQRCPACKAGER_H
