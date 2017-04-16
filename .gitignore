@@ -27,3 +27,7 @@
 *.exe
 *.out
 *.app
+tmp_downloads
+tmp_downloads/
+tmp_downloads/*
+
