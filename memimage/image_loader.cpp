@@ -1,6 +1,7 @@
 #include "image_loader.h"
 #include <QImage>
 #include <QDebug>
+#include <iostream>
 
 #include "utils/cont_utils.h"
 
@@ -156,6 +157,32 @@ image_cacher::~image_cacher()
 }
 
 #ifdef USING_VIDEO_FS
+
+static const auto& getUserSelectedRawFormat()
+{
+    struct conv_def_t
+    {
+        decltype (CV_RGB2BGR)  codec;
+        uint32_t               src_channels;
+    };
+
+    const static std::vector<conv_def_t> rawVideosCodes =
+    {
+        {CV_RGB2BGR,      3},
+        {CV_GRAY2BGR,     1},
+
+        //fixme: other 3 (except 1) must be checked with real cameras and maybe swapped to match colors (i was guessing their positions)
+        {CV_BayerRG2BGR,  1},
+        {CV_BayerGB2BGR,  1}, //GRBG (only this one seems proper by test video)
+        {CV_BayerGR2BGR,  1},
+        {CV_BayerBG2BGR,  1},
+
+    };
+
+    auto index = StaticSettingsMap::getGlobalSetts().readInt("Raw_format_video"); //item selected INDEX
+    return rawVideosCodes.at(static_cast<size_t>(index));
+}
+
 VideoCapturePtr image_loader::getVideoCapturer(const QString& filePath) const
 {
     //function must be called in locked state
@@ -166,14 +193,11 @@ VideoCapturePtr image_loader::getVideoCapturer(const QString& filePath) const
 
     if (!ptr)
     {
-
-        ptr.reset(new cv::VideoCapture());
+        const static auto backend = cv::VideoCaptureAPIs::CAP_ANY;
+        ptr.reset(new cv::VideoCapture(filePath.toStdString(), backend));
         frameLoaders[filePath] = ptr;
-    }
-
-    if (!ptr->isOpened())
-    {
-        ptr->open(filePath.toStdString());
+        bool is_raw = 0 == static_cast<uint32_t>(ptr->get(CV_CAP_PROP_FOURCC));
+        ptr->set(CV_CAP_PROP_CONVERT_RGB, !is_raw);
         ptr->set(CV_CAP_PROP_POS_FRAMES, 0);
     }
     return ptr;
@@ -234,7 +258,16 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
             {
                 const auto path = url.path();
                 VideoCapturePtr ptr = getVideoCapturer(path);
+
                 tmp.framesLoader = ptr;
+
+                union {
+                    uint32_t val;
+                    char   codec[4];
+                } prop_format;
+                prop_format.val = static_cast<decltype (prop_format.val)>(ptr->get(CV_CAP_PROP_FOURCC));
+                //qDebug() << "Codec: " << std::string(prop_format.codec, 4).c_str() << prop_format.val;
+                const bool is_raw = prop_format.val == 0;
 
                 bool ok_num;
                 auto frame_num = std::max<long>(0, url.fragment().toLong(&ok_num, base_frames_to_string_numbering));
@@ -256,6 +289,7 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
                     {
                         if (static_cast<decltype(frame_num)>(ptr->get(CV_CAP_PROP_POS_FRAMES)) != frame_num)
                             ptr->set(CV_CAP_PROP_POS_FRAMES, frame_num);
+
                         cv::Mat rgb;
                         if (ptr->read(rgb))
                         {
@@ -267,12 +301,28 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
                                     if (p)
                                     {
                                         if (!dctor) //on qt 5.8 if this lambda is called from destructor (by closing app) save makes sigsegv
-                                            p->save(cfn);
+                                            p->save(cfn); //saving cached image when it is thrown out of RAM
                                         delete p;
                                     }
                                 });
                             }
-                            *tmp.data = utility::bgrrgb::createFrom(rgb);
+                            if (is_raw)
+                            {
+                                const auto& t = getUserSelectedRawFormat();
+                                auto rc = static_cast<decltype (t.src_channels)>(rgb.channels());
+                                if (rc > t.src_channels)
+                                {
+                                    std::vector<cv::Mat> channels(rc);
+                                    cv::split(rgb, channels);
+                                    cv::merge(channels.data(), t.src_channels, rgb);
+                                }
+
+                                cv::Mat res;
+                                cvtColor(rgb, res, t.codec, 3);
+                                *tmp.data = utility::bgrrgb::createFrom(res);
+                            }
+                            else
+                                *tmp.data = utility::bgrrgb::createFrom(rgb);
                         }
                     }
                 }

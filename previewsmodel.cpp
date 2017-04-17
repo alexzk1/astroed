@@ -344,6 +344,8 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
         PreviewsModelData itm;
         {
             std::lock_guard<decltype (listMut)> grd(listMut);
+            if (row >=modelFiles.size())
+                return res;
             itm = modelFiles.at(row);
         }
         const bool wasLoaded = itm.isLoaded();
