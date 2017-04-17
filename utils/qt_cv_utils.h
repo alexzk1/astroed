@@ -9,12 +9,14 @@
 #endif
 
 #include "cont_utils.h"
-
+#include "fatal_err.h"
 
 namespace utility
 {
     namespace bgrrgb
     {
+        using default_color_type = uint8_t; //how many bits per color
+
         //pixel iterator, which keeps counting in term of "pixel", which is tripplet of 3 colors
         template <typename ColorT, typename ColorType = ColorT*>
         class PixelIterator : public std::iterator<std::random_access_iterator_tag, ColorType>
@@ -22,7 +24,7 @@ namespace utility
         private:
             ColorType buffer;
             size_t tripplets_amount;
-            size_t current;
+            mutable size_t current;
 
             PixelIterator(ColorT* buffer, size_t tripplets_amount): //expects size of buffer to be 3 * tripplets_amount of ColotT elements exactly
                 buffer(buffer),
@@ -46,6 +48,18 @@ namespace utility
             static PixelIterator end(ColorT* buffer, size_t tripplets_amount)
             {
                 PixelIterator r(buffer, tripplets_amount);
+                r.current = tripplets_amount;
+                return r;
+            }
+
+            const static PixelIterator start(const ColorT* buffer, const size_t tripplets_amount)
+            {
+                return PixelIterator(const_cast<ColorT*>(buffer), tripplets_amount);
+            }
+
+            const static PixelIterator end(const ColorT* buffer, const size_t tripplets_amount)
+            {
+                PixelIterator r(const_cast<ColorT*>(buffer), tripplets_amount);
                 r.current = tripplets_amount;
                 return r;
             }
@@ -128,6 +142,7 @@ namespace utility
                 return tmp;
             }
 
+
             size_t operator+(const PixelIterator& val) const
             {
                 return current + val.current;
@@ -137,7 +152,6 @@ namespace utility
             {
                 return current - val.current;
             }
-
 
             bool operator < (const PixelIterator& c) const
             {
@@ -171,8 +185,8 @@ namespace utility
         };
 
         //expecting, that buffer is 3 * pixels_amount, allows conversion in both directions (invariant)
-        template <typename ColorT = uint8_t> //allows to have more than 8 bytes per color
-        inline void convert(ColorT *buffer, size_t pixels_amount)
+        template <typename ColorT = default_color_type> //allows to have more than 8 bytes per color
+        inline void convertRGBBGR(ColorT *buffer, size_t pixels_amount)
         {
             using iter_t = PixelIterator<ColorT>;
             auto  istart = iter_t::start(buffer, pixels_amount);
@@ -185,17 +199,28 @@ namespace utility
 #ifdef USING_VIDEO_FS
         inline void rgbConvert(QImage& img)
         {
+            if (img.format() != QImage::Format_RGB888)
+                FATAL_RISE("Unexpected QImage pixel format");
+
             //QImage has method to do conversion, but not sure if it can use all CPUs as we do here with openmp
-            utility::bgrrgb::convert(static_cast<uint8_t*>(img.bits()), static_cast<size_t>(img.width() * img.height()));
+            utility::bgrrgb::convertRGBBGR(static_cast<uint8_t*>(img.bits()), static_cast<size_t>(img.width() * img.height()));
         }
 
         inline void rgbConvert(cv::Mat& img)
         {
-            utility::bgrrgb::convert(static_cast<uint8_t*>(img.data), static_cast<size_t>(img.cols * img.rows));
+            //fixme: implement per row conversion (each row is cont)
+            if (!img.isContinuous())
+                FATAL_RISE("Cannot convert non-continious matrix");
+
+            utility::bgrrgb::convertRGBBGR(static_cast<uint8_t*>(img.data), static_cast<size_t>(img.cols * img.rows));
         }
 
         inline QImage copy(const cv::Mat& rgb)
         {
+            //fixme: implement per row copy (each row is cont)
+            if (!rgb.isContinuous())
+                FATAL_RISE("Cannot copy non-continious matrix");
+
             return QImage(static_cast<uint8_t*>(rgb.data), rgb.cols, rgb.rows, QImage::Format_RGB888).copy();
         }
 
