@@ -183,6 +183,18 @@ static const auto& getUserSelectedRawFormat()
     return rawVideosCodes.at(static_cast<size_t>(index));
 }
 
+bool static isRawVideo(const VideoCapturePtr& ptr)
+{
+    union {
+        uint32_t val;
+        char   codec[4];
+    } prop_format;
+    prop_format.val = static_cast<decltype (prop_format.val)>(ptr->get(CV_CAP_PROP_FOURCC));
+    //qDebug() << "Codec: " << std::string(prop_format.codec, 4).c_str() << prop_format.val;
+
+    return prop_format.val == 0; //fixme: it returns 0 for my raw sample, BUT it is possible that some more fouriercc can be returned
+}
+
 VideoCapturePtr image_loader::getVideoCapturer(const QString& filePath) const
 {
     //function must be called in locked state
@@ -196,8 +208,7 @@ VideoCapturePtr image_loader::getVideoCapturer(const QString& filePath) const
         const static auto backend = cv::VideoCaptureAPIs::CAP_ANY;
         ptr.reset(new cv::VideoCapture(filePath.toStdString(), backend));
         frameLoaders[filePath] = ptr;
-        bool is_raw = 0 == static_cast<uint32_t>(ptr->get(CV_CAP_PROP_FOURCC));
-        ptr->set(CV_CAP_PROP_CONVERT_RGB, !is_raw);
+        ptr->set(CV_CAP_PROP_CONVERT_RGB, !isRawVideo(ptr));
         ptr->set(CV_CAP_PROP_POS_FRAMES, 0);
     }
     return ptr;
@@ -260,14 +271,7 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
                 VideoCapturePtr ptr = getVideoCapturer(path);
 
                 tmp.framesLoader = ptr;
-
-                union {
-                    uint32_t val;
-                    char   codec[4];
-                } prop_format;
-                prop_format.val = static_cast<decltype (prop_format.val)>(ptr->get(CV_CAP_PROP_FOURCC));
-                //qDebug() << "Codec: " << std::string(prop_format.codec, 4).c_str() << prop_format.val;
-                const bool is_raw = prop_format.val == 0;
+                const bool is_raw = isRawVideo(ptr);
 
                 bool ok_num;
                 auto frame_num = std::max<long>(0, url.fragment().toLong(&ok_num, base_frames_to_string_numbering));
