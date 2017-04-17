@@ -2,7 +2,6 @@
 #include <QImage>
 #include <QDebug>
 
-#include "utils/erase_if.h"
 #include "utils/cont_utils.h"
 
 #include <chrono>
@@ -15,6 +14,7 @@
 #include <QFile>
 #include <QDir>
 #include "config_ui/globalsettings.h"
+#include "utils/qt_cv_utils.h"
 
 using namespace imaging;
 
@@ -260,7 +260,7 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
                         if (ptr->read(rgb))
                         {
                             //we have BGR888 and need RGB888 i think ..
-                            utility::bgr_rgb(static_cast<uint8_t*>(rgb.data), static_cast<size_t>(rgb.cols * rgb.rows));
+                            utility::bgrrgb::convert(static_cast<uint8_t*>(rgb.data), static_cast<size_t>(rgb.cols * rgb.rows));
                             //cv::Mat must be kept while QImage is alive, so we do deep copy() here
                             QImage implicit = QImage(static_cast<uint8_t*>(rgb.data), rgb.cols, rgb.rows, QImage::Format_RGB888);
                             if (isUsingCached() && !cfn.isEmpty())
