@@ -14,13 +14,14 @@ TEMPLATE = app
 #lets optimize for CPU on linux
 unix:!macx:QMAKE_CXXFLAGS +=  -march=native
 
-QMAKE_CXXFLAGS +=  -std=c++14 -Wall -frtti -fexceptions -Werror=return-type -Werror=overloaded-virtual
+QMAKE_CXXFLAGS +=  -std=c++14 -Wall -march=native -frtti -fexceptions -Werror=return-type -Werror=overloaded-virtual
 QMAKE_CXXFLAGS +=  -Wctor-dtor-privacy -Werror=delete-non-virtual-dtor -Werror=strict-aliasing -fstrict-aliasing
 
 
 macx:QMAKE_LFLAGS+=-Wl,-map,mapfile
 CONFIG += c++14
 CONFIG += opencv
+CONFIG += openmp
 
 #using new C++ libs for macos http://blog.michael.kuron-germany.de/2013/02/using-c11-on-mac-os-x-10-8/
 #that may not work with C++14 though, Apple is slow
@@ -29,6 +30,14 @@ macx: QMAKE_LFLAGS += -lc++
 macx: QMAKE_CXXFLAGS += -mmacosx-version-min=10.10
 macx: QMAKE_MACOSX_DEPLOYMENT_TARGET=10.10
 
+
+openmp {
+DEFINES *= USING_OPENMP
+QMAKE_CXXFLAGS *= -fopenmp
+QMAKE_LFLAGS   *= -fopenmp
+#uncomment to try global parallels
+#DEFINES *= _GLIBCXX_PARALLEL
+}
 
 CONFIG(debug) {
      message( "Building the DEBUG Version" )
