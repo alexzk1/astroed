@@ -185,6 +185,7 @@ namespace utility
 #ifdef USING_VIDEO_FS
         inline void rgbConvert(QImage& img)
         {
+            //QImage has method to do conversion, but not sure if it can use all CPUs as we do here with openmp
             utility::bgrrgb::convert(static_cast<uint8_t*>(img.bits()), static_cast<size_t>(img.width() * img.height()));
         }
 
