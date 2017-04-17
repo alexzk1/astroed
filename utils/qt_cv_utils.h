@@ -1,9 +1,15 @@
 #ifndef QT_CV_UTILS_H
 #define QT_CV_UTILS_H
-#ifdef USING_OPENMP
-#include <parallel/algorithm>
+
+#include "palgorithm.h"
+
+#ifdef USING_VIDEO_FS
+#include <opencv2/opencv.hpp>
+#include <QImage>
 #endif
+
 #include "cont_utils.h"
+
 
 namespace utility
 {
@@ -171,16 +177,35 @@ namespace utility
             using iter_t = PixelIterator<ColorT>;
             auto  istart = iter_t::start(buffer, pixels_amount);
             auto  iend   = iter_t::end  (buffer, pixels_amount);
-#ifdef USING_OPENMP
-            __gnu_parallel::
-        #else
-            std::
-        #endif
-                    for_each(istart, iend, [](auto p)
+            ALG_NS::for_each(istart, iend, [](auto p)
             {
                 utility::swapPointed(p + 0, p + 2);
             });
         }
+#ifdef USING_VIDEO_FS
+        inline void rgbConvert(QImage& img)
+        {
+            utility::bgrrgb::convert(static_cast<uint8_t*>(img.bits()), static_cast<size_t>(img.width() * img.height()));
+        }
+
+        inline void rgbConvert(cv::Mat& img)
+        {
+            utility::bgrrgb::convert(static_cast<uint8_t*>(img.data), static_cast<size_t>(img.cols * img.rows));
+        }
+
+        inline QImage copy(const cv::Mat& rgb)
+        {
+            return QImage(static_cast<uint8_t*>(rgb.data), rgb.cols, rgb.rows, QImage::Format_RGB888).copy();
+        }
+
+        inline QImage createFrom(const cv::Mat& rgb)
+        {
+            QImage tmp = copy(rgb);
+            rgbConvert(tmp);
+            return tmp;
+        }
+
+#endif
     }
 }
 

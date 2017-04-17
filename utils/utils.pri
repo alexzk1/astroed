@@ -9,7 +9,8 @@ HEADERS += \
     $$PWD/fatal_err.h \
     $$PWD/no_const.h \
     $$PWD/cont_utils.h \
-    $$PWD/qt_cv_utils.h
+    $$PWD/qt_cv_utils.h \
+    $$PWD/palgorithm.h
 
 SOURCES += \
     $$PWD/memsize.cpp

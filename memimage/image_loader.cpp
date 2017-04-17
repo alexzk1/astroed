@@ -259,10 +259,6 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
                         cv::Mat rgb;
                         if (ptr->read(rgb))
                         {
-                            //we have BGR888 and need RGB888 i think ..
-                            utility::bgrrgb::convert(static_cast<uint8_t*>(rgb.data), static_cast<size_t>(rgb.cols * rgb.rows));
-                            //cv::Mat must be kept while QImage is alive, so we do deep copy() here
-                            QImage implicit = QImage(static_cast<uint8_t*>(rgb.data), rgb.cols, rgb.rows, QImage::Format_RGB888);
                             if (isUsingCached() && !cfn.isEmpty())
                             {
                                 //ok, some optimization, will do save to disk on delete from memory
@@ -276,7 +272,7 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
                                     }
                                 });
                             }
-                            *tmp.data = implicit.copy();
+                            *tmp.data = utility::bgrrgb::createFrom(rgb);
                         }
                     }
                 }
