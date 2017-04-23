@@ -58,6 +58,8 @@ namespace luavm
         template <typename... Args> struct isset<std::set<Args...>>:std::true_type{};
 
         template <typename T>       struct ismap:std::false_type{};
+        template <typename T>       struct isqtmap:std::false_type{};
+
         template <typename... Args> struct ismap<std::map<Args...>>:std::true_type{};
 
 
@@ -73,7 +75,7 @@ namespace luavm
 
 #ifdef QT_CORE_LIB
         template <typename... Args> struct isset<QSet<Args...>>:std::true_type{};
-        template <typename... Args> struct ismap<QMap<Args...>>:std::true_type{}; //not tested conversion with lua* funcs
+        template <typename... Args> struct isqtmap<QMap<Args...>>:std::true_type{}; //not tested conversion with lua* funcs
         template <typename... Args> struct isvector<QList<Args...>>:std::true_type{};  //not tested conversion with lua* funcs
         template <>                 struct isvector<QStringList>:std::true_type{}; //there is inheritance and line above dont catch it
 #endif
@@ -84,11 +86,12 @@ namespace luavm
             static constexpr bool isEnum    = std::is_enum<T>::value;
             static constexpr bool isSet     = isset<T>::value;
             static constexpr bool isMap     = ismap<T>::value;
+            static constexpr bool isQtMap   = isqtmap<T>::value;
             static constexpr bool isPair    = ispair<T>::value;
             static constexpr bool isVector  = isvector<T>::value;
             static constexpr bool isShared  = issharedptr<T>::value;
 
-            static constexpr bool isTable   = isSet || isMap || isVector || isPair;
+            static constexpr bool isTable   = isSet || isMap || isQtMap || isVector || isPair;
             static constexpr bool isGeneric = !isEnum && !isShared && !isTable;
         };
 
@@ -194,7 +197,6 @@ namespace luavm
         }
         //--------------------------------------------------------------------------
 
-
         template<>
         inline bool luaTestType<lua_State*>(lua_State* L, int index)
         {
@@ -212,6 +214,13 @@ namespace luavm
         inline bool luaTestType<QString>(lua_State* L, int index)
         {
             return !lua_isnil(L, index) && lua_isstring(L, index);
+        }
+        //--------------------------------------------------------------------------
+
+        template<>
+        inline bool luaTestType<QVariant>(lua_State*, int)
+        {
+            return true;
         }
 #endif
         //--------------------------------------------------------------------------
@@ -254,7 +263,7 @@ namespace luavm
             return !lua_isnil(L, index) && lua_islightuserdata(L, index);
         }
         //--------------------------------------------------------------------------
-        //support for hashes, if key's or value's type differes from C++ declared - that will be skipped
+
         inline int updateIndexForLooping(int index)
         {
             if (index > 0 ) //not sure about 0 actually
@@ -262,8 +271,9 @@ namespace luavm
             return index - 1;
         }
 
+        //support for hashes, if key's or value's type differes from C++ declared - that will be skipped
         template <class T>
-        inline typename std::enable_if<checker<T>::isMap, T>::type
+        inline typename std::enable_if<checker<T>::isMap || checker<T>::isQtMap, T>::type
         luaParam(lua_State *L, int index)
         {
             T result;
@@ -326,6 +336,31 @@ namespace luavm
             return result;
         }
         //--------------------------------------------------------------------------
+
+#ifdef QT_CORE_LIB
+#define TEST_RET(TYPE) if (luaTestType<TYPE>(L, index)) return luaParam<TYPE>(L, index);
+        template<>
+        inline QVariant luaParam<QVariant>(lua_State* L, int index)
+        {
+            //need to define types, so it can go into macros as 1 word
+            using map_t  = QMap<QString, QVariant>;
+            using list_t = QList<QVariant>;
+
+            TEST_RET(bool);
+            TEST_RET(int);
+            TEST_RET(double);
+            TEST_RET(QString);
+
+            TEST_RET(list_t);
+            TEST_RET(map_t);
+
+            return QVariant();
+        }
+#undef TEST_RET
+#endif
+
+        //--------------------------------------------------------------------------
+
         template <class T>
         inline T testGetParam(lua_State* L, int index)
         {
@@ -469,6 +504,7 @@ namespace luavm
         luaPush(lua_State *L, const T& sp)
         {
             lua_newtable(L);
+
             for (const auto& v : sp)
             {
                 luaPush(L, v.first);
@@ -476,6 +512,15 @@ namespace luavm
                 lua_settable(L, -3);
             }
         }
+        //have to split map and qtmap, when doing push of Map<QString, QVariant>
+        template<class T> inline
+        typename std::enable_if<checker<T>::isQtMap, void>::type
+        luaPush(lua_State *L, const T& sp)
+        {
+            const auto st = sp.toStdMap();
+            luaPush(L, st);
+        }
+
         //differs from luaPush - this one has check to skip empty strings, used in couple places
         template <class T>
         inline void luaPushStringArray(lua_State *L, const T& what, bool skipEmpty = false)
@@ -526,8 +571,15 @@ namespace luavm
                     case QVariant::StringList:
                         luaPush(L, var.toStringList());
                         break;
+                    case QVariant::Map:
+                        luaPush(L, var.toMap());
+                        break;
+                    case QVariant::List:
+                        luaPush(L, var.toList());
+                        break;
+
                     default:
-                        FATAL_RISE("Invalid variant to lua runtime conversion.");
+                        FATAL_RISE("Unsupported QVariant to lua runtime conversion.");
                         //break;
                 }
         }
@@ -541,10 +593,22 @@ namespace luavm
         }
 
         template <typename... Args>
-        inline void luaPushFunc(lua_State* L, const std::string& funcName, Args... args)
+        inline bool luaPushFunc(lua_State* L, const char* funcName, Args... args)
         {
-            lua_getglobal(L, funcName.c_str());
+            lua_getglobal(L, funcName);
+            if (lua_isnil(L, -1) || !lua_isfunction(L, -1))
+            {
+                lua_pop(L, 1);
+                return false;
+            }
             luaPushMany(L, args...);
+            return true;
+        }
+
+        template <typename... Args>
+        inline bool luaPushFunc(lua_State* L, const std::string& funcName, Args... args)
+        {
+            return luaPushFunc<Args...>(L, funcName.c_str(), args...);
         }
 
         template <class T>//pushes single field of the current table on lua stack
@@ -568,10 +632,24 @@ namespace luavm
             auto f = field_name.toStdString();
             luaPushField(L, f, value);
         }
+
+        template <typename... Args>
+        inline bool luaPushFunc(lua_State* L, const QString& funcName, Args... args)
+        {
+            return luaPushFunc<Args...>(L, funcName.toUtf8().data(), args...);
+        }
 #endif
 
 
-//NILP should be used to do lua_pushnil(L)
+        //changing numbering, for example function returns a,b,c, classic will use -3 for a, but this one will use 1
+        //don't forget to rollback luas stack by lua_pop(L, n)
+        template <typename Res>
+        Res luaGetResult(lua_State *L, int64_t total_results, int64_t positive_index = 1)
+        {
+            return  testGetParam<Res>(L, positive_index - (total_results + 1));
+        }
+
+        //NILP should be used to do lua_pushnil(L)
 #define NILP std::shared_ptr<char>(nullptr)
     }
 }

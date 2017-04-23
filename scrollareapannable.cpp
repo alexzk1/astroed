@@ -87,10 +87,11 @@ void ScrollAreaPannable::mousePressEvent(QMouseEvent *e)
     }
 }
 
-//keyboard events are filtered and intercepted by mainform, so to add keys - do it there
+//keyboard events are filtered and intercepted by mainform (because it should do preview model calls too), so to add keys - do it there
 
 void ScrollAreaPannable::mouseMoveEvent(QMouseEvent *e)
 {
+    //use QRubberBand Class, Luke!
     if (e->buttons() == Qt::LeftButton)
     {
         setCursor(Qt::ClosedHandCursor);
