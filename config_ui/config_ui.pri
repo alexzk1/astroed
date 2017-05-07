@@ -1,7 +1,6 @@
 HEADERS += \
     $$PWD/dndwidget.h \
     $$PWD/globalsettings.h \
-    $$PWD/saveable_widget.h \
     $$PWD/settingsdialog.h
 
 SOURCES += \

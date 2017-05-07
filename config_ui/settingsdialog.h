@@ -4,13 +4,13 @@
 #define SETTINGSDIALOG_H
 
 #include <QDialog>
-#include "saveable_widget.h"
+#include "utils/saveable_widget.h"
 
 namespace Ui {
     class SettingsDialog;
 }
 
-class SettingsDialog : public QDialog, protected virtual SaveableWidget
+class SettingsDialog : public QDialog, protected virtual utility::SaveableWidget<SettingsDialog>
 {
     Q_OBJECT
 

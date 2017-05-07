@@ -23,7 +23,7 @@ class ClickableLabel;
 class QSortFilterProxyModel;
 class SettingsDialog;
 
-class MainWindow : public QMainWindow, public utility::ItCanBeOnlyOne<MainWindow>, protected utility::SaveableWidget
+class MainWindow : public QMainWindow, public utility::ItCanBeOnlyOne<MainWindow>, protected utility::SaveableWidget<MainWindow>
 {
     Q_OBJECT
 public:
