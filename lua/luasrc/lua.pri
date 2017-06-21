@@ -34,7 +34,7 @@ HEADERS += \
     $$PWD/lua_allocator.h
 
 
-SOURCES += \
+LUA_SOURCES += \
     $$PWD/lapi.c.cpp \
     $$PWD/lauxlib.c.cpp \
     $$PWD/lbaselib.c.cpp \
@@ -72,13 +72,13 @@ SOURCES += \
 
 #I have moved lua sources from C to C++, this breaks some rules, for example, union cast is UB
 #https://stackoverflow.com/questions/27683777/how-to-specify-compiler-flag-to-a-single-source-file-with-qmake
-#lua_compiler.name = lua_compiler
-#lua_compiler.input = LUA_SOURCES
-#lua_compiler.dependency_type = TYPE_C
-#lua_compiler.variable_out = OBJECTS
-#lua_compiler.output = ${QMAKE_VAR_OBJECTS_DIR}${QMAKE_FILE_IN_BASE}$${first(QMAKE_EXT_OBJ)}
-#lua_compiler.commands = $${QMAKE_CXX} $(CXXFLAGS) -fno-strict-aliasing -Wno-error=strict-aliasing $(INCPATH) -c ${QMAKE_FILE_IN} -o ${QMAKE_FILE_OUT}
-#QMAKE_EXTRA_COMPILERS += lua_compiler
+lua_compiler.name = lua_compiler
+lua_compiler.input = LUA_SOURCES
+lua_compiler.dependency_type = TYPE_C
+lua_compiler.variable_out = OBJECTS
+lua_compiler.output = ${QMAKE_VAR_OBJECTS_DIR}${QMAKE_FILE_IN_BASE}$${first(QMAKE_EXT_OBJ)}
+lua_compiler.commands = $${QMAKE_CXX} $(CXXFLAGS) -fno-strict-aliasing -Wno-error=strict-aliasing $(INCPATH) -c ${QMAKE_FILE_IN} -o ${QMAKE_FILE_OUT}
+QMAKE_EXTRA_COMPILERS += lua_compiler
 
 #CONFIG(debug) {
 #unix:!macx {

@@ -10,7 +10,6 @@
 
 #include <limits.h>
 #include <stddef.h>
-#include "utils/union_cast.h"
 
 #include "lua.h"
 
