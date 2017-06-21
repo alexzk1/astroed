@@ -10,7 +10,7 @@
 
 #include <limits.h>
 #include <stddef.h>
-
+#include "utils/union_cast.h"
 
 #include "lua.h"
 
@@ -313,7 +313,7 @@ typedef unsigned long Instruction;
 #define condchangemem(L)	condmovestack(L)
 #else
 #define condchangemem(L)  \
-	((void)(!(G(L)->gcrunning) || (luaC_fullgc(L, 0), 1)))
+    ((void)(!(G(L)->gcrunning) || (luaC_fullgc(L, 0), 1)))
 #endif
 
 #endif

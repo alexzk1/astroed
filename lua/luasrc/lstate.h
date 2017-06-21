@@ -219,8 +219,11 @@ union GCUnion {
     struct lua_State th;  /* thread */
 };
 
-
-#define cast_u(o)	cast(union GCUnion *, (o))
+#ifdef __cplusplus
+#define cast_u(o)	union_cast<union GCUnion *>(o)
+#else
+#define cast_u(o) cast(union GCUnion *, (o))
+#endif
 
 /* macros to convert a GCObject into a specific value */
 #define gco2ts(o)  \
