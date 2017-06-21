@@ -15,8 +15,8 @@ TEMPLATE = app
 unix:!macx:QMAKE_CXXFLAGS +=  -march=native
 
 QMAKE_CXXFLAGS +=  -std=c++14 -Wall -march=native -frtti -fexceptions -Werror=return-type -Werror=overloaded-virtual
-QMAKE_CXXFLAGS +=  -Wctor-dtor-privacy -Werror=delete-non-virtual-dtor -Werror=strict-aliasing -fstrict-aliasing
-
+QMAKE_CXXFLAGS +=  -Wctor-dtor-privacy -Werror=delete-non-virtual-dtor -fstrict-aliasing
+QMAKE_CXXFLAGS +=  -Werror=strict-aliasing -Wstrict-aliasing=2
 
 macx:QMAKE_LFLAGS+=-Wl,-map,mapfile
 CONFIG += c++14
