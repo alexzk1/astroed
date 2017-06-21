@@ -14,6 +14,7 @@ typename std::enable_if<std::is_pointer<T>::value, T>::type union_cast(Src src)
 //    } tmp;
 //    tmp.s = src;
 //    return tmp.d;
+    static_assert(sizeof(T) <= sizeof(Src), "result type is small");
     T tmp;
     memcpy(&tmp, &src, sizeof (tmp));
     return tmp;
