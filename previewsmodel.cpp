@@ -106,7 +106,7 @@ const static std::vector<sectiondescr_t> captions =
 };
 
 //todo: add more file formats (should be supported by Qt)
-const static QStringList supportedExt =
+const static QStringList supportedExt
 {
     "jpeg",
     "jpg",
@@ -120,12 +120,14 @@ const static QStringList supportedExt =
 };
 
 #ifdef USING_VIDEO_FS
-const static std::set<QString> supportedVids = {
+const QStringList supportedVids
+{
     "mov",
     "mp4",
     "avi",
 };
 #endif
+
 
 template <class T>
 bool isDark(const T& path)
@@ -151,8 +153,9 @@ void PreviewsModel::generateProjectCode(std::ostream &out) const
     //generating lua code from internal state, hardly bound to arrays above (to their indexes, values, etc)
 
     const auto spid = static_cast<size_t>(getSpecialColumnId());
-    out << "guiSelectedFilesBase = '" << currentFolder.toStdString()<<"'"<<std::endl;
-    QDir dir(currentFolder);
+    QString path = (currentFolder.isDir())?currentFolder.canonicalFilePath():currentFolder.canonicalPath();
+    out << "guiSelectedFilesBase = '" << currentFolder.canonicalFilePath().toStdString()<<"'"<<std::endl;
+    QDir dir(path);
 
     out << "guiSelectedFilesList = {";
     for (const auto& file : modelFiles)
@@ -162,8 +165,11 @@ void PreviewsModel::generateProjectCode(std::ostream &out) const
         //lets append things on load from C++ code, so user has less control over how they can break it
         if (1 == role.luaRole)
             continue;
-
-        out << "\n\t{\n\t\tfileName = '"<<dir.relativeFilePath(file.filePath).toStdString()<<"',\n\t\tfileMode = "<<role.luaRole<< ", --" << role.humanRole.toStdString() << "\n\t},";
+        QString fpr = file.filePath;
+        fpr.remove(QString("%1://").arg(VFS_PREFIX));
+        fpr.remove(QString("%1:/").arg(VFS_PREFIX));
+        fpr = "/" + fpr;
+        out << "\n\t{\n\t\tfileName = '"<<dir.relativeFilePath(fpr).toStdString()<<"',\n\t\tfileMode = "<<role.luaRole<< ", --" << role.humanRole.toStdString() << "\n\t},";
     }
     out << "\n}" << std::endl;
 }
@@ -188,30 +194,31 @@ void PreviewsModel::loadProjectCode(const std::string &src)
     vm->doString(src);
     auto root = testGetGlobal<QString>(*vm, "guiSelectedFilesBase");
 
-    *conn     = connect(this, &PreviewsModel::filesAreListed, this, [this, conn, vm](const QString& dir)
+    *conn = connect(this, &PreviewsModel::filesAreListed, this, [this, conn, vm, root](const QString& dir)
     {
         //here is 3rd stage: gui starts list -> thread does list -> gui need update list from lua
         std::lock_guard<decltype (listMut)> grd(listMut);
-        if (currentFolder == dir) //check if user was clicking all around while project loads
+        lua_State *L = *vm;
+        int stack = lua_gettop(L);
+        auto proj = testGetGlobal<std::vector<internal_map>>(L, "guiSelectedFilesList");
+        for (const auto& itm : proj)
         {
-            lua_State *L = *vm;
-            int stack = lua_gettop(L);
-            auto proj = testGetGlobal<std::vector<internal_map>>(L, "guiSelectedFilesList");
-            for (const auto& itm : proj)
+            if (itm.count("fileName") && itm.count("fileMode"))
             {
-                if (itm.count("fileName") && itm.count("fileMode"))
-                {
-                    auto fp   = QString("%1/%2").arg(dir).arg(itm.at("fileName"));
-                    int  mode = itm.at("fileMode").toInt();
-                    if (lua2index_map.count(mode))
-                        setRoleForPriv(fp, lua2index_map.at(mode));
-                }
+                auto fn = itm.at("fileName");
+                const static QString pref = QString("%1://").arg(VFS_PREFIX);
+                auto fp   = QString("%3%1/%2").arg(dir).arg(fn).arg((fn.contains("#")?pref:""));
+                int  mode = itm.at("fileMode").toInt();
+                if (lua2index_map.count(mode))
+                    setRoleForPriv(fp, lua2index_map.at(mode));
             }
-            if (stack!=lua_gettop(L))
-                FATAL_RISE("Broken stack on project loading.");
         }
+        if (stack!=lua_gettop(L))
+            FATAL_RISE("Broken stack on project loading.");
 
         disconnect(*conn); //self-deleting, releasing captures
+        emit loadedProject(root, false);
+
     }, Qt::QueuedConnection); //important, resolves cross-thread
 
     setCurrentFolder(root, false); //fixme: recursivness is not stored, do some signal/slot to reflect that in GUI
@@ -517,16 +524,17 @@ Qt::ItemFlags PreviewsModel::flags(const QModelIndex &index) const
     return res;
 }
 
+
 void PreviewsModel::setCurrentFolder(const QString &path, bool recursive)
 {
     loadPreviews.reset();
     listFiles.reset();
-    QDir dir(path);
-    const auto absPath = dir.absolutePath();
-    currentFolder = absPath;
+    QFileInfo inf = currentFolder = QFileInfo(path);
 
-    listFiles = utility::startNewRunner([this, absPath, recursive](auto stop)
+    listFiles = utility::startNewRunner([this, recursive, inf](auto stop)
     {
+        QString absPath = (inf.isDir())?inf.canonicalFilePath():inf.canonicalPath();
+
         QStringList filter;
         for (const auto& s : supportedExt)
         {
@@ -534,19 +542,16 @@ void PreviewsModel::setCurrentFolder(const QString &path, bool recursive)
             filter << "*."+s.toUpper();
         }
 #ifdef USING_VIDEO_FS
-        if (isParsingVideo())
-        {
-            for (const auto& s: supportedVids)
+        if (recursive)
+            for (const auto& s : supportedVids)
             {
                 filter << "*."+s.toLower();
                 filter << "*."+s.toUpper();
             }
-        }
 #endif
-
         using namespace utility;
-        std::vector<QFileInfo> pathes;
-        std::vector<QString>  subfolders;
+        PreviewsModel::files_t pathes;
+        std::vector<QString>   subfolders;
         subfolders.reserve(50);
         pathes.reserve(500);
 
@@ -565,28 +570,33 @@ void PreviewsModel::setCurrentFolder(const QString &path, bool recursive)
                 subfolders.push_back(fp);
             }
         }
-        const static QString cachef(VFS_CACHED_FOLDER);
-        QDirIterator it(absPath, filter, QDir::Files, QDirIterator::Subdirectories);
-        while (it.hasNext() && !(*stop))
+        if (inf.isDir())
         {
-            it.next();
-            if (!it.fileInfo().isDir())
+            const static QString cachef(VFS_CACHED_FOLDER);
+            QDirIterator it(absPath, filter, QDir::Files, QDirIterator::Subdirectories);
+            while (it.hasNext() && !(*stop))
             {
-                bool push = recursive;
+                it.next();
+                if (!it.fileInfo().isDir())
+                {
+                    bool push = recursive;
 
 
-                if (!push)
-                    push = !strcontains(it.filePath(), subfolders);
+                    if (!push)
+                        push = !strcontains(it.filePath(), subfolders);
 
-                push = push && !strcontains(it.filePath(), cachef); //excluding own cache from the list, will access it using regular URI
+                    push = push && !strcontains(it.filePath(), cachef); //excluding own cache from the list, will access it using regular URI
 
-                if (push)
-                    pathes.push_back(QFileInfo(it.filePath()));
+                    if (push)
+                        pathes.push_back(QFileInfo(it.filePath()));
+                }
+
+                if (pathes.capacity() - 5 < pathes.size())
+                    pathes.reserve(static_cast<size_t>(pathes.capacity() * 1.25 + 10));
             }
-
-            if (pathes.capacity() - 5 < pathes.size())
-                pathes.reserve(static_cast<size_t>(pathes.capacity() * 1.25 + 10));
         }
+        else
+            pathes.push_back(inf);
 
         if (*stop)
             pathes.clear(); //forced interrupted
@@ -670,7 +680,7 @@ void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list, const util
 
 #ifdef USING_VIDEO_FS
         const bool ipv = isParsingVideo();
-        if (ipv && supportedVids.count(fi.suffix().toLower()))
+        if (ipv && supportedVids.contains(fi.suffix().toLower()))
         {
             auto frames = IMAGE_LOADER.getVideoFramesLinks(s);
             if (frames.size())

@@ -8,12 +8,17 @@
 #include <QAbstractTableModel>
 #include <QStyledItemDelegate>
 #include <QTimer>
+#include <QFileInfo>
 
 #include "lua/lua_gen.h"
 #include "utils/runners.h"
 #include "previewsmodeldata.h"
 
 class QFileInfo;
+#ifdef USING_VIDEO_FS
+extern const QStringList supportedVids;
+#endif
+
 class PreviewsModel : public QAbstractTableModel, public luavm::ProjectSaver, public luavm::ProjectLoader
 {
     Q_OBJECT
@@ -65,7 +70,7 @@ private:
     std::atomic<int64_t> modelFilesAmount;
     std::map<int, QStringList> fixedCombosLists; //wana to do generic solution
     QTimer scrollDelayedLoader;
-    QString currentFolder;
+    QFileInfo currentFolder;
 
     void haveFilesList(const files_t& list, const utility::runnerint_t& stop);
     void loadCurrentInterval();
@@ -76,6 +81,7 @@ signals:
     void finishedPreviewsLoad();
     void loadProgress(int percents);
     void filesAreListed(const QString& rootPath);
+    void loadedProject(const QString& root, bool recursive);
 };
 
 

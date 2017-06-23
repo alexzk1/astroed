@@ -20,6 +20,7 @@ void FixedComboWithShortcut::addItemWithShortcut(const QString &text, const QKey
 
 bool FixedComboWithShortcut::eventFilter(QObject *t, QEvent *e)
 {
+    Q_UNUSED(t);
     QKeyEvent *keyEvent = dynamic_cast<QKeyEvent*>(e);
     if (keyEvent)
     {

@@ -93,6 +93,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     }, Qt::QueuedConnection);
 
+
     setWindowTitle("");
     setupFsBrowsing();
     readSettings(this);
@@ -334,7 +335,19 @@ void MainWindow::setupFsBrowsing()
 {
     dirsModel = new QFileSystemModel(this);
     dirsModel->setRootPath("/");
+#ifdef USING_VIDEO_FS
+    dirsModel->setFilter(QDir::NoDotAndDotDot | QDir::AllDirs | QDir::Files);
+    QStringList filter;
+    for (const auto& s : supportedVids)
+    {
+        filter << "*."+s.toLower();
+        filter << "*."+s.toUpper();
+    }
+    dirsModel->setNameFilters(filter);
+    dirsModel->setNameFilterDisables(false);
+#else
     dirsModel->setFilter(QDir::NoDotAndDotDot | QDir::AllDirs);
+#endif
     dirsModel->setReadOnly(true);
     //ui->dirsTree->setModel(dirsModel);
 
@@ -360,6 +373,23 @@ void MainWindow::setupFsBrowsing()
             *lastFolder = dirsModel->data(p1, QFileSystemModel::FilePathRole).toString();
             this->currentDirChanged(*lastFolder);
         }
+    }, Qt::QueuedConnection);
+
+    connect(previewsModel, &PreviewsModel::loadedProject, this, [this, lastFolder](const QString& root, bool rec)
+    {
+       if (ui->dirsTree && ui->dirsTree->selectionModel())
+       {
+           ui->dirsTree->selectionModel()->blockSignals(true);
+           ui->dirsTree->blockSignals(true);
+           selectPath(root,true);
+           ui->dirsTree->blockSignals(false);
+           ui->dirsTree->selectionModel()->blockSignals(false);
+
+           ui->actionRecursive_Listing->blockSignals(true);
+           ui->actionRecursive_Listing->setChecked(rec);
+           ui->actionRecursive_Listing->blockSignals(false);
+           *lastFolder = root;
+       }
     }, Qt::QueuedConnection);
 
     auto toolBox = addToolbarToLayout(ui->layoutFilesTree);
@@ -528,10 +558,15 @@ void MainWindow::on_actionSaveProject_triggered()
     QSettings sett;
 
     QString lastFolder = getSelectedFolder();
+
+    QFileInfo fi(lastFolder);
+    if (fi.isFile())
+        lastFolder = fi.canonicalPath();
+
     if (lastFolder.isEmpty())
         sett.value("LastSaveProjectFolder", QDir::homePath()).toString();
 
-    lastFolder =lastFolder + defaultProjFile;
+    lastFolder = lastFolder + defaultProjFile;
     auto name = QFileDialog::getSaveFileName(this, tr("Save Project"), lastFolder, "luap (*.luap)");
     if (!name.isEmpty())
     {

@@ -88,8 +88,6 @@ private:
     void setupZoomGui();
 
     const static QString zoomKbHintText;
-
-
     QToolBar* addToolbarToLayout(QLayout* src, int pos = 0);
 };
 
