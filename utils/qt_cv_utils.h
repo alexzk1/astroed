@@ -196,7 +196,7 @@ namespace utility
                 utility::swapPointed(p + 0, p + 2);
             });
         }
-#ifdef USING_VIDEO_FS
+#if defined(USING_VIDEO_FS) || defined (USING_OPENCV)
         inline void rgbConvert(QImage& img)
         {
             if (img.format() != QImage::Format_RGB888)
@@ -226,8 +226,16 @@ namespace utility
 
         inline QImage createFrom(const cv::Mat& rgb)
         {
-            QImage tmp = copy(rgb);
-            rgbConvert(tmp);
+            QImage tmp;
+            if (rgb.type() == CV_8UC3)
+            {
+                tmp = copy(rgb);
+                rgbConvert(tmp);
+            }
+            if (rgb.type() == CV_8UC1)
+            {
+                tmp = QImage(static_cast<uint8_t*>(rgb.data), rgb.cols, rgb.rows, QImage::Format_Grayscale8).copy();
+            }
             return tmp;
         }
 

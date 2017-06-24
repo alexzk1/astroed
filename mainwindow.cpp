@@ -19,6 +19,10 @@
 #include "custom_roles.h"
 #include "utils/strutils.h"
 
+#ifdef USING_OPENCV
+#include "opencv_utils/opencv_utils.h"
+#endif
+
 const static auto ZOOMING_KB_VALUE = 2 * ScrollAreaPannable::WheelStep;
 
 const static QString defaultProjFile = "/ae_project.luap";
@@ -377,19 +381,19 @@ void MainWindow::setupFsBrowsing()
 
     connect(previewsModel, &PreviewsModel::loadedProject, this, [this, lastFolder](const QString& root, bool rec)
     {
-       if (ui->dirsTree && ui->dirsTree->selectionModel())
-       {
-           ui->dirsTree->selectionModel()->blockSignals(true);
-           ui->dirsTree->blockSignals(true);
-           selectPath(root,true);
-           ui->dirsTree->blockSignals(false);
-           ui->dirsTree->selectionModel()->blockSignals(false);
+        if (ui->dirsTree && ui->dirsTree->selectionModel())
+        {
+            ui->dirsTree->selectionModel()->blockSignals(true);
+            ui->dirsTree->blockSignals(true);
+            selectPath(root,true);
+            ui->dirsTree->blockSignals(false);
+            ui->dirsTree->selectionModel()->blockSignals(false);
 
-           ui->actionRecursive_Listing->blockSignals(true);
-           ui->actionRecursive_Listing->setChecked(rec);
-           ui->actionRecursive_Listing->blockSignals(false);
-           *lastFolder = root;
-       }
+            ui->actionRecursive_Listing->blockSignals(true);
+            ui->actionRecursive_Listing->setChecked(rec);
+            ui->actionRecursive_Listing->blockSignals(false);
+            *lastFolder = root;
+        }
     }, Qt::QueuedConnection);
 
     auto toolBox = addToolbarToLayout(ui->layoutFilesTree);
@@ -446,6 +450,22 @@ void MainWindow::setupZoomGui()
             if (previewsModel && a)
                 previewsModel->setRoleFor(lastPreviewFileName, a->property("model_role").toInt());
         }, Qt::QueuedConnection);
+
+
+#ifdef USING_OPENCV
+        {
+            //fixme: algo test! need to make it reusable later
+            using namespace utility::opencv;
+            zoomToolbar->addSeparator();
+            auto lucy_rich = zoomToolbar->addAction("lucy_rich");
+            connect(lucy_rich, &QAction::triggered, this, [this]()
+            {
+                auto mat = createMat(*IMAGE_LOADER.getImage(lastPreviewFileName));
+                lucy_richardson_deconv(mat, 5);
+                ui->lblZoomPix->setPixmap(QPixmap::fromImage(utility::bgrrgb::createFrom(mat)));
+            });
+        }
+#endif
     }
 }
 
