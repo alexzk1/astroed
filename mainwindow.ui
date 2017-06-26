@@ -206,6 +206,8 @@
    <addaction name="separator"/>
    <addaction name="actionNewtone"/>
    <addaction name="actionSettings"/>
+   <addaction name="separator"/>
+   <addaction name="actionWipe_Cache"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <action name="actionNewtone">
@@ -356,6 +358,33 @@
    </property>
    <property name="toolTip">
     <string>Reload current folder</string>
+   </property>
+  </action>
+  <action name="actionCopyCurrentImage">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/icons/copy-icon-image.png</normaloff>:/icons/icons/copy-icon-image.png</iconset>
+   </property>
+   <property name="text">
+    <string>Copy</string>
+   </property>
+   <property name="toolTip">
+    <string>Copy current original image to clipboard.</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+C</string>
+   </property>
+  </action>
+  <action name="actionWipe_Cache">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/icons/sweep-icon.png</normaloff>:/icons/icons/sweep-icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Wipe Cache</string>
+   </property>
+   <property name="toolTip">
+    <string>Clears RAM cache of loaded images.</string>
    </property>
   </action>
  </widget>

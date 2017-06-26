@@ -69,6 +69,10 @@ private slots:
 
     void on_actionReload_triggered();
 
+    void on_actionCopyCurrentImage_triggered();
+
+    void on_actionWipe_Cache_triggered();
+
 private:
     Ui::MainWindow *ui;
     QPointer<QFileSystemModel> dirsModel;

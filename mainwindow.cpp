@@ -428,6 +428,7 @@ void MainWindow::setupZoomGui()
     {
         zoomToolbar->setToolButtonStyle(Qt::ToolButtonIconOnly);
         zoomToolbar->addAction(ui->actionSave_As);
+        zoomToolbar->addAction(ui->actionCopyCurrentImage);
         zoomToolbar->addSeparator();
         zoomPicModeActions = {
             zoomToolbar->addAction(QIcon(":/icons/icons/Science-Minus2-Math-icon.png"), "Ignored"),
@@ -666,4 +667,19 @@ void MainWindow::on_actionReload_triggered()
     PREVIEW_LOADER.wipe();
 
     currentDirChanged(p);
+}
+
+void MainWindow::on_actionCopyCurrentImage_triggered()
+{
+    auto ptr = IMAGE_LOADER.getImage(lastPreviewFileName);
+    if (ptr)
+    {
+        QApplication::clipboard()->setImage(*ptr);
+    }
+}
+
+void MainWindow::on_actionWipe_Cache_triggered()
+{
+    IMAGE_LOADER.wipe();
+    PREVIEW_LOADER.wipe();
 }
