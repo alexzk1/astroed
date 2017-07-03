@@ -3,6 +3,7 @@
 
 #include <opencv2/opencv.hpp>
 #include <vector>
+#include <array>
 #include <stdint.h>
 #include <functional>
 #include "utils/qt_cv_utils.h"
@@ -12,18 +13,34 @@ namespace utility
 {
     namespace opencv
     {
-        using contours_t  = std::vector<std::vector<cv::Point>>;
-        using hierarchy_t = std::vector<cv::Vec4i>;
+        const cv::Mat wrapQImage(const QImage &src); //wraps buffer of image without copying, colors order remains same as QImage (RGB, 8 bit)
+        cv::Mat createMat(const QImage &src); //copies QImage to new Mat and makes it CV_64F
 
-        cv::Mat createMat(const QImage &src); //copies QImage to new Mat
-        const cv::Mat wrapQImage(const QImage &src); //wraps buffer of image without copying, colors order remains same as QImage (RGB)
-        contours_t detectExternContours(const QImage& src, int treshold1 = 100, int treshold2 = 200);
-        void forEachChannel(cv::Mat& src, const std::function<void(cv::Mat& channel)>& functor);
+        namespace algos
+        {
+            using fft_planes_t = std::array<cv::Mat, 2>;
+            using contours_t   = std::vector<std::vector<cv::Point>>;
+            using hierarchy_t  = std::vector<cv::Vec4i>;
 
-        //this one algo seems cool to filter noise with low iterations
-        //https://drive.google.com/file/d/0B7CO_0Z4IxeRWVdXSjZFRzF3Y0k/view
-        void lucy_richardson_deconv_grayscale(cv::Mat& img, int num_iterations, double sigmaG);
-        void lucy_richardson_deconv(cv::Mat& img, int num_iterations = 5, double sigmaG = 6.0);
+            contours_t detectExternContours(const QImage& src, int treshold1 = 100, int treshold2 = 200);
+
+            //this one algo seems cool to filter noise with low iterations
+            //https://drive.google.com/file/d/0B7CO_0Z4IxeRWVdXSjZFRzF3Y0k/view
+            void lucy_richardson_deconv_grayscale(cv::Mat& img, int num_iterations, double sigmaG);
+            void lucy_richardson_deconv(cv::Mat& img, int num_iterations = 5, double sigmaG = 6.0);
+
+
+            //----------------------------------------------------------
+            // Compute Re and Im planes of FFT from Image
+            //----------------------------------------------------------
+            void ForwardFFT(const cv::Mat &Src, fft_planes_t& FImg);
+            //----------------------------------------------------------
+            // Compute image from Re and Im parts of FFT
+            //----------------------------------------------------------
+            void InverseFFT(const fft_planes_t& FImg, cv::Mat &Dst);
+
+            cv::Mat get_FWHM(const cv::Mat& src);
+        }
     };
 };
 

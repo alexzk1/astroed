@@ -21,3 +21,5 @@ TODO / Ideas:
 1 of operands and keeps result. That can be shown as preview additionally (possibly, in separated window).
 * today I made succesefull experiment with getting starts spectrums (https://github.com/alexzk1/stars_spectrum), 
 so now I want to process it somehow too and have spectral lines data (maybe chemistry inside)
+* quality estimate, preview only selected (or sort)
+* deconvultion

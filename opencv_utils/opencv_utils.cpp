@@ -12,7 +12,7 @@
 
 using namespace utility::opencv;
 
-contours_t utility::opencv::detectExternContours(const QImage &src, int treshold1, int treshold2)
+algos::contours_t utility::opencv::algos::detectExternContours(const QImage &src, int treshold1, int treshold2)
 {
     using namespace cv;
     const auto tmpColored(createMat(src));
@@ -42,6 +42,13 @@ cv::Mat utility::opencv::createMat(const QImage &src)
     cv::Mat tmp = wrapQImage(src);
     auto res = tmp.clone();
     rgbConvert(res);
+
+    forEachChannel(res, [](cv::Mat& c)
+    {
+        c.convertTo(c, CV_64F);// convert to double
+        normalize(c, c, 0, 1, cv::NORM_MINMAX);
+    });
+
     return res;
 }
 
@@ -53,14 +60,13 @@ const cv::Mat utility::opencv::wrapQImage(const QImage &src)
     return cv::Mat(src.height(), src.width(), CV_8UC3, const_cast<uchar*>(src.bits()));
 }
 
-
 const static double EPSILON=2.2204e-16;
-void utility::opencv::lucy_richardson_deconv_grayscale(cv::Mat &img, int num_iterations, double sigmaG)
+void utility::opencv::algos::lucy_richardson_deconv_grayscale(cv::Mat &img, int num_iterations, double sigmaG)
 {
     using namespace cv;
 
-    img.convertTo(img, CV_64F);// convert to double
-    normalize(img, img, 0, 1, NORM_MINMAX);
+//    img.convertTo(img, CV_64F);// convert to double
+//    normalize(img, img, 0, 1, NORM_MINMAX);
 
     // Lucy-Richardson Deconvolution Function
     // input-1 img: NxM matrix image
@@ -119,22 +125,56 @@ void utility::opencv::lucy_richardson_deconv_grayscale(cv::Mat &img, int num_ite
     }
 
     // output
-    normalize(J1.clone(), img, 0, 1, NORM_MINMAX);
-    convertScaleAbs(img, img, 256);
+    img = J1;
+//    normalize(J1.clone(), img, 0, 1, NORM_MINMAX);
+//    convertScaleAbs(img, img, 256);
 }
 
-void utility::opencv::forEachChannel(cv::Mat &src, const std::function<void (cv::Mat &)> &functor)
-{
-    std::vector<cv::Mat> channels(src.channels());
-    cv::split(src, channels);
-    ALG_NS::for_each(channels.begin(), channels.end(), functor);
-    cv::merge(channels.data(), channels.size(), src);
-}
-
-void utility::opencv::lucy_richardson_deconv(cv::Mat& img, int num_iterations, double sigmaG)
+void utility::opencv::algos::lucy_richardson_deconv(cv::Mat& img, int num_iterations, double sigmaG)
 {
     forEachChannel(img, [&num_iterations, &sigmaG](cv::Mat& c)
     {
        lucy_richardson_deconv_grayscale(c, num_iterations, sigmaG);
     });
+}
+
+//from https://stackoverflow.com/questions/40713929/weiner-deconvolution-using-opencv
+void utility::opencv::algos::ForwardFFT(const cv::Mat &Src, fft_planes_t &FImg)
+{
+    using namespace cv;
+    int M = getOptimalDFTSize(Src.rows);
+    int N = getOptimalDFTSize(Src.cols);
+    Mat padded;
+    copyMakeBorder(Src, padded, 0, M - Src.rows, 0, N - Src.cols, BORDER_CONSTANT, Scalar::all(0));
+    Mat planes[] = { Mat_<double>(padded), Mat::zeros(padded.size(), CV_64FC1) };
+    Mat complexImg;
+    merge(planes, 2, complexImg);
+    dft(complexImg, complexImg);
+    split(complexImg, planes);
+    // crop result
+    planes[0] = planes[0](Rect(0, 0, Src.cols, Src.rows));
+    planes[1] = planes[1](Rect(0, 0, Src.cols, Src.rows));
+    FImg[0] = planes[0].clone();
+    FImg[1] = planes[1].clone();
+}
+
+//from https://stackoverflow.com/questions/40713929/weiner-deconvolution-using-opencv
+void utility::opencv::algos::InverseFFT(const fft_planes_t &FImg, cv::Mat &Dst)
+{
+    using namespace cv;
+    Mat complexImg;
+    merge(FImg.data(), 2, complexImg);
+    dft(complexImg, complexImg, DFT_INVERSE + DFT_SCALE);
+    fft_planes_t tmp;
+    split(complexImg, tmp.data());
+    Dst = tmp[0];
+}
+
+cv::Mat utility::opencv::algos::get_FWHM(const cv::Mat &src)
+{
+    const auto static coef = 2 * sqrt(2 * log(2));
+    cv::Mat mean, stddev;
+    cv::meanStdDev(src, mean, stddev);
+    stddev *= coef;
+    return stddev;
 }

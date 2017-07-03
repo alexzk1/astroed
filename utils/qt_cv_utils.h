@@ -10,9 +10,23 @@
 
 #include "cont_utils.h"
 #include "fatal_err.h"
+#include <functional>
+#include <vector>
 
 namespace utility
 {
+#if defined(USING_VIDEO_FS) || defined (USING_OPENCV)
+    namespace opencv
+    {
+        inline void forEachChannel(cv::Mat &src, const std::function<void (cv::Mat &)> &functor)
+        {
+            std::vector<cv::Mat> channels(static_cast<size_t>(std::max(1, src.channels())));
+            cv::split(src, channels);
+            ALG_NS::for_each(channels.begin(), channels.end(), functor);
+            cv::merge(channels.data(), channels.size(), src);
+        }
+    };
+#endif
     namespace bgrrgb
     {
         using default_color_type = uint8_t; //how many bits per color
@@ -224,18 +238,34 @@ namespace utility
             return QImage(static_cast<uint8_t*>(rgb.data), rgb.cols, rgb.rows, QImage::Format_RGB888).copy();
         }
 
-        inline QImage createFrom(const cv::Mat& rgb)
+        inline QImage createFrom(const cv::Mat& rgb_p)
         {
             QImage tmp;
-            if (rgb.type() == CV_8UC3)
+            auto make_it = [&tmp](const cv::Mat& rgb)
             {
-                tmp = copy(rgb);
-                rgbConvert(tmp);
-            }
-            if (rgb.type() == CV_8UC1)
+                if (rgb.type() == CV_8UC3)
+                {
+                    tmp = copy(rgb);
+                    rgbConvert(tmp);
+                }
+                if (rgb.type() == CV_8UC1)
+                {
+                    tmp = QImage(static_cast<uint8_t*>(rgb.data), rgb.cols, rgb.rows, QImage::Format_Grayscale8).copy();
+                }
+            };
+
+            if (rgb_p.type() == CV_64FC1 || rgb_p.type() == CV_64FC3)
             {
-                tmp = QImage(static_cast<uint8_t*>(rgb.data), rgb.cols, rgb.rows, QImage::Format_Grayscale8).copy();
+                cv::Mat tm{rgb_p.clone()};
+                utility::opencv::forEachChannel(tm, [](cv::Mat& c)
+                {
+                    cv::normalize(c, c, 0, 1, cv::NORM_MINMAX);
+                    cv::convertScaleAbs(c, c, 256);
+                });
+                make_it(tm);
             }
+            else
+                make_it(rgb_p);
             return tmp;
         }
 

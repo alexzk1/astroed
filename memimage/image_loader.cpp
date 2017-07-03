@@ -185,14 +185,10 @@ static const auto& getUserSelectedRawFormat()
 
 bool static isRawVideo(const VideoCapturePtr& ptr)
 {
-    union {
-        uint32_t val;
-        char   codec[4];
-    } prop_format;
-    prop_format.val = static_cast<decltype (prop_format.val)>(ptr->get(CV_CAP_PROP_FOURCC));
+    uint32_t val = static_cast<decltype (val)>(ptr->get(CV_CAP_PROP_FOURCC));
     //qDebug() << "Codec: " << std::string(prop_format.codec, 4).c_str() << prop_format.val;
 
-    return prop_format.val == 0; //fixme: it returns 0 for my raw sample, BUT it is possible that some more fouriercc can be returned
+    return val == 0; //fixme: it returns 0 for my raw sample, BUT it is possible that some more fouriercc can be returned
 }
 
 VideoCapturePtr image_loader::getVideoCapturer(const QString& filePath) const

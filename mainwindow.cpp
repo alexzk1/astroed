@@ -462,7 +462,7 @@ void MainWindow::setupZoomGui()
             connect(lucy_rich, &QAction::triggered, this, [this]()
             {
                 auto mat = createMat(*IMAGE_LOADER.getImage(lastPreviewFileName));
-                lucy_richardson_deconv(mat, 5);
+                algos::lucy_richardson_deconv(mat, 5);
                 ui->lblZoomPix->setPixmap(QPixmap::fromImage(utility::bgrrgb::createFrom(mat)));
             });
         }
