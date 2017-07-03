@@ -16,6 +16,11 @@
 #include <QDir>
 #include "config_ui/globalsettings.h"
 #include "utils/qt_cv_utils.h"
+#include "utils/runners.h"
+
+#if defined(USING_VIDEO_FS) || defined (USING_OPENCV)
+#include "opencv_utils/opencv_utils.h"
+#endif
 
 using namespace imaging;
 
@@ -57,7 +62,7 @@ image_buffer_ptr image_cacher::getImage(const QString &fileName)
     return t.data;
 }
 
-meta_t image_cacher::getExif(const QString &fileName)
+meta_t image_cacher::getMeta(const QString &fileName)
 {
     image_t_s t;
     findImage(fileName, t);
@@ -343,8 +348,9 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
     //done: this should load exif too
     if (!is_url) //loading exif only from files
     {
-        tmp.meta.load(key);
+        tmp.meta.loadExif(key);
     }
+    tmp.meta.precalculate(tmp.data);
     return tmp;
 }
 
@@ -461,7 +467,8 @@ meta_t::meta_t():
     iso(INIT(iso)),
     exposure(INIT(exposure)),
     aperture(INIT(aperture)),
-    optZoom(1)
+    optZoom(1),
+    precalcs()
 {
 }
 
@@ -469,11 +476,14 @@ meta_t::meta_t():
 
 QString meta_t::getStringValue() const //should prepare human readable value
 {
+    QString extra = QString("FWHM: %1")
+                    .arg(precalcs.fullFWHM, 0, 'f', 4);
     if (!wasLoaded)
-        return QObject::tr("No meta tags");
+        return extra + QObject::tr("\nNo EXIF tags.");
 
     using namespace exiv2_helpers::exiv_rationals;
-    return QString(QObject::tr("ISO: %1\nExposure: %2 s\nAperture: %3 mm\nOptical Zoom: x%4"))
+    return QString(QObject::tr("%0\nISO: %1\nExposure: %2 s\nAperture: %3 mm\nOptical Zoom: x%4"))
+            .arg(extra)
             .arg(iso)
             .arg(toDouble(exposure), 0, 'f', 4)
             .arg(toDouble(aperture), 0, 'f', 2)
@@ -481,7 +491,7 @@ QString meta_t::getStringValue() const //should prepare human readable value
             ;
 }
 
-void meta_t::load(const QString &fileName)
+void meta_t::loadExif(const QString &fileName)
 {
     using namespace exiv2_helpers;
     if (QFile::exists(fileName))
@@ -549,4 +559,15 @@ void meta_t::load(const QString &fileName)
             wasLoaded = true;
         }
     }
+}
+
+void meta_t::precalculate(const image_buffer_ptr &img)
+{
+#if defined(USING_VIDEO_FS) || defined (USING_OPENCV)
+    using namespace utility::opencv;
+    auto mat = createMat(*img, true);
+    precalcs.fullFWHM = algos::get_FWHM(*mat).at<decltype (precalcs.fullFWHM)>(0);
+#else
+#warning opencv is disabled, precalculations will be too as well.
+#endif
 }

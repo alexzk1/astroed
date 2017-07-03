@@ -176,7 +176,7 @@ void MainWindow::openPreviewTab(const imaging::image_buffer_ptr& image, const QS
     fileNameLabel->setText(txt);
     if (!fileName.isEmpty())
     {
-        auto meta = IMAGE_LOADER.getExif(fileName);
+        auto meta = IMAGE_LOADER.getMeta(fileName);
         ui->lblZoomPix->setStatusTip(meta.getStringValue());
     }
     ui->lblZoomPix->setPixmap(QPixmap::fromImage(*image));
@@ -461,9 +461,9 @@ void MainWindow::setupZoomGui()
             auto lucy_rich = zoomToolbar->addAction("lucy_rich");
             connect(lucy_rich, &QAction::triggered, this, [this]()
             {
-                auto mat = createMat(*IMAGE_LOADER.getImage(lastPreviewFileName));
-                algos::lucy_richardson_deconv(mat, 5);
-                ui->lblZoomPix->setPixmap(QPixmap::fromImage(utility::bgrrgb::createFrom(mat)));
+                auto mat = createMat(*IMAGE_LOADER.getImage(lastPreviewFileName), true);
+                algos::lucy_richardson_deconv(*mat, 5);
+                ui->lblZoomPix->setPixmap(QPixmap::fromImage(utility::bgrrgb::createFrom(*mat)));
             });
         }
 #endif

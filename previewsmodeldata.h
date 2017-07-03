@@ -51,7 +51,7 @@ public:
 
     QString getPreviewInfo() const
     {
-        return PREVIEW_LOADER.getExif(filePath).getStringValue();
+        return PREVIEW_LOADER.getMeta(filePath).getStringValue();
     }
 
     const QImage& getPreview() const

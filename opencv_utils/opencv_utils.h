@@ -6,6 +6,7 @@
 #include <array>
 #include <stdint.h>
 #include <functional>
+#include <memory>
 #include "utils/qt_cv_utils.h"
 
 class QImage;
@@ -13,8 +14,9 @@ namespace utility
 {
     namespace opencv
     {
+        using MatPtr = std::shared_ptr<cv::Mat>;
         const cv::Mat wrapQImage(const QImage &src); //wraps buffer of image without copying, colors order remains same as QImage (RGB, 8 bit)
-        cv::Mat createMat(const QImage &src); //copies QImage to new Mat and makes it CV_64F
+        MatPtr createMat(const QImage &src, bool grey = false); //copies QImage to new Mat and makes it CV_64F
 
         namespace algos
         {

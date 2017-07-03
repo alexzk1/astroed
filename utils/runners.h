@@ -4,6 +4,7 @@
 #include <memory>
 #include <functional>
 #include <atomic>
+#include "ctpl_stl.h"
 
 namespace utility {
     using runner_t    = std::shared_ptr<std::thread>;
@@ -28,5 +29,10 @@ namespace utility {
         });
     }
 
+    inline ctpl::thread_pool& getThreadsPool()
+    {
+        static ctpl::thread_pool pool(8);
+        return pool;
+    }
 }
 

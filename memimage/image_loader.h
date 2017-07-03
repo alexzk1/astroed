@@ -196,6 +196,7 @@ namespace imaging
 
     struct meta_t
     {
+
         meta_t();
         bool wasLoaded;
         long  iso;
@@ -203,7 +204,17 @@ namespace imaging
         Exiv2::URational aperture;
         double optZoom;
         QString getStringValue() const;
-        void load(const QString& fileName);
+
+        struct precalcs_t
+        {
+            double fullFWHM;
+            precalcs_t():
+                fullFWHM(-1)
+            {}
+        } precalcs;
+
+        void loadExif(const QString& fileName);
+        void precalculate(const image_buffer_ptr &img);
     };
 
     class image_cacher
@@ -277,7 +288,7 @@ namespace imaging
     public:
         image_cacher();
         image_buffer_ptr getImage(const QString& fileName);
-        meta_t           getExif(const QString& fileName);
+        meta_t           getMeta(const QString& fileName);
         bool             isLoaded(const QString& fileName) const;
 
         virtual void gc(bool no_wait = false);

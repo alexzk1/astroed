@@ -9,7 +9,8 @@ HEADERS += \
     $$PWD/no_const.h \
     $$PWD/cont_utils.h \
     $$PWD/qt_cv_utils.h \
-    $$PWD/palgorithm.h
+    $$PWD/palgorithm.h \
+    $$PWD/ctpl_stl.h
 
 SOURCES += \
     $$PWD/memsize.cpp

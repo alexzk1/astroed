@@ -8,6 +8,7 @@
 #include <QObject>
 #include <QMessageBox>
 #include "singleapp/singleapplication.h"
+#include "utils/runners.h"
 
 static QMessageBox* noMemoryBox = nullptr;
 [[ noreturn ]] static void no_memory ()
@@ -46,6 +47,8 @@ int main(int argc, char *argv[])
 
     w.show();
     int r = a.exec();
+
+    utility::getThreadsPool().stop(false);
 
     if (noMemoryBox)
         delete noMemoryBox;

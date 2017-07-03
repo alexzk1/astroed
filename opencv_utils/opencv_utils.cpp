@@ -15,11 +15,11 @@ using namespace utility::opencv;
 algos::contours_t utility::opencv::algos::detectExternContours(const QImage &src, int treshold1, int treshold2)
 {
     using namespace cv;
-    const auto tmpColored(createMat(src));
+    const auto tmpColored = createMat(src);
     Mat src_gray;
 
     // Convert image to gray and blur it
-    cvtColor( tmpColored, src_gray, CV_RGB2GRAY );
+    cvtColor(*tmpColored, src_gray, CV_RGB2GRAY );
     blur( src_gray, src_gray, Size(3,3) );
 
     Mat canny_output;
@@ -33,17 +33,21 @@ algos::contours_t utility::opencv::algos::detectExternContours(const QImage &src
     return contours;
 }
 
-cv::Mat utility::opencv::createMat(const QImage &src)
+MatPtr utility::opencv::createMat(const QImage &src, bool grey)
 {
     //assuming src is RGB888 ...
     if (src.format() != QImage::Format_RGB888)
         FATAL_RISE("Unexpected QImage pixel format");
     using namespace utility::bgrrgb;
     cv::Mat tmp = wrapQImage(src);
-    auto res = tmp.clone();
-    rgbConvert(res);
+    auto res = MatPtr(new cv::Mat(tmp.clone()));
 
-    forEachChannel(res, [](cv::Mat& c)
+    if (grey)
+        cvtColor(*res, *res, cv::COLOR_RGB2GRAY);
+    else
+        rgbConvert(*res);
+
+    forEachChannel(*res, [](cv::Mat& c)
     {
         c.convertTo(c, CV_64F);// convert to double
         normalize(c, c, 0, 1, cv::NORM_MINMAX);
@@ -172,9 +176,17 @@ void utility::opencv::algos::InverseFFT(const fft_planes_t &FImg, cv::Mat &Dst)
 
 cv::Mat utility::opencv::algos::get_FWHM(const cv::Mat &src)
 {
+    //https://en.wikipedia.org/wiki/Full_width_at_half_maximum
     const auto static coef = 2 * sqrt(2 * log(2));
     cv::Mat mean, stddev;
     cv::meanStdDev(src, mean, stddev);
     stddev *= coef;
+
+    //https://sourceforge.net/projects/astrofocuser/?source=typ_redirect
+    stddev.forEach<double>([](double& v, const int*)
+    {
+       v = 2 * sqrt(v / M_PI);
+    });
+
     return stddev;
 }
