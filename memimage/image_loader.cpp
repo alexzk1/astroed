@@ -476,8 +476,8 @@ meta_t::meta_t():
 
 QString meta_t::getStringValue() const //should prepare human readable value
 {
-    QString extra = QString("FWHM: %1")
-                    .arg(precalcs.fullFWHM, 0, 'f', 4);
+    QString extra = QString("Blureness: %1")
+                    .arg(precalcs.blureness, 0, 'f', 4);
     if (!wasLoaded)
         return extra + QObject::tr("\nNo EXIF tags.");
 
@@ -566,7 +566,7 @@ void meta_t::precalculate(const image_buffer_ptr &img)
 #if defined(USING_VIDEO_FS) || defined (USING_OPENCV)
     using namespace utility::opencv;
     auto mat = createMat(*img, true);
-    precalcs.fullFWHM = algos::get_FWHM(*mat).at<decltype (precalcs.fullFWHM)>(0);
+    precalcs.blureness = algos::get_Blureness(*mat).at<decltype (precalcs.blureness)>(0);
 #else
 #warning opencv is disabled, precalculations will be too as well.
 #endif

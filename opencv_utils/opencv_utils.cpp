@@ -7,7 +7,7 @@
 #include <opencv/highgui.h>
 #endif
 
-
+const static auto laplasianBlurKernelSize = 7;//odd, bigger value = slower, but less noise counting
 
 
 using namespace utility::opencv;
@@ -174,12 +174,12 @@ void utility::opencv::algos::InverseFFT(const fft_planes_t &FImg, cv::Mat &Dst)
     Dst = tmp[0];
 }
 
-cv::Mat utility::opencv::algos::get_FWHM(const cv::Mat &src)
+cv::Mat utility::opencv::algos::get_FWHM(const cv::Mat &src_greyscale)
 {
     //https://en.wikipedia.org/wiki/Full_width_at_half_maximum
     const auto static coef = 2 * sqrt(2 * log(2));
     cv::Mat mean, stddev;
-    cv::meanStdDev(src, mean, stddev);
+    cv::meanStdDev(src_greyscale, mean, stddev);
     stddev *= coef;
 
     //https://sourceforge.net/projects/astrofocuser/?source=typ_redirect
@@ -189,4 +189,12 @@ cv::Mat utility::opencv::algos::get_FWHM(const cv::Mat &src)
     });
 
     return stddev;
+}
+
+
+cv::Mat utility::opencv::algos::get_Blureness(const cv::Mat &src_greyscale)
+{
+    cv::Mat dest;
+    cv::Laplacian(src_greyscale, dest, src_greyscale.type(), laplasianBlurKernelSize);
+    return get_FWHM(dest);
 }

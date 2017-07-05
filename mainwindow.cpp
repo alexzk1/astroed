@@ -177,7 +177,11 @@ void MainWindow::openPreviewTab(const imaging::image_buffer_ptr& image, const QS
     if (!fileName.isEmpty())
     {
         auto meta = IMAGE_LOADER.getMeta(fileName);
+        auto txt  = meta.getStringValue();
         ui->lblZoomPix->setStatusTip(meta.getStringValue());
+        if (statusBar())
+            statusBar()->showMessage(txt);
+
     }
     ui->lblZoomPix->setPixmap(QPixmap::fromImage(*image));
     if (zoomPicModeActions.size() > pictureRole && zoomPicModeActions.at(pictureRole))

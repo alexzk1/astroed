@@ -207,9 +207,9 @@ namespace imaging
 
         struct precalcs_t
         {
-            double fullFWHM;
+            double blureness;
             precalcs_t():
-                fullFWHM(-1)
+                blureness(-1)
             {}
         } precalcs;
 

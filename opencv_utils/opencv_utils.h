@@ -41,7 +41,8 @@ namespace utility
             //----------------------------------------------------------
             void InverseFFT(const fft_planes_t& FImg, cv::Mat &Dst);
 
-            cv::Mat get_FWHM(const cv::Mat& src);
+            cv::Mat get_FWHM(const cv::Mat& src_greyscale);
+            cv::Mat get_Blureness(const cv::Mat& src_greyscale);
         }
     };
 };

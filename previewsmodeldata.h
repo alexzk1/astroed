@@ -49,9 +49,14 @@ public:
         return preview && !preview->isNull();
     }
 
+    auto getPreviewMeta() const
+    {
+        return PREVIEW_LOADER.getMeta(filePath);
+    }
+
     QString getPreviewInfo() const
     {
-        return PREVIEW_LOADER.getMeta(filePath).getStringValue();
+        return getPreviewMeta().getStringValue();
     }
 
     const QImage& getPreview() const
