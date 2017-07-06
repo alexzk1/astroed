@@ -25,7 +25,7 @@
        <enum>QTabWidget::West</enum>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tabFiles">
        <property name="focusPolicy">
@@ -385,6 +385,18 @@
    </property>
    <property name="toolTip">
     <string>Clears RAM cache of loaded images.</string>
+   </property>
+  </action>
+  <action name="actionGuess_Bests">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/icons/best-icon.png</normaloff>:/icons/icons/best-icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Guess Bests</string>
+   </property>
+   <property name="toolTip">
+    <string>Tries to guess best quality images as sources.</string>
    </property>
   </action>
  </widget>

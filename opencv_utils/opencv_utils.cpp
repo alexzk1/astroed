@@ -7,7 +7,7 @@
 #include <opencv/highgui.h>
 #endif
 
-const static auto laplasianBlurKernelSize = 7;//odd, bigger value = slower, but less noise counting
+const static auto laplasianBlurKernelSize = 3;//odd, bigger value = slower, but less noise counting
 
 
 using namespace utility::opencv;

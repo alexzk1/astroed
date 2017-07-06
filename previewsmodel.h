@@ -40,6 +40,11 @@ public:
     bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
 
     void guessDarks();
+
+    utility::runner_t pickBests(int from, int to);
+    utility::runner_t pickBests();
+
+
     void setAllRole(int role_id); //should be same order as in fileRoles
     void setRoleFor(const QString& fileName, int role_id);
 

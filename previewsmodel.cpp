@@ -5,7 +5,6 @@
 #include <queue>
 #include <set>
 #include <map>
-#include <algorithm>
 
 #include <QDirIterator>
 #include <QDir>
@@ -37,6 +36,7 @@
 #include "../customtableview.h"
 #include "lua/luasrc/customlua.h"
 #include "lua/lua_params.h"
+#include "utils/palgorithm.h"
 
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------CONFIG------------------------------------------------------------------------------------------------
@@ -142,7 +142,7 @@ bool isDark(const T& path)
 }
 
 
-constexpr static int64_t previews_half_range = 5;
+constexpr static int64_t previews_half_range = 10;
 
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------MODEL-------------------------------------------------------------------------------------------------
@@ -474,16 +474,99 @@ void PreviewsModel::setRoleForPriv(const QString &fileName, int role_id)
     }
 }
 
-
 void PreviewsModel::guessDarks()
 {
     //trying to guess dark frames according to path name, which should contain "dark" word
+    std::lock_guard<decltype (listMut)> grd(listMut);
+    const static QVector<int> roles {Qt::EditRole};
     for (int row = 0, size = rowCount(); row < size; ++row)
     {
         const auto& itm = modelFiles.at(static_cast<size_t>(row));
         if (isDark(itm.getFilePath()))
-            setData(index(row, getSpecialColumnId()), 2, Qt::EditRole);
+        {
+            auto ind = index(row, getSpecialColumnId());
+            if (setDataPriv(ind, 2, Qt::EditRole))
+                emit dataChanged(ind, ind, roles);
+        }
     }
+}
+
+
+utility::runner_t PreviewsModel::pickBests()
+{
+    return pickBests(0, static_cast<int>(modelFiles.size()) - 1);
+}
+
+utility::runner_t PreviewsModel::pickBests(int from, int to) //zero based indexes of the range
+{
+    from = std::max(0, from); from = std::min(from, static_cast<decltype(from)>(modelFiles.size()) - 1);
+    to   = std::max(0, to);   to   = std::min(to,   static_cast<decltype(to)>(modelFiles.size()) - 1);
+
+    const static auto spid = static_cast<size_t>(getSpecialColumnId());
+    const static QVector<int> roles {Qt::EditRole};
+
+    //trying to pick bests amoung
+    struct sort_t
+    {
+        QString file;
+        double  weight;
+    };
+
+    return utility::startNewRunner([this, from, to](auto stop)
+    {
+        std::vector<sort_t> source;
+        {
+            std::lock_guard<decltype (listMut)> grd(listMut);
+            source.reserve(modelFiles.size());
+
+            for (int i = from; i <= to; ++i)
+            {
+                const auto& file = modelFiles.at(i);
+                //skipping darks
+                if (2 != file.getValue(spid, captions.at(spid).initialValue).toInt())
+                    source.push_back({file.getFilePath(), -1});
+            }
+        }
+
+        if (source.size())
+        {
+            double min = IMAGE_LOADER.getMeta(source.at(0).file).precalcs.blureness;
+            double max = min;
+
+            for (auto& s : source)
+            {
+                if (*stop)
+                    break;
+                s.weight = IMAGE_LOADER.getMeta(s.file).precalcs.blureness;
+                max = std::max(s.weight, max);
+                min = std::min(s.weight, min);
+            }
+            const double accept = (max - min) * 0.7 + min;
+
+            {
+                std::lock_guard<decltype (listMut)> grd(listMut);
+                auto its = modelFiles.begin();
+
+                for (auto it = source.begin(); it!=source.end() && !*stop;++it)
+                {
+                    if (accept > it->weight)
+                        continue;
+                    //using that fact, that modelFiles and source are in same string order
+                    //if we do some other sort of modelFiles later - that may break
+                    its = ALG_NS::find_if(its, modelFiles.end(),[&it](auto& s)
+                    {
+                       return s.getFilePath() == it->file;
+                    });
+
+                    if (its == modelFiles.end())
+                        break;
+
+                    its->valuesPerColumn[spid] = 1;
+                }
+                simulateModelReset();
+            }
+        }
+    });
 }
 
 void PreviewsModel::setAllRole(int role_id)

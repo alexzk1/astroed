@@ -73,6 +73,8 @@ private slots:
 
     void on_actionWipe_Cache_triggered();
 
+    void on_actionGuess_Bests_triggered();
+
 private:
     Ui::MainWindow *ui;
     QPointer<QFileSystemModel> dirsModel;

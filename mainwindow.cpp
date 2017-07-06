@@ -420,6 +420,7 @@ void MainWindow::setupFsBrowsing()
 
         toolBox->addSeparator();
         toolBox->addAction(ui->actionGuess_Darks);
+        toolBox->addAction(ui->actionGuess_Bests);
         toolBox->addAction(ui->actionCopy_as_Lua);
     }
 }
@@ -686,4 +687,12 @@ void MainWindow::on_actionWipe_Cache_triggered()
 {
     IMAGE_LOADER.wipe();
     PREVIEW_LOADER.wipe();
+}
+
+void MainWindow::on_actionGuess_Bests_triggered()
+{
+    if (previewsModel)
+    {
+        static auto tptr = previewsModel->pickBests();
+    }
 }
