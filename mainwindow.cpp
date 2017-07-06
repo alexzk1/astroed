@@ -693,6 +693,7 @@ void MainWindow::on_actionGuess_Bests_triggered()
 {
     if (previewsModel)
     {
-        static auto tptr = previewsModel->pickBests();
+        static utility::runner_t tptr;
+        tptr = previewsModel->pickBests();
     }
 }

@@ -533,6 +533,7 @@ utility::runner_t PreviewsModel::pickBests(int from, int to) //zero based indexe
             double min = IMAGE_LOADER.getMeta(source.at(0).file).precalcs.blureness;
             double max = min;
 
+            int scntr = 1;
             for (auto& s : source)
             {
                 if (*stop)
@@ -540,6 +541,9 @@ utility::runner_t PreviewsModel::pickBests(int from, int to) //zero based indexe
                 s.weight = IMAGE_LOADER.getMeta(s.file).precalcs.blureness;
                 max = std::max(s.weight, max);
                 min = std::min(s.weight, min);
+
+                if (!(scntr++ % 20))
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10)); //need some sleep or it pushes HDD too hard
             }
             const double accept = (max - min) * 0.7 + min;
 
