@@ -41,11 +41,13 @@ public:
 
     void guessDarks();
 
-    utility::runner_t pickBests(int from, int to);
-    utility::runner_t pickBests();
+    void pickBests(const utility::runner_f_t& end_func, int from, int to);
+    void pickBests(const utility::runner_f_t &end_func);
 
 
+    //this is "usage role" like "Source, Ignored, Darks"
     void setAllRole(int role_id); //should be same order as in fileRoles
+    //this is "usage role" like "Source, Ignored, Darks"
     void setRoleFor(const QString& fileName, int role_id);
 
     Qt::ItemFlags flags(const QModelIndex& index) const override;
@@ -76,6 +78,7 @@ private:
     std::map<int, QStringList> fixedCombosLists; //wana to do generic solution
     QTimer scrollDelayedLoader;
     QFileInfo currentFolder;
+    std::atomic<bool> shouldStopPretty;
 
     void haveFilesList(const files_t& list, const utility::runnerint_t& stop);
     void loadCurrentInterval();

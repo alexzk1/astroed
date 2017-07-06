@@ -136,6 +136,8 @@ MainWindow::MainWindow(QWidget *parent) :
     //todo: add complete api list here to lexer
     LuaEditor::createSharedLuaLexer({{"apiTest", "param", "test function"}});
     ui->tabScript->layout()->addWidget(new LuaEditor(this));
+
+    connect(this, &MainWindow::prettyEnded, this, &MainWindow:: on_actionGuess_Bests_Ended, Qt::QueuedConnection);
 }
 
 MainWindow::~MainWindow()
@@ -199,12 +201,13 @@ void MainWindow::showTempNotify(const QString &text, int delay)
     statusBar()->showMessage(text, delay);
 }
 
-void MainWindow::resetPreview()
+void MainWindow::resetPreview(bool resetRoles)
 {
     previewShift = 0;
     ui->scrollAreaZoom->zoomFitWindow();
     ui->scrollAreaZoom->ensureVisible(0,0);
-    if (zoomPicModeActions.size() && zoomPicModeActions.at(0))
+
+    if (resetRoles && zoomPicModeActions.size() && zoomPicModeActions.at(0))
     {
         if (zoomPicModeActionsGroup)
             zoomPicModeActionsGroup->blockSignals(true);
@@ -691,9 +694,18 @@ void MainWindow::on_actionWipe_Cache_triggered()
 
 void MainWindow::on_actionGuess_Bests_triggered()
 {
+    ui->actionGuess_Bests->setEnabled(false);
     if (previewsModel)
     {
-        static utility::runner_t tptr;
-        tptr = previewsModel->pickBests();
+        previewsModel->pickBests([this](auto)
+        {
+            //todo: need to reenable action, warning! this is NOT GUI thread here
+            emit prettyEnded();
+        });
     }
+}
+
+void MainWindow::on_actionGuess_Bests_Ended()
+{
+    ui->actionGuess_Bests->setEnabled(true);
 }

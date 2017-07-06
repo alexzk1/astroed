@@ -246,7 +246,8 @@ PreviewsModel::PreviewsModel(QObject *parent)
       urgentRowScrolled(0),
       modelFilesAmount(0),
       scrollDelayedLoader(),
-      currentFolder()
+      currentFolder(),
+      shouldStopPretty(false)
 {
     /*
      * QObject::connect: Cannot queue arguments of type 'Qt::Orientation'
@@ -258,6 +259,7 @@ PreviewsModel::PreviewsModel(QObject *parent)
     {
         //it's kinda limitation of qt-gui, same thread cannot list files & load files, bcs list is model reset and load is fillup of the model,
         //if we do in 1 thread, it will not be smooth, i.e. all empty until full load
+        shouldStopPretty = true;
         emit this->startedPreviewsLoad(true);
         urgentRowScrolled = 0;
         loadCurrentInterval();
@@ -461,6 +463,7 @@ bool PreviewsModel::setDataPriv(const QModelIndex &index, const QVariant &value,
     return changed;
 }
 
+//this is "usage role" like "Source, Ignored, Darks"
 void PreviewsModel::setRoleForPriv(const QString &fileName, int role_id)
 {
     const QVariant val(role_id);
@@ -471,6 +474,27 @@ void PreviewsModel::setRoleForPriv(const QString &fileName, int role_id)
             setDataPriv(index(static_cast<int>(row), getSpecialColumnId()), val, Qt::EditRole);
             break;
         }
+    }
+}
+//this is "usage role" like "Source, Ignored, Darks"
+
+void PreviewsModel::setRoleFor(const QString &fileName, int role_id)
+{
+    const static QVector<int> roles {Qt::EditRole};
+    std::lock_guard<decltype (listMut)> grd(listMut);
+    setRoleForPriv(fileName, role_id);
+}
+
+void PreviewsModel::setAllRole(int role_id)
+{
+    if (role_id > -1 && static_cast<size_t>(role_id) < fileRoles.size())
+    {
+        const QVariant val(role_id);
+        std::lock_guard<decltype (this->listMut)> grd(this->listMut);
+        for (int row = 0, size = rowCount(); row < size; ++row)
+            setDataPriv(index(row, getSpecialColumnId()), val, Qt::EditRole);
+
+        emit dataChanged(index(0, getSpecialColumnId()), index(rowCount() - 1, getSpecialColumnId()), QVector<int>() << Qt::EditRole);
     }
 }
 
@@ -492,18 +516,18 @@ void PreviewsModel::guessDarks()
 }
 
 
-utility::runner_t PreviewsModel::pickBests()
+void PreviewsModel::pickBests(const utility::runner_f_t& end_func)
 {
-    return pickBests(0, static_cast<int>(modelFiles.size()) - 1);
+    return pickBests(end_func, 0, static_cast<int>(modelFiles.size()) - 1);
 }
 
-utility::runner_t PreviewsModel::pickBests(int from, int to) //zero based indexes of the range
+void PreviewsModel::pickBests(const utility::runner_f_t &end_func, int from, int to) //zero based indexes of the range
 {
     from = std::max(0, from); from = std::min(from, static_cast<decltype(from)>(modelFiles.size()) - 1);
     to   = std::max(0, to);   to   = std::min(to,   static_cast<decltype(to)>(modelFiles.size()) - 1);
 
     const static auto spid = static_cast<size_t>(getSpecialColumnId());
-    const static QVector<int> roles {Qt::EditRole};
+
 
     //trying to pick bests amoung
     struct sort_t
@@ -511,12 +535,15 @@ utility::runner_t PreviewsModel::pickBests(int from, int to) //zero based indexe
         QString file;
         double  weight;
     };
-
-    return utility::startNewRunner([this, from, to](auto stop)
+    static utility::runner_t tptr;
+    tptr.reset();
+    tptr = utility::startNewRunner([this, from, to, end_func](auto stop)
     {
         std::vector<sort_t> source;
         {
             std::lock_guard<decltype (listMut)> grd(listMut);
+            shouldStopPretty = false;
+
             source.reserve(modelFiles.size());
 
             for (int i = from; i <= to; ++i)
@@ -536,14 +563,14 @@ utility::runner_t PreviewsModel::pickBests(int from, int to) //zero based indexe
             int scntr = 1;
             for (auto& s : source)
             {
-                if (*stop)
+                if (*stop || shouldStopPretty)
                     break;
                 s.weight = IMAGE_LOADER.getMeta(s.file).precalcs.blureness;
                 max = std::max(s.weight, max);
                 min = std::min(s.weight, min);
 
-                if (!(scntr++ % 20))
-                    std::this_thread::sleep_for(std::chrono::milliseconds(10)); //need some sleep or it pushes HDD too hard
+                if (0 == (scntr++ % previews_half_range))
+                    std::this_thread::sleep_for(std::chrono::milliseconds(25)); //need some sleep or it pushes HDD too hard
             }
             const double accept = (max - min) * 0.7 + min;
 
@@ -551,10 +578,8 @@ utility::runner_t PreviewsModel::pickBests(int from, int to) //zero based indexe
                 std::lock_guard<decltype (listMut)> grd(listMut);
                 auto its = modelFiles.begin();
 
-                for (auto it = source.begin(); it!=source.end() && !*stop;++it)
+                for (auto it = source.begin(); it!=source.end() && !*stop && !shouldStopPretty;++it)
                 {
-                    if (accept > it->weight)
-                        continue;
                     //using that fact, that modelFiles and source are in same string order
                     //if we do some other sort of modelFiles later - that may break
                     its = ALG_NS::find_if(its, modelFiles.end(),[&it](auto& s)
@@ -565,31 +590,14 @@ utility::runner_t PreviewsModel::pickBests(int from, int to) //zero based indexe
                     if (its == modelFiles.end())
                         break;
 
-                    its->valuesPerColumn[spid] = 1;
+                    its->valuesPerColumn[spid] = (accept > it->weight) ? 0 : 1; //here 0-1 are indexes in list Ignore,Source,Dark
                 }
-                simulateModelReset();
+                if (!*stop && !shouldStopPretty) //not sure if we need this if
+                    simulateModelReset();
             }
         }
+        end_func(stop);
     });
-}
-
-void PreviewsModel::setAllRole(int role_id)
-{
-    if (role_id > -1 && static_cast<size_t>(role_id) < fileRoles.size())
-    {
-        const QVariant val(role_id);
-        std::lock_guard<decltype (this->listMut)> grd(this->listMut);
-        for (int row = 0, size = rowCount(); row < size; ++row)
-            setDataPriv(index(row, getSpecialColumnId()), val, Qt::EditRole);
-
-        emit dataChanged(index(0, getSpecialColumnId()), index(rowCount() - 1, getSpecialColumnId()), QVector<int>() << Qt::EditRole);
-    }
-}
-
-void PreviewsModel::setRoleFor(const QString &fileName, int role_id)
-{
-    std::lock_guard<decltype (listMut)> grd(listMut);
-    setRoleForPriv(fileName, role_id);
 }
 
 Qt::ItemFlags PreviewsModel::flags(const QModelIndex &index) const
@@ -891,9 +899,11 @@ bool PreviewsDelegate::showLastClickedPreview(int shift, const QSize& lastSize)
                 if (img != nullptr)
                 {
                     const bool reset = lastSize != img->size(); //next line (openPreview) will change referenced lastSize to current
-                    MainWindow::instance()->openPreviewTab(img, fileName, static_cast<size_t>(index.data(Qt::EditRole).toInt())); //fixme: maybe do some signal/ slot for that
+                    auto currRole = static_cast<size_t>(index.data(Qt::EditRole).toInt());
+                    qDebug() << "CurrRole: " << currRole;
+                    MainWindow::instance()->openPreviewTab(img, fileName, currRole); //fixme: maybe do some signal/ slot for that
                     if (reset)
-                        MainWindow::instance()->resetPreview();//fixme: maybe do some signal/ slot for that
+                        MainWindow::instance()->resetPreview(false);//fixme: maybe do some signal/ slot for that
                 }
             }
         }

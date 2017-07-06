@@ -35,7 +35,7 @@ public:
     void loadProjectFromFile(const QString& name);
 public slots:
     void openPreviewTab(const imaging::image_buffer_ptr &image, const QString &fileName, size_t pictureRole);
-    void resetPreview();
+    void resetPreview(bool resetRoles = true);
     void selectPath(const QString &path, bool collapse = true);
     void showTempNotify(const QString& text, int delay = 10000);
 protected:
@@ -46,6 +46,8 @@ protected:
     virtual void recurseRead(QSettings& settings, QObject* object) override;
 
     void currentDirChanged(const QString& dir);
+signals:
+    void prettyEnded();
 private slots:
     void on_tabsWidget_currentChanged(int index);
     void on_actionNewtone_toggled(bool checked);
@@ -74,7 +76,7 @@ private slots:
     void on_actionWipe_Cache_triggered();
 
     void on_actionGuess_Bests_triggered();
-
+    void on_actionGuess_Bests_Ended();
 private:
     Ui::MainWindow *ui;
     QPointer<QFileSystemModel> dirsModel;
