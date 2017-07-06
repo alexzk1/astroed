@@ -625,6 +625,7 @@ void PreviewsModel::setCurrentFolder(const QString &path, bool recursive)
     loadPreviews.reset();
     listFiles.reset();
     QFileInfo inf = currentFolder = QFileInfo(path);
+    IMAGE_LOADER.gc();
 
     listFiles = utility::startNewRunner([this, recursive, inf](auto stop)
     {
@@ -802,6 +803,7 @@ void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list, const util
 
 void PreviewsModel::loadCurrentInterval()
 {
+    IMAGE_LOADER.gc();
     loadPreviews = utility::startNewRunner([this](auto stop)
     {
         auto sz   = static_cast<size_t>(modelFilesAmount);
@@ -900,7 +902,7 @@ bool PreviewsDelegate::showLastClickedPreview(int shift, const QSize& lastSize)
                 {
                     const bool reset = lastSize != img->size(); //next line (openPreview) will change referenced lastSize to current
                     auto currRole = static_cast<size_t>(index.data(Qt::EditRole).toInt());
-                    qDebug() << "CurrRole: " << currRole;
+                   // qDebug() << "CurrRole: " << currRole;
                     MainWindow::instance()->openPreviewTab(img, fileName, currRole); //fixme: maybe do some signal/ slot for that
                     if (reset)
                         MainWindow::instance()->resetPreview(false);//fixme: maybe do some signal/ slot for that
