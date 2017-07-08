@@ -406,7 +406,8 @@ void MainWindow::setupFsBrowsing()
     auto toolBox = addToolbarToLayout(ui->layoutFilesTree);
     if (toolBox)
     {
-        toolBox->setToolButtonStyle(Qt::ToolButtonIconOnly);
+        //toolBox->setToolButtonStyle(Qt::ToolButtonIconOnly);
+
         toolBox->addAction(ui->actionReload);
         toolBox->addAction(ui->actionRecursive_Listing);
         connect(ui->actionRecursive_Listing, &QAction::triggered, this, [this, lastFolder]()
@@ -414,17 +415,23 @@ void MainWindow::setupFsBrowsing()
             this->currentDirChanged(*lastFolder);
         }, Qt::QueuedConnection);
 
-        //fixme: ok, that is really wrong placement, better to make 1 new toolbar, but then I need layout ... couldn't click it proper in editor,
-        //any way, I want next buttons be on 1st tab (and hidden when tab switched)
+        //toolBox->addSeparator();
+    }
+
+
+    toolBox = addToolbarToLayout(ui->layoutPreviews);
+    if (toolBox)
+    {
+        //toolBox->setToolButtonStyle(Qt::ToolButtonIconOnly);
+
+        toolBox->addAction(ui->actionGuess_Bests);
+        toolBox->addAction(ui->actionGuess_Darks);
+        toolBox->addAction(ui->actionCopy_as_Lua);
         toolBox->addSeparator();
         toolBox->addAction(ui->actionSet_All_Source);
         toolBox->addAction(ui->actionSet_All_Ignored);
         toolBox->addAction(ui->actionSet_All_Darks);
 
-        toolBox->addSeparator();
-        toolBox->addAction(ui->actionGuess_Darks);
-        toolBox->addAction(ui->actionGuess_Bests);
-        toolBox->addAction(ui->actionCopy_as_Lua);
     }
 }
 

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>911</width>
-    <height>645</height>
+    <height>647</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -66,40 +66,49 @@
             </item>
            </layout>
           </widget>
-          <widget class="CustomTableView" name="previewsTable">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-             <horstretch>7</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>250</width>
-             <height>500</height>
-            </size>
-           </property>
-           <property name="mouseTracking">
-            <bool>true</bool>
-           </property>
-           <property name="focusPolicy">
-            <enum>Qt::StrongFocus</enum>
-           </property>
-           <property name="toolTipDuration">
-            <number>0</number>
-           </property>
-           <property name="editTriggers">
-            <set>QAbstractItemView::AllEditTriggers</set>
-           </property>
-           <property name="selectionMode">
-            <enum>QAbstractItemView::NoSelection</enum>
-           </property>
-           <property name="selectionBehavior">
-            <enum>QAbstractItemView::SelectRows</enum>
-           </property>
-           <property name="sortingEnabled">
-            <bool>false</bool>
-           </property>
+          <widget class="QWidget" name="layoutWidget2">
+           <layout class="QVBoxLayout" name="layoutPreviews">
+            <property name="spacing">
+             <number>0</number>
+            </property>
+            <item>
+             <widget class="CustomTableView" name="previewsTable">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                <horstretch>7</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>250</width>
+                <height>500</height>
+               </size>
+              </property>
+              <property name="mouseTracking">
+               <bool>true</bool>
+              </property>
+              <property name="focusPolicy">
+               <enum>Qt::StrongFocus</enum>
+              </property>
+              <property name="toolTipDuration">
+               <number>0</number>
+              </property>
+              <property name="editTriggers">
+               <set>QAbstractItemView::AllEditTriggers</set>
+              </property>
+              <property name="selectionMode">
+               <enum>QAbstractItemView::NoSelection</enum>
+              </property>
+              <property name="selectionBehavior">
+               <enum>QAbstractItemView::SelectRows</enum>
+              </property>
+              <property name="sortingEnabled">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </widget>
          </widget>
         </item>
@@ -142,7 +151,7 @@
              <x>0</x>
              <y>0</y>
              <width>862</width>
-             <height>518</height>
+             <height>520</height>
             </rect>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -270,7 +279,7 @@
      <normaloff>:/icons/icons/Books-2-icon.png</normaloff>:/icons/icons/Books-2-icon.png</iconset>
    </property>
    <property name="text">
-    <string>Recursive Listing</string>
+    <string>Recursive</string>
    </property>
    <property name="toolTip">
     <string>Recurse read (list subfolders). Pathes which contain word &quot;dark&quot; will be always listed regardless switch.</string>

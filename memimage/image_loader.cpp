@@ -84,7 +84,7 @@ void image_cacher::findImage(const QString& key, image_t_s& res)
     if (wcache.count(key))
     {
         //trying to restore pointer to somewhere existing image (it is possible somebody else holds shared_ptr copy)
-        res = wcache.at(key).second;
+        res = wcache.at(key).second; //overloaded operator =, it does lock()
     }
 
     if (!res)
@@ -263,7 +263,7 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
 
         if (is_url)
         {
-            //todo:videofs is expexted to be in form: videofs://file_path.mov#frame_number
+            //videofs is expexted to be in form: videofs://file_path.mov#frame_number
 #ifdef USING_VIDEO_FS
 
             if (url.scheme() == vfs_scheme)
