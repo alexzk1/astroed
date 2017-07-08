@@ -511,6 +511,7 @@ QToolBar *MainWindow::addToolbarToLayout(QLayout *src, int pos)
     {
         auto st = (ui->mainToolBar)?ui->mainToolBar->toolButtonStyle():Qt::ToolButtonFollowStyle;
         result->setToolButtonStyle(st);
+        result->setIconSize((ui->mainToolBar)?ui->mainToolBar->iconSize():QSize(20, 20));
     }
 
     return result;
