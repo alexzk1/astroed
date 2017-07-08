@@ -224,11 +224,6 @@ void PreviewsModel::loadProjectCode(const std::string &src)
     setCurrentFolder(root, false); //fixme: recursivness is not stored, do some signal/slot to reflect that in GUI
 }
 
-bool PreviewsModel::isParsingVideo()
-{
-    return StaticSettingsMap::getGlobalSetts().readBool("Bool_parse_frames");
-}
-
 int PreviewsModel::getSpecialColumnId() //dunno how to name it really
 {
     return 2;
@@ -775,8 +770,7 @@ void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list, const util
         auto s = fi.absoluteFilePath();
 
 #ifdef USING_VIDEO_FS
-        const bool ipv = isParsingVideo();
-        if (ipv && supportedVids.contains(fi.suffix().toLower()))
+        if (supportedVids.contains(fi.suffix().toLower()))
         {
             auto frames = IMAGE_LOADER.getVideoFramesLinks(s);
             if (frames.size())
@@ -798,7 +792,7 @@ void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list, const util
         modelFiles.clear();
     modelFilesAmount = static_cast<int64_t>(modelFiles.size());
     emit headerDataChanged(Qt::Horizontal, 0, 0);
-    //qDebug() << "Files listed "<<modelFiles.size();
+    qDebug() << "Files listed "<<modelFiles.size();
 }
 
 void PreviewsModel::loadCurrentInterval()

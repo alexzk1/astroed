@@ -60,7 +60,6 @@ public:
     virtual void generateProjectCode(std::ostream& out) const override;
     virtual void loadProjectCode(const std::string& src) override;
 
-    bool static isParsingVideo();
     int  static getSpecialColumnId(); //this column may have automatic changes in loop
     virtual ~PreviewsModel();
 private slots:
