@@ -347,8 +347,6 @@ void MainWindow::setupFsBrowsing()
     dirsModel = new QFileSystemModel(this);
     dirsModel->setRootPath("/");
 #ifdef USING_VIDEO_FS
-    //BUG: this code executes once so cannot relay on setting :(
-    //if (previewsModel && previewsModel->isParsingVideo())
     if (previewsModel)
     {
         dirsModel->setFilter(QDir::NoDotAndDotDot | QDir::AllDirs | QDir::Files);
@@ -361,7 +359,6 @@ void MainWindow::setupFsBrowsing()
         dirsModel->setNameFilters(filter);
         dirsModel->setNameFilterDisables(false);
     }
-    //else
 #else
     dirsModel->setFilter(QDir::NoDotAndDotDot | QDir::AllDirs);
 #endif

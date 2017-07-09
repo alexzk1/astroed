@@ -11,7 +11,10 @@
 namespace luavm
 {
     template<class T, typename T2 = typename std::enable_if<!std::is_enum<T>::value, void>::type>
-    T variantTo(const QVariant& var);
+    T variantTo(const QVariant& var)
+    {
+        return qvariant_cast<T>(var);
+    }
 
     //to resolve enum is ambiqous with ints ... making different amount of template args
     template<typename T, typename T3 = int, typename T2 = typename std::enable_if<std::is_enum<T>::value, T>::type>
@@ -19,60 +22,6 @@ namespace luavm
     T variantTo(const QVariant& var)
     {
         return static_cast<T>(var.toInt());
-    }
-
-    template<>
-    inline QString variantTo(const QVariant& var)
-    {
-        return var.toString();
-    }
-
-    template<>
-    inline QDate variantTo(const QVariant& var)
-    {
-        return var.toDate();
-    }
-
-    template<>
-    inline int variantTo(const QVariant& var)
-    {
-        return var.toInt();
-    }
-
-    template<>
-    inline qint64 variantTo(const QVariant& var)
-    {
-        return var.toLongLong();
-    }
-
-    template<>
-    inline bool variantTo(const QVariant& var)
-    {
-        return var.toBool();
-    }
-
-    template<>
-    inline uint variantTo(const QVariant& var)
-    {
-        return var.toUInt();
-    }
-
-    template<>
-    inline quint64 variantTo(const QVariant& var)
-    {
-        return var.toULongLong();
-    }
-
-    template<>
-    inline double variantTo(const QVariant& var)
-    {
-        return var.toDouble();
-    }
-
-    template<>
-    inline QVariant variantTo(const QVariant& var)
-    {
-        return var;
     }
 }
 #endif
