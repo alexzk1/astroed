@@ -27,12 +27,13 @@ namespace utility
     template <class T>
     class ItCanBeOnlyOne
     {
-    private:
+    public:
         using T_ptr = T*;
-
-        static T_ptr& staticPtr()
+    private:
+        using self_ptr_t = ItCanBeOnlyOne<T>*;
+        static self_ptr_t& staticPtr()
         {
-            static T_ptr ptr = nullptr;
+            static self_ptr_t ptr = nullptr;
             return ptr;
         }
 
@@ -50,16 +51,16 @@ namespace utility
                 throw std::runtime_error(s);
             }
             else
-                staticPtr() = static_cast<T*>(this);
+                staticPtr() = this;
         }
         virtual ~ItCanBeOnlyOne()
         {
             lock().clear();
         }
     public:
-        static T* instance()
+        static T_ptr instance()
         {
-            return staticPtr();
+            return dynamic_cast<T_ptr>(staticPtr());
         }
     };
 }

@@ -43,6 +43,8 @@ CONFIG(debug) {
      message( "Building the DEBUG Version" )
      QMAKE_CXXFLAGS += -O0 -g
      DEFINES += _DEBUG
+     QMAKE_CXXFLAGS += -fsanitize=undefined -fsanitize=vptr
+     LIBS += -lubsan
 }
 else {
     DEFINES += NDEBUG

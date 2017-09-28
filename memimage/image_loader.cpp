@@ -383,7 +383,7 @@ QStringList image_loader::getVideoFramesLinks(const QString &videoFileName)
     QStringList res;
 #ifdef USING_VIDEO_FS
     VideoCapturePtr ptr;
-    int fcount = 0;
+    int64_t fcount = 0;
     {
         std::lock_guard<std::recursive_mutex> guard(mutex);
         ptr = getVideoCapturer(videoFileName);
@@ -450,7 +450,7 @@ image_cacher::image_t_s image_preview_loader::createImage(const QString &key) co
     image_t_s src;
     IMAGE_LOADER.findImage(key, src);
     //keeping aspect ratio
-    int width = static_cast<decltype(width)>(previewSize * src.data->width() / static_cast<double>(src.data->height()));
+    int width = static_cast<decltype(width)>(static_cast<int64_t>(previewSize * src.data->width() / static_cast<double>(src.data->height())));
     src.data  = decltype (src.data)(new QImage(src.data->scaled(width, previewSize, Qt::KeepAspectRatio)));
     return src;
 }
