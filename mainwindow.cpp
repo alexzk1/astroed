@@ -708,7 +708,7 @@ void MainWindow::on_actionGuess_Bests_triggered()
     ui->actionGuess_Bests->setEnabled(false);
     if (previewsModel)
     {
-        previewsModel->pickBests([this](auto)
+        previewsModel->pickBests([this](const auto& stop)
         {
             //todo: need to reenable action, warning! this is NOT GUI thread here
             emit prettyEnded();

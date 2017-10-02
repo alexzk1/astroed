@@ -77,7 +77,7 @@ private:
     std::map<int, QStringList> fixedCombosLists; //wana to do generic solution
     QTimer scrollDelayedLoader;
     QFileInfo currentFolder;
-    std::atomic<bool> shouldStopPretty;
+    utility::runner_t bestPicker;
 
     void haveFilesList(const files_t& list, const utility::runnerint_t& stop);
     void loadCurrentInterval();

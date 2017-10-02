@@ -242,7 +242,7 @@ PreviewsModel::PreviewsModel(QObject *parent)
       modelFilesAmount(0),
       scrollDelayedLoader(),
       currentFolder(),
-      shouldStopPretty(false)
+      bestPicker(nullptr)
 {
     /*
      * QObject::connect: Cannot queue arguments of type 'Qt::Orientation'
@@ -254,7 +254,7 @@ PreviewsModel::PreviewsModel(QObject *parent)
     {
         //it's kinda limitation of qt-gui, same thread cannot list files & load files, bcs list is model reset and load is fillup of the model,
         //if we do in 1 thread, it will not be smooth, i.e. all empty until full load
-        shouldStopPretty = true;
+        bestPicker.reset();
         emit this->startedPreviewsLoad(true);
         urgentRowScrolled = 0;
         loadCurrentInterval();
@@ -530,14 +530,12 @@ void PreviewsModel::pickBests(const utility::runner_f_t &end_func, int from, int
         QString file;
         double  weight;
     };
-    static utility::runner_t tptr;
-    tptr.reset();
-    tptr = utility::startNewRunner([this, from, to, end_func](auto stop)
+
+    bestPicker = utility::startNewRunner([this, from, to, end_func](auto stop)
     {
         std::vector<sort_t> source;
         {
             std::lock_guard<decltype (listMut)> grd(listMut);
-            shouldStopPretty = false;
 
             source.reserve(modelFiles.size());
 
@@ -550,46 +548,49 @@ void PreviewsModel::pickBests(const utility::runner_f_t &end_func, int from, int
             }
         }
 
-        if (source.size())
+        if (source.size() && !*stop)
         {
-            double min = IMAGE_LOADER.getMeta(source.at(0).file).precalcs.blureness;
-            double max = min;
+            std::atomic<double> min(IMAGE_LOADER.getMeta(source.at(0).file).precalcs.blureness);
+            std::atomic<double> max(min.load());
+            std::atomic<size_t> cntr(0);
 
-            int scntr = 1;
-            for (auto& s : source)
+            //it seems better to use 1 thread here (std::) in terms of HDD pressure. However let em be atomics
+            std::find_if(source.begin(), source.end(), [&min, &max, &stop, &cntr](auto& s)->bool
             {
-                if (*stop || shouldStopPretty)
-                    break;
-                s.weight = IMAGE_LOADER.getMeta(s.file).precalcs.blureness;
-                max = std::max(s.weight, max);
-                min = std::min(s.weight, min);
+                auto w = s.weight =IMAGE_LOADER.getMeta(s.file).precalcs.blureness;
+                update_maximum(max, w);
+                update_minimum(min, w);
+                auto v = ++cntr;
+                if (!*stop && (v % 10 == 0))
+                    std::this_thread::sleep_for(std::chrono::milliseconds(25)); //hdd pressure
+                return *stop;
+            });
 
-                if (0 == (scntr++ % previews_half_range))
-                    std::this_thread::sleep_for(std::chrono::milliseconds(25)); //need some sleep or it pushes HDD too hard
-            }
             const double accept = (max - min) * 0.7 + min;
-
+            if (!*stop)
             {
                 std::lock_guard<decltype (listMut)> grd(listMut);
-                auto its = modelFiles.begin();
-
-                for (auto it = source.begin(); it!=source.end() && !*stop && !shouldStopPretty;++it)
+                ALG_NS::find_if(source.cbegin(), source.cend(), [this, &accept, &stop](const auto& it)->bool
                 {
                     //using that fact, that modelFiles and source are in same string order
                     //if we do some other sort of modelFiles later - that may break
-                    its = ALG_NS::find_if(its, modelFiles.end(),[&it](auto& s)
+
+                    auto its = modelFiles.begin();
+                    its = ALG_NS::find_if(its, modelFiles.end(),[&it, &stop](auto& s)->bool
                     {
-                       return s.getFilePath() == it->file;
+                        return *stop || s.getFilePath() == it.file;
                     });
 
-                    if (its == modelFiles.end())
-                        break;
+                    if (*stop || its == modelFiles.end())
+                        return true;
 
-                    its->valuesPerColumn[spid] = (accept > it->weight) ? 0 : 1; //here 0-1 are indexes in list Ignore,Source,Dark
-                }
-                if (!*stop && !shouldStopPretty) //not sure if we need this if
-                    simulateModelReset();
+                    its->valuesPerColumn[spid] = (accept > it.weight) ? 0 : 1; //here 0-1 are indexes in list Ignore,Source,Dark
+                    return *stop;
+                });
             }
+            if (!*stop) //not sure if we need this if
+                simulateModelReset();
+
         }
         end_func(stop);
     });
@@ -896,7 +897,7 @@ bool PreviewsDelegate::showLastClickedPreview(int shift, const QSize& lastSize)
                 {
                     const bool reset = lastSize != img->size(); //next line (openPreview) will change referenced lastSize to current
                     auto currRole = static_cast<size_t>(index.data(Qt::EditRole).toInt());
-                   // qDebug() << "CurrRole: " << currRole;
+                    // qDebug() << "CurrRole: " << currRole;
                     MainWindow::instance()->openPreviewTab(img, fileName, currRole); //fixme: maybe do some signal/ slot for that
                     if (reset)
                         MainWindow::instance()->resetPreview(false);//fixme: maybe do some signal/ slot for that
