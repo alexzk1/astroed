@@ -539,34 +539,37 @@ void PreviewsModel::pickBests(const utility::runner_f_t &end_func, int from, int
 
             source.reserve(modelFiles.size());
 
-            for (int i = from; i <= to; ++i)
+            for (int i = from; !*stop && i <= to; ++i)
             {
-                const auto& file = modelFiles.at(i);
+                auto& file = modelFiles.at(i);
                 //skipping darks
                 if (2 != file.getValue(spid, captions.at(spid).initialValue).toInt())
+                {
                     source.push_back({file.getFilePath(), -1});
+                }
             }
         }
 
         if (source.size() && !*stop)
         {
-            std::atomic<double> min(IMAGE_LOADER.getMeta(source.at(0).file).precalcs.blureness);
+             //using previews because that cache lasts longer, so meta has chance to live in RAM long
+            std::atomic<double> min(PREVIEW_LOADER.getMeta(source.at(0).file).precalcs.blureness);
             std::atomic<double> max(min.load());
             std::atomic<size_t> cntr(0);
 
             //it seems better to use 1 thread here (std::) in terms of HDD pressure. However let em be atomics
             std::find_if(source.begin(), source.end(), [&min, &max, &stop, &cntr](auto& s)->bool
             {
-                auto w = s.weight =IMAGE_LOADER.getMeta(s.file).precalcs.blureness;
+                auto w = s.weight =PREVIEW_LOADER.getMeta(s.file).precalcs.blureness;
                 update_maximum(max, w);
                 update_minimum(min, w);
                 auto v = ++cntr;
                 if (!*stop && (v % 10 == 0))
-                    std::this_thread::sleep_for(std::chrono::milliseconds(25)); //hdd pressure
+                    std::this_thread::sleep_for(std::chrono::milliseconds(5)); //hdd pressure
                 return *stop;
             });
             const double accept = (max - min) * min_quality + min;
-            qDebug() << max << min << accept;
+
             if (!*stop)
             {
                 std::lock_guard<decltype (listMut)> grd(listMut);
@@ -583,7 +586,6 @@ void PreviewsModel::pickBests(const utility::runner_f_t &end_func, int from, int
 
                     if (*stop || its == modelFiles.end())
                         return true;
-
                     its->valuesPerColumn[spid] = (it.weight >= accept) ? 1 : 0; //here 0-1 are indexes in list Ignore,Source,Dark
                     return *stop;
                 });

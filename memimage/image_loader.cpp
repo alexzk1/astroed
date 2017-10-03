@@ -30,7 +30,7 @@ constexpr static size_t lowMemory = 2ll * 1024 * 1024 * 1024;
 //mem pressure until it will start "gc" loops (with systems <2Gb ram we will have to use most of ram I think)
 const static auto& dumb           = IMAGE_LOADER; //ensuring single instance is created on program init
 
-const static int64_t longestDelay = 240; //how long at most image will remain cached since last access
+const static int64_t longestDelay = 600; //how long at most image will remain cached since last access
 const static int     previewSize  = 300; //recommended size
 
 const static QString vfs_scheme(VFS_PREFIX);
@@ -116,7 +116,7 @@ void image_cacher::gc(bool no_wait)
         utility::erase_if(cache, [this, t, no_wait](const auto& sp)
         {
             auto delay = t - sp.second.first;
-            return (sp.second.second.data.unique() && (no_wait || delay > 20)) || delay > longestDelay;
+            return (sp.second.second.data.unique() && (no_wait || delay > 60)) || delay > longestDelay;
         });
 
         //2 step, if no hard links left anywhere - clearing weaks too, meaning memory is freed already
@@ -361,7 +361,7 @@ void image_loader::gc(bool no_wait)
     image_cacher::gc(no_wait);
 #ifdef USING_VIDEO_FS
     //Nth step erase expired video frame loaders
-    utility::erase_if(frameLoaders, [this](const auto& sp)
+    utility::erase_if(frameLoaders, [](const auto& sp)
     {
         return sp.second.expired();
     });
