@@ -511,12 +511,12 @@ void PreviewsModel::guessDarks()
 }
 
 
-void PreviewsModel::pickBests(const utility::runner_f_t& end_func)
+void PreviewsModel::pickBests(const utility::runner_f_t& end_func, const double min_quality)
 {
-    return pickBests(end_func, 0, static_cast<int>(modelFiles.size()) - 1);
+    return pickBests(end_func, 0, static_cast<int>(modelFiles.size()) - 1, min_quality);
 }
 
-void PreviewsModel::pickBests(const utility::runner_f_t &end_func, int from, int to) //zero based indexes of the range
+void PreviewsModel::pickBests(const utility::runner_f_t &end_func, int from, int to, const double min_quality) //zero based indexes of the range
 {
     from = std::max(0, from); from = std::min(from, static_cast<decltype(from)>(modelFiles.size()) - 1);
     to   = std::max(0, to);   to   = std::min(to,   static_cast<decltype(to)>(modelFiles.size()) - 1);
@@ -531,7 +531,7 @@ void PreviewsModel::pickBests(const utility::runner_f_t &end_func, int from, int
         double  weight;
     };
 
-    bestPicker = utility::startNewRunner([this, from, to, end_func](auto stop)
+    bestPicker = utility::startNewRunner([this, from, to, end_func, min_quality](auto stop)
     {
         std::vector<sort_t> source;
         {
@@ -565,8 +565,8 @@ void PreviewsModel::pickBests(const utility::runner_f_t &end_func, int from, int
                     std::this_thread::sleep_for(std::chrono::milliseconds(25)); //hdd pressure
                 return *stop;
             });
-
-            const double accept = (max - min) * 0.7 + min;
+            const double accept = (max - min) * min_quality + min;
+            qDebug() << max << min << accept;
             if (!*stop)
             {
                 std::lock_guard<decltype (listMut)> grd(listMut);
@@ -584,7 +584,7 @@ void PreviewsModel::pickBests(const utility::runner_f_t &end_func, int from, int
                     if (*stop || its == modelFiles.end())
                         return true;
 
-                    its->valuesPerColumn[spid] = (accept > it.weight) ? 0 : 1; //here 0-1 are indexes in list Ignore,Source,Dark
+                    its->valuesPerColumn[spid] = (it.weight >= accept) ? 1 : 0; //here 0-1 are indexes in list Ignore,Source,Dark
                     return *stop;
                 });
             }

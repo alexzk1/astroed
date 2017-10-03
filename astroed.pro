@@ -70,7 +70,9 @@ SOURCES += main.cpp\
     previewsmodel.cpp \
     customtableview.cpp \
     scrollareapannable.cpp \
-    fixedcombowithshortcut.cpp
+    fixedcombowithshortcut.cpp \
+    sliderdrop.cpp \
+    labeledslider.cpp
 
 HEADERS  += mainwindow.h \
     previewsmodel.h \
@@ -78,10 +80,14 @@ HEADERS  += mainwindow.h \
     customtableview.h \
     custom_roles.h \
     scrollareapannable.h \
+    fixedcombowithshortcut.h \
     clickablelabel.h \
-    fixedcombowithshortcut.h
+    sliderdrop.h \
+    labeledslider.h
 
-FORMS    += mainwindow.ui
+
+FORMS    += mainwindow.ui \
+    labeledslider.ui
 
 RESOURCES += \
     resources.qrc

@@ -9,6 +9,7 @@
 #include <memory>
 #include "utils/qt_cv_utils.h"
 
+
 class QImage;
 namespace utility
 {

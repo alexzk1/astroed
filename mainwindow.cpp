@@ -18,6 +18,8 @@
 #include "config_ui/settingsdialog.h"
 #include "custom_roles.h"
 #include "utils/strutils.h"
+#include "labeledslider.h"
+#include "sliderdrop.h"
 
 #ifdef USING_OPENCV
 #include "opencv_utils/opencv_utils.h"
@@ -37,12 +39,14 @@ MainWindow::MainWindow(QWidget *parent) :
     fileNameLabel(new ClickableLabel(this)),
     loadingProgress(new QProgressBar(this)),
     settDialog(new SettingsDialog(this)),
+    bestPickDrop(nullptr),
     previewShift(0),
     lastPreviewSize(-2, -2), //i think this should differ from what delegate has (-1, -1) to ensure initial reset
     originalStylesheet(qApp->styleSheet()),
     lastPreviewFileName(),
     zoomPicModeActions(),
     zoomPicModeActionsGroup()
+
 {
     ui->setupUi(this);
 
@@ -99,7 +103,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
 
     setWindowTitle("");
-    setupFsBrowsing();
+    setupFsBrowsingAndToolbars();
     readSettings(this);
 
     statusBar()->addPermanentWidget(memoryLabel);
@@ -136,8 +140,6 @@ MainWindow::MainWindow(QWidget *parent) :
     //todo: add complete api list here to lexer
     LuaEditor::createSharedLuaLexer({{"apiTest", "param", "test function"}});
     ui->tabScript->layout()->addWidget(new LuaEditor(this));
-
-    connect(this, &MainWindow::prettyEnded, this, &MainWindow:: on_actionGuess_Bests_Ended, Qt::QueuedConnection);
 }
 
 MainWindow::~MainWindow()
@@ -342,7 +344,7 @@ QString MainWindow::getSelectedFolder()
     return "";
 }
 
-void MainWindow::setupFsBrowsing()
+void MainWindow::setupFsBrowsingAndToolbars()
 {
     dirsModel = new QFileSystemModel(this);
     dirsModel->setRootPath("/");
@@ -426,15 +428,22 @@ void MainWindow::setupFsBrowsing()
     if (toolBox)
     {
         //toolBox->setToolButtonStyle(Qt::ToolButtonIconOnly);
-
+#ifdef USING_OPENCV
         toolBox->addAction(ui->actionGuess_Bests);
+        connect(this, &MainWindow::prettyEnded, this, &MainWindow:: on_actionGuess_Bests_Ended, Qt::QueuedConnection);
+        QToolButton *btn=dynamic_cast<QToolButton*>(toolBox->widgetForAction(ui->actionGuess_Bests));
+        btn->setPopupMode(QToolButton::MenuButtonPopup);
+        bestPickDrop = new SliderDrop(btn);
+        btn->addAction(bestPickDrop);
+        bestPickDrop->slider()->getText()->setText(tr("Left-Accept All, Right - Sharpest"));
+        bestPickDrop->slider()->getSlider()->setValue(70);
+#endif
         toolBox->addAction(ui->actionGuess_Darks);
         toolBox->addAction(ui->actionCopy_as_Lua);
         toolBox->addSeparator();
         toolBox->addAction(ui->actionSet_All_Source);
         toolBox->addAction(ui->actionSet_All_Ignored);
         toolBox->addAction(ui->actionSet_All_Darks);
-
     }
 }
 
@@ -705,15 +714,19 @@ void MainWindow::on_actionWipe_Cache_triggered()
 
 void MainWindow::on_actionGuess_Bests_triggered()
 {
+#ifdef USING_OPENCV
     ui->actionGuess_Bests->setEnabled(false);
     if (previewsModel)
     {
-        previewsModel->pickBests([this](const auto& stop)
+        auto sl   = bestPickDrop->slider()->getSlider();
+        auto min  = static_cast<double>(sl->value()) / (sl->maximum() - sl->minimum());
+        previewsModel->pickBests([this](auto)
         {
             //todo: need to reenable action, warning! this is NOT GUI thread here
             emit prettyEnded();
-        });
+        }, min);
     }
+#endif
 }
 
 void MainWindow::on_actionGuess_Bests_Ended()

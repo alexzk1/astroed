@@ -28,7 +28,6 @@ extern size_t getMemorySize();
 const static size_t sysMemory     = getMemorySize();
 constexpr static size_t lowMemory = 2ll * 1024 * 1024 * 1024;
 //mem pressure until it will start "gc" loops (with systems <2Gb ram we will have to use most of ram I think)
-const static size_t maxMemUsage   = (sysMemory > lowMemory)?(sysMemory / 2): (sysMemory * 3/ 4);
 const static auto& dumb           = IMAGE_LOADER; //ensuring single instance is created on program init
 
 const static int64_t longestDelay = 240; //how long at most image will remain cached since last access
@@ -107,6 +106,8 @@ void image_cacher::findImage(const QString& key, image_t_s& res)
 void image_cacher::gc(bool no_wait)
 {
     //kinda "gc" loop - removing weak pointers which were deleted already
+    //const static size_t maxMemUsage   = (sysMemory > lowMemory)?(sysMemory / 2): (sysMemory * 3/ 4);
+    size_t maxMemUsage = sysMemory * static_cast<size_t>(StaticSettingsMap::getGlobalSetts().readInt("Int_mem_pressure")) / 100;
     if (lastSize > maxMemUsage)
     {
         std::lock_guard<std::recursive_mutex> guard(mutex);

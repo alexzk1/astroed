@@ -40,6 +40,8 @@ const StaticSettingsMap &StaticSettingsMap::getGlobalSetts()
                                             //                                            tr("If enabled it will automatically load projects when folder is switched (only if there is 1 exactly project file found).")),
                                             DECL_SETT(GlobalStorableInt, "Int_scroll_delay", 50, tr("Scroll delay (ms)"), tr("This value defines delay-on-scroll before actual previews will be loaded.\n"
                                             "You can set value depend on how fast is your storage to pick best reaction/device pressure ratio."), 25, 500),
+                                            DECL_SETT(GlobalStorableInt, "Int_mem_pressure", 30, tr("RAM pressure by cache measured in percents."), tr("This value defines how much RAM will be used to cache loaded images."),
+                                            20, 95),
                                         });
     return list;
 }

@@ -41,8 +41,8 @@ public:
 
     void guessDarks();
 
-    void pickBests(const utility::runner_f_t& end_func, int from, int to);
-    void pickBests(const utility::runner_f_t &end_func);
+    void pickBests(const utility::runner_f_t& end_func, int from, int to, const double min_quality);
+    void pickBests(const utility::runner_f_t &end_func, const double min_quality = 0.7);
 
 
     //this is "usage role" like "Source, Ignored, Darks"

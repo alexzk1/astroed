@@ -22,6 +22,7 @@ class MainWindow;
 class ClickableLabel;
 class QSortFilterProxyModel;
 class SettingsDialog;
+class SliderDrop;
 
 class MainWindow : public QMainWindow, public utility::ItCanBeOnlyOne<MainWindow>, protected utility::SaveableWidget<MainWindow>
 {
@@ -86,13 +87,14 @@ private:
     QPointer<ClickableLabel>   fileNameLabel;
     QPointer<QProgressBar>     loadingProgress;
     QPointer<SettingsDialog>   settDialog;
+    QPointer<SliderDrop>       bestPickDrop;
     int previewShift;
     QSize lastPreviewSize;
     const QString originalStylesheet;
     QString lastPreviewFileName;
     std::vector<QPointer<QAction>> zoomPicModeActions;
     QPointer<QActionGroup> zoomPicModeActionsGroup;
-    void setupFsBrowsing();
+    void setupFsBrowsingAndToolbars();
     void setupZoomGui();
 
     const static QString zoomKbHintText;
