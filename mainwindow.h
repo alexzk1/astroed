@@ -78,8 +78,11 @@ private slots:
     void on_actionWipe_Cache_triggered();
 
     void on_actionGuess_Bests_triggered();
-    void on_actionGuess_Bests_Ended();
+    void actionGuess_Bests_Ended();
     void resetFiltering();
+
+    void setColumnsAutosize(bool auto_size);
+    void resizeColumns();
 private:
     Ui::MainWindow *ui;
     QPointer<QFileSystemModel> dirsModel;

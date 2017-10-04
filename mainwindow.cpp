@@ -80,13 +80,6 @@ MainWindow::MainWindow(QWidget *parent) :
         hdr->setStretchLastSection(true);
     }
 
-    auto hdrv = ui->previewsTable->verticalHeader();
-    if (hdrv)
-    {
-        //ui will be not responsive with this, need to do manualy
-        hdrv->setSectionResizeMode(QHeaderView::ResizeToContents);
-    }
-
     connect(previewsModel, &PreviewsModel::startedPreviewsLoad, this, [this](bool scroll){
         if (ui->previewsTable && scroll)
             ui->previewsTable->scrollToTop();
@@ -452,7 +445,7 @@ void MainWindow::setupFsBrowsingAndToolbars()
 #ifdef USING_OPENCV
         //guessing bests button
         toolBox->addAction(ui->actionGuess_Bests);
-        connect(this, &MainWindow::prettyEnded, this, &MainWindow:: on_actionGuess_Bests_Ended, Qt::QueuedConnection);
+        connect(this, &MainWindow::prettyEnded, this, &MainWindow:: actionGuess_Bests_Ended, Qt::QueuedConnection);
         QToolButton *btn=dynamic_cast<QToolButton*>(toolBox->widgetForAction(ui->actionGuess_Bests));
         btn->setPopupMode(QToolButton::MenuButtonPopup);
         bestPickDrop = new SliderDrop(btn);
@@ -637,6 +630,29 @@ void MainWindow::resetFiltering()
     if (sortModel)
     {
         sortModel->setFilterRegExp("");
+    }
+    resizeColumns();
+}
+
+void MainWindow::setColumnsAutosize(bool auto_size)
+{
+    auto hdrv = ui->previewsTable->verticalHeader();
+    if (hdrv)
+    {
+        //ui will be not responsive with this, need to do manualy
+        if (auto_size)
+            hdrv->setSectionResizeMode(QHeaderView::ResizeToContents);
+        else
+            hdrv->setSectionResizeMode(QHeaderView::Interactive);
+    }
+}
+
+void MainWindow::resizeColumns()
+{
+    auto hdrv = ui->previewsTable->verticalHeader();
+    if (hdrv)
+    {
+        hdrv->resizeSections(QHeaderView::ResizeToContents);
     }
 }
 
@@ -840,7 +856,7 @@ void MainWindow::on_actionGuess_Bests_triggered()
 #endif
 }
 
-void MainWindow::on_actionGuess_Bests_Ended()
+void MainWindow::actionGuess_Bests_Ended()
 {
     ui->actionGuess_Bests->setEnabled(true);
 }
