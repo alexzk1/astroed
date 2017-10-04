@@ -256,7 +256,7 @@ namespace utility
 
             if (rgb_p.type() == CV_64FC1 || rgb_p.type() == CV_64FC3)
             {
-                cv::Mat tm{rgb_p.clone()};
+                cv::Mat tm = rgb_p.clone();
                 utility::opencv::forEachChannel(tm, [](cv::Mat& c)
                 {
                     cv::normalize(c, c, 0, 1, cv::NORM_MINMAX);

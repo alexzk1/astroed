@@ -514,7 +514,7 @@ void MainWindow::setupZoomGui()
         if (!shortc.isEmpty())
         {
             a->setShortcut(shortc);
-            a->setToolTip(QString("%1 (%2)").arg(a->text()).arg(shortc.toString()));
+            a->setToolTip(QString(tr("%1 (Shortcut: %2)")).arg(a->text()).arg(shortc.toString()));
         }
         else
             a->setToolTip(a->text());

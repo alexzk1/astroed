@@ -79,7 +79,7 @@ void ScrollAreaPannable::setMouseMode(int mode)
 
 void ScrollAreaPannable::mousePressEvent(QMouseEvent *e)
 {
-    pressedAtMode = currentMode;
+    pressedAtMode = currentMode; //user can switch mode using keyboard while holding mouse, avoiding crap
     if (currentMode == MouseMode::mmMove)
     {
         if (e->button() == Qt::LeftButton)
