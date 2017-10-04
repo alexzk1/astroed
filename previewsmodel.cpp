@@ -64,25 +64,15 @@ struct sectiondescr_t
     const QVariant initialValue; //initial default value for things like combobox
 };
 
-//texts can be translated, but for lua need to have some fixed values
-struct fileroles_t
-{
-    const QString      humanRole;
-    const int64_t      luaRole;
-    const QKeySequence seq;
-};
-
 //order is important here, lua-generator below relays on it
 //PreviewsModel::guessDarks() relays on it
-const static std::vector<fileroles_t> fileRoles =
+const static FileRolesList fileRoles =
 {
     //1st will be set as default, also GUI actions are bound to index in this list
     {QObject::tr("Ignored"), 1, QKeySequence("-")},
     {QObject::tr("Source"), 0, QKeySequence("=")},
     {QObject::tr("Dark"), 2, QKeySequence("0")},
 };
-
-
 
 
 //if you change order in arrays here, something below may break bcs assumes fixed index
@@ -152,7 +142,7 @@ void PreviewsModel::generateProjectCode(std::ostream &out) const
     std::lock_guard<decltype (listMut)> grd(listMut);
     //generating lua code from internal state, hardly bound to arrays above (to their indexes, values, etc)
 
-    const auto spid = static_cast<size_t>(getSpecialColumnId());
+    const auto spid = static_cast<size_t>(getFileRoleColumnId());
     QString path = (currentFolder.isDir())?currentFolder.canonicalFilePath():currentFolder.canonicalPath();
     out << "guiSelectedFilesBase = '" << currentFolder.canonicalFilePath().toStdString()<<"'"<<std::endl;
     QDir dir(path);
@@ -224,7 +214,7 @@ void PreviewsModel::loadProjectCode(const std::string &src)
     setCurrentFolder(root, false); //fixme: recursivness is not stored, do some signal/slot to reflect that in GUI
 }
 
-int PreviewsModel::getSpecialColumnId() //dunno how to name it really
+int PreviewsModel::getFileRoleColumnId() //dunno how to name it really
 {
     return 2;
 }
@@ -466,7 +456,7 @@ void PreviewsModel::setRoleForPriv(const QString &fileName, int role_id)
     {
         if (fileName == modelFiles.at(row).getFilePath())
         {
-            setDataPriv(index(static_cast<int>(row), getSpecialColumnId()), val, Qt::EditRole);
+            setDataPriv(index(static_cast<int>(row), getFileRoleColumnId()), val, Qt::EditRole);
             break;
         }
     }
@@ -487,9 +477,9 @@ void PreviewsModel::setAllRole(int role_id)
         const QVariant val(role_id);
         std::lock_guard<decltype (this->listMut)> grd(this->listMut);
         for (int row = 0, size = rowCount(); row < size; ++row)
-            setDataPriv(index(row, getSpecialColumnId()), val, Qt::EditRole);
+            setDataPriv(index(row, getFileRoleColumnId()), val, Qt::EditRole);
 
-        emit dataChanged(index(0, getSpecialColumnId()), index(rowCount() - 1, getSpecialColumnId()), QVector<int>() << Qt::EditRole);
+        emit dataChanged(index(0, getFileRoleColumnId()), index(rowCount() - 1, getFileRoleColumnId()), QVector<int>() << Qt::EditRole);
     }
 }
 
@@ -503,7 +493,7 @@ void PreviewsModel::guessDarks()
         const auto& itm = modelFiles.at(static_cast<size_t>(row));
         if (isDark(itm.getFilePath()))
         {
-            auto ind = index(row, getSpecialColumnId());
+            auto ind = index(row, getFileRoleColumnId());
             if (setDataPriv(ind, 2, Qt::EditRole))
                 emit dataChanged(ind, ind, roles);
         }
@@ -521,7 +511,7 @@ void PreviewsModel::pickBests(const utility::runner_f_t &end_func, int from, int
     from = std::max(0, from); from = std::min(from, static_cast<decltype(from)>(modelFiles.size()) - 1);
     to   = std::max(0, to);   to   = std::min(to,   static_cast<decltype(to)>(modelFiles.size()) - 1);
 
-    const static auto spid = static_cast<size_t>(getSpecialColumnId());
+    const static auto spid = static_cast<size_t>(getFileRoleColumnId());
 
 
     //trying to pick bests amoung
@@ -744,6 +734,11 @@ PreviewsModel::~PreviewsModel()
     loadPreviews.reset();
 }
 
+const FileRolesList &PreviewsModel::getFileRoles()
+{
+    return fileRoles;
+}
+
 void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list, const utility::runnerint_t &stop)
 {
     std::lock_guard<decltype (listMut)> grd(listMut);
@@ -891,7 +886,7 @@ bool PreviewsDelegate::showLastClickedPreview(int shift, const QSize& lastSize)
                 //that what happens when we have MVD and want to connect something trivial, like radiobuttons, do I really need to implement view with 3 buttons
                 //which can be bound to toolbar ?!?!gosh...hate those ideas in fact
                 //(i just want field from "model" be visible as 3 buttons on toolbar, for such simple thing so many code all around)
-                QModelIndex index = lastClickedPreview.model()->index(ind.row(), PreviewsModel::getSpecialColumnId());
+                QModelIndex index = lastClickedPreview.model()->index(ind.row(), PreviewsModel::getFileRoleColumnId());
                 ind.data(MyScrolledView); //tipping model, need to load previews
                 const auto fileName = ind.data(MyGetPathRole).toString();
                 const auto img      = IMAGE_LOADER.getImage(fileName);

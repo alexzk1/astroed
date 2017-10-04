@@ -426,6 +426,18 @@
     <string>Tries to guess best quality images as sources.</string>
    </property>
   </action>
+  <action name="actionFilter">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/icons/Filter-2-icon.png</normaloff>:/icons/icons/Filter-2-icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Filter by Roles</string>
+   </property>
+   <property name="toolTip">
+    <string>Sets filter on list by image role.</string>
+   </property>
+  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>

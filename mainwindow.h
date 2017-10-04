@@ -9,7 +9,7 @@
 #include <QLayout>
 #include <QToolBar>
 #include <QActionGroup>
-
+#include <QSortFilterProxyModel>
 #include "utils/inst_once.h"
 #include "utils/saveable_widget.h"
 #include "previewsmodel.h"
@@ -47,6 +47,7 @@ protected:
     virtual void recurseRead(QSettings& settings, QObject* object) override;
 
     void currentDirChanged(const QString& dir);
+
 signals:
     void prettyEnded();
 private slots:
@@ -78,6 +79,7 @@ private slots:
 
     void on_actionGuess_Bests_triggered();
     void on_actionGuess_Bests_Ended();
+    void resetFiltering();
 private:
     Ui::MainWindow *ui;
     QPointer<QFileSystemModel> dirsModel;
@@ -88,6 +90,8 @@ private:
     QPointer<QProgressBar>     loadingProgress;
     QPointer<SettingsDialog>   settDialog;
     QPointer<SliderDrop>       bestPickDrop;
+    QPointer<QSortFilterProxyModel> sortModel;
+    QPointer<QAction> fact;
     int previewShift;
     QSize lastPreviewSize;
     const QString originalStylesheet;

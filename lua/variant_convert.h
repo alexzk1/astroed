@@ -6,8 +6,6 @@
 #include <QString>
 #include <QDate>
 
-//okey...maybe all that can be skipped and used QVariant::value<T>() ... however,types must be registered with meta-system then
-
 namespace luavm
 {
     template<class T, typename T2 = typename std::enable_if<!std::is_enum<T>::value, void>::type>

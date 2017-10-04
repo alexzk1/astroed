@@ -6,6 +6,7 @@
 #include <QItemSelectionModel>
 #include <QSortFilterProxyModel>
 #include <QToolButton>
+#include <QPushButton>
 #include <QStatusBar>
 #include <QTimer>
 #include <QFileInfo>
@@ -28,6 +29,7 @@
 const static auto ZOOMING_KB_VALUE = 2 * ScrollAreaPannable::WheelStep;
 
 const static QString defaultProjFile = "/ae_project.luap";
+const static QString btnFilterText = QObject::tr("Filter by Role");
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -40,6 +42,7 @@ MainWindow::MainWindow(QWidget *parent) :
     loadingProgress(new QProgressBar(this)),
     settDialog(new SettingsDialog(this)),
     bestPickDrop(nullptr),
+    sortModel(new QSortFilterProxyModel(this)),
     previewShift(0),
     lastPreviewSize(-2, -2), //i think this should differ from what delegate has (-1, -1) to ensure initial reset
     originalStylesheet(qApp->styleSheet()),
@@ -50,7 +53,10 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    ui->previewsTable->setModel(previewsModel);
+    sortModel->setSourceModel(previewsModel);
+    ui->previewsTable->setModel(sortModel);
+
+    //ui->previewsTable->setModel(previewsModel);
     ui->previewsTable->setItemDelegate(previewsDelegate);
 
     ui->tabsWidget->setCurrentWidget(ui->tabFiles);
@@ -70,6 +76,13 @@ MainWindow::MainWindow(QWidget *parent) :
         //ui will be not responsive with this, need to do manualy
         //hdr->setSectionResizeMode(QHeaderView::ResizeToContents);
         hdr->setStretchLastSection(true);
+    }
+
+    auto hdrv = ui->previewsTable->verticalHeader();
+    if (hdrv)
+    {
+        //ui will be not responsive with this, need to do manualy
+        hdrv->setSectionResizeMode(QHeaderView::ResizeToContents);
     }
 
     connect(previewsModel, &PreviewsModel::startedPreviewsLoad, this, [this](bool scroll){
@@ -333,6 +346,7 @@ void MainWindow::recurseRead(QSettings &settings, QObject *object)
 void MainWindow::currentDirChanged(const QString &dir)
 {
     //qDebug() << "currentDirChanged: " << dir;
+    resetFiltering(); //we do not support selecting file roles in different folders ...
     previewsModel->setCurrentFolder(dir, ui->actionRecursive_Listing->isChecked());
 }
 
@@ -429,6 +443,7 @@ void MainWindow::setupFsBrowsingAndToolbars()
     {
         //toolBox->setToolButtonStyle(Qt::ToolButtonIconOnly);
 #ifdef USING_OPENCV
+        //guessing bests button
         toolBox->addAction(ui->actionGuess_Bests);
         connect(this, &MainWindow::prettyEnded, this, &MainWindow:: on_actionGuess_Bests_Ended, Qt::QueuedConnection);
         QToolButton *btn=dynamic_cast<QToolButton*>(toolBox->widgetForAction(ui->actionGuess_Bests));
@@ -438,12 +453,54 @@ void MainWindow::setupFsBrowsingAndToolbars()
         bestPickDrop->slider()->getText()->setText(tr("Left-Accept All, Right - Sharpest"));
         bestPickDrop->slider()->getSlider()->setValue(70);
 #endif
+        //just adding existing actions from the form
         toolBox->addAction(ui->actionGuess_Darks);
         toolBox->addAction(ui->actionCopy_as_Lua);
         toolBox->addSeparator();
         toolBox->addAction(ui->actionSet_All_Source);
         toolBox->addAction(ui->actionSet_All_Ignored);
         toolBox->addAction(ui->actionSet_All_Darks);
+
+        toolBox->addSeparator();
+
+        //building filter button
+        const static auto& roles = PreviewsModel::getFileRoles();
+
+        fact = new QAction(); //so complex with action because otherwise button is incorrect shown
+        fact->setCheckable(true);
+        fact->setText(btnFilterText);//however, action itself is never triggered
+        fact->setIcon(QIcon(":/icons/icons/Filter-2-icon.png"));
+        fact->setToolTip(tr("Enables filter by file role."));
+        toolBox->addAction(fact);
+
+        QToolButton *fbtn=dynamic_cast<QToolButton*>(toolBox->widgetForAction(fact));
+        fbtn->setPopupMode(QToolButton::InstantPopup);
+
+        QMenu *fmenu = new QMenu(fbtn);
+        fbtn->setMenu(fmenu);
+        QAction *aclr = new QAction(tr("No Filter"));
+        connect(aclr, &QAction::triggered, this, &MainWindow::resetFiltering, Qt::QueuedConnection);
+
+        fmenu->addAction(aclr);
+        for (size_t i = 0, sz = roles.size(); i < sz; ++i)
+        {
+            QAction *a = new QAction(roles.at(i).humanRole);
+            connect(a, &QAction::triggered, this, [i, this]()
+            {
+                if (sortModel)
+                {
+                    sortModel->setFilterKeyColumn(PreviewsModel::getFileRoleColumnId());
+                    sortModel->setFilterFixedString(roles.at(i).humanRole);
+
+                    if (fact)
+                    {
+                        fact->setText(QString("%1 (%2)").arg(roles.at(i).humanRole).arg(sortModel->rowCount()));
+                        fact->setChecked(true);
+                    }
+                }
+            }, Qt::QueuedConnection);
+            fmenu->addAction(a);
+        }
     }
 }
 
@@ -527,6 +584,19 @@ QToolBar *MainWindow::addToolbarToLayout(QLayout *src, int pos)
     }
 
     return result;
+}
+
+void MainWindow::resetFiltering()
+{
+    if (fact)
+    {
+        fact->setChecked(false);
+        fact->setText(btnFilterText);
+    }
+    if (sortModel)
+    {
+        sortModel->setFilterRegExp("");
+    }
 }
 
 void MainWindow::on_actionNewtone_toggled(bool checked)

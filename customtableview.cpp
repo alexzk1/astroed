@@ -19,7 +19,7 @@ CustomTableView::CustomTableView(QWidget *parent):
 void CustomTableView::dataChangedInModel(const QModelIndex &start, const QModelIndex &end)
 {
     //optimization for the mass processing like "set all ignored"
-    if (start.column() == end.column() && start.column() == PreviewsModel::getSpecialColumnId())
+    if (start.column() == end.column() && start.column() == PreviewsModel::getFileRoleColumnId())
         return;
 
     for (int column = start.column(), colsz = end.column(); column <= colsz; ++column)

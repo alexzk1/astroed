@@ -19,13 +19,21 @@ class QFileInfo;
 extern const QStringList supportedVids;
 #endif
 
+//texts can be translated, but for lua need to have some fixed values
+struct fileroles_t
+{
+    const QString      humanRole;
+    const int64_t      luaRole;
+    const QKeySequence seq;
+};
+
+using FileRolesList = std::vector<fileroles_t>;
+
 class PreviewsModel : public QAbstractTableModel, public luavm::ProjectSaver, public luavm::ProjectLoader
 {
     Q_OBJECT
 public:
-
     explicit PreviewsModel(QObject *parent = 0);
-
     // Header:
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
     bool setHeaderData(int section, Qt::Orientation orientation, const QVariant &value, int role = Qt::EditRole) override;
@@ -40,7 +48,6 @@ public:
     bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
 
     void guessDarks();
-
     void pickBests(const utility::runner_f_t& end_func, int from, int to, const double min_quality);
     void pickBests(const utility::runner_f_t &end_func, const double min_quality = 0.7);
 
@@ -60,8 +67,9 @@ public:
     virtual void generateProjectCode(std::ostream& out) const override;
     virtual void loadProjectCode(const std::string& src) override;
 
-    int  static getSpecialColumnId(); //this column may have automatic changes in loop
+    int  static getFileRoleColumnId(); //this column may have automatic changes in loop
     virtual ~PreviewsModel();
+    const static FileRolesList& getFileRoles();
 private slots:
     void onTimerDelayedLoader();
 private:
@@ -72,6 +80,7 @@ private:
     utility::runner_t loadPreviews;
     mutable std::recursive_mutex listMut;
     mfiles_t  modelFiles;
+
     mutable std::atomic<int64_t> urgentRowScrolled;
     std::atomic<int64_t> modelFilesAmount;
     std::map<int, QStringList> fixedCombosLists; //wana to do generic solution
