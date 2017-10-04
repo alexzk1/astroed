@@ -10,7 +10,9 @@ ScrollAreaPannable::ScrollAreaPannable(QWidget *parent):
     QScrollArea (parent),
     min_width(width()), min_height(height()),
     mousePosPan(0,0),
-    maxZoom(0,0)
+    maxZoom(0,0),
+    currentMode(MouseMode::mmMove),
+    pressedAtMode(MouseMode::mmMove)
 {
 
 }
@@ -70,20 +72,28 @@ QSize ScrollAreaPannable::getCurrentZoomedSize() const
         return widget()->size();
 }
 
+void ScrollAreaPannable::setMouseMode(int mode)
+{
+    currentMode = static_cast<MouseMode>(mode);
+}
+
 void ScrollAreaPannable::mousePressEvent(QMouseEvent *e)
 {
-
-    if (e->button() == Qt::LeftButton)
+    pressedAtMode = currentMode;
+    if (currentMode == MouseMode::mmMove)
     {
-        mousePosPan = e->pos();
-        setCursor(Qt::OpenHandCursor);
-    }
+        if (e->button() == Qt::LeftButton)
+        {
+            mousePosPan = e->pos();
+            setCursor(Qt::OpenHandCursor);
+        }
 
-    if (e->button() == Qt::RightButton)
-    {
-        //todo: button will be used to make selection
-        //possibly will need option to fit content to viewport, so user can draw selection easier
-        setCursor(Qt::CrossCursor);
+        if (e->button() == Qt::RightButton)
+        {
+            //todo: button will be used to make selection
+            //possibly will need option to fit content to viewport, so user can draw selection easier
+            setCursor(Qt::CrossCursor);
+        }
     }
 }
 
@@ -92,21 +102,27 @@ void ScrollAreaPannable::mousePressEvent(QMouseEvent *e)
 void ScrollAreaPannable::mouseMoveEvent(QMouseEvent *e)
 {
     //use QRubberBand Class, Luke!
-    if (e->buttons() == Qt::LeftButton)
+    if (pressedAtMode == MouseMode::mmMove)
     {
-        setCursor(Qt::ClosedHandCursor);
-        QPoint diff = mousePosPan - e->pos();
-        mousePosPan = e->pos();
-        verticalScrollBar()->  setValue(verticalScrollBar()->value()   + diff.y());
-        horizontalScrollBar()->setValue(horizontalScrollBar()->value() + diff.x());
+        if (e->buttons() == Qt::LeftButton)
+        {
+            setCursor(Qt::ClosedHandCursor);
+            QPoint diff = mousePosPan - e->pos();
+            mousePosPan = e->pos();
+            verticalScrollBar()->  setValue(verticalScrollBar()->value()   + diff.y());
+            horizontalScrollBar()->setValue(horizontalScrollBar()->value() + diff.x());
+        }
     }
 }
 
 void ScrollAreaPannable::mouseReleaseEvent(QMouseEvent *e)
 {
     Q_UNUSED(e);
-    setCursor(Qt::ArrowCursor);
-    mousePosPan = QPoint(0, 0);
+    if (pressedAtMode == MouseMode::mmMove)
+    {
+        setCursor(Qt::ArrowCursor);
+        mousePosPan = QPoint(0, 0);
+    }
 }
 
 void ScrollAreaPannable::wheelEvent(QWheelEvent *event)

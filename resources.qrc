@@ -26,6 +26,8 @@
         <file>icons/sweep-icon.png</file>
         <file>icons/best-icon.png</file>
         <file>icons/Filter-2-icon.png</file>
+        <file>icons/Cursor-Move-icon.png</file>
+        <file>icons/Cursor-Select-icon.png</file>
     </qresource>
     <qresource prefix="/styles">
         <file alias="darkorange">styles/darkorange.style</file>

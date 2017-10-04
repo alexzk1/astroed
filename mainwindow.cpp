@@ -21,6 +21,7 @@
 #include "utils/strutils.h"
 #include "labeledslider.h"
 #include "sliderdrop.h"
+#include "config_ui/globalsettings.h"
 
 #ifdef USING_OPENCV
 #include "opencv_utils/opencv_utils.h"
@@ -43,6 +44,7 @@ MainWindow::MainWindow(QWidget *parent) :
     settDialog(new SettingsDialog(this)),
     bestPickDrop(nullptr),
     sortModel(new QSortFilterProxyModel(this)),
+    fact(nullptr),
     previewShift(0),
     lastPreviewSize(-2, -2), //i think this should differ from what delegate has (-1, -1) to ensure initial reset
     originalStylesheet(qApp->styleSheet()),
@@ -255,7 +257,9 @@ void MainWindow::on_tabsWidget_currentChanged(int index)
     if (ui->tabsWidget->currentWidget() == ui->tabZoomed)
     {
         //making all dark on big preview, because it's bad for eyes when around black space u see white window borders
-        qApp->setStyleSheet(styler);
+        if (StaticSettingsMap::getGlobalSetts().readBool("Bool_black_preview"))
+            qApp->setStyleSheet(styler);
+
         static bool session_once = true;
         if (session_once)
         {
@@ -287,30 +291,33 @@ bool MainWindow::eventFilter(QObject *src, QEvent *e)
 {
     //mouse events for scrollzoom are overloaded in ScrollAreaPannable, do it there
     //if you change shortcuts here, please fix hint string into on_tabsWidget_currentChanged(int index)
-    if (e->type() == QEvent::KeyPress && src == ui->scrollAreaZoom)
+    if (src == ui->scrollAreaZoom)
     {
-        const QKeyEvent *ke = static_cast<decltype (ke)>(e);
-        auto key = ke->key();
-        if ((ke->modifiers() == Qt::ControlModifier) && (key == Qt::Key_Left || key == Qt::Key_Right))
+        if (e->type() == QEvent::KeyPress)
         {
-            auto s = previewShift + ((key == Qt::Key_Left)?-1:((key == Qt::Key_Right)?1 : 0));
-            auto dele = dynamic_cast<PreviewsDelegate*>(ui->previewsTable->itemDelegate());
-            if (dele)
+            const QKeyEvent *ke = static_cast<decltype (ke)>(e);
+            auto key = ke->key();
+            if ((ke->modifiers() == Qt::ControlModifier) && (key == Qt::Key_Left || key == Qt::Key_Right))
             {
-                if (dele->showLastClickedPreview(s, lastPreviewSize))
+                auto s = previewShift + ((key == Qt::Key_Left)?-1:((key == Qt::Key_Right)?1 : 0));
+                auto dele = dynamic_cast<PreviewsDelegate*>(ui->previewsTable->itemDelegate());
+                if (dele)
                 {
-                    previewShift = s;
-                    //qDebug() << "set shift "<<s;
+                    if (dele->showLastClickedPreview(s, lastPreviewSize))
+                    {
+                        previewShift = s;
+                        //qDebug() << "set shift "<<s;
+                    }
+                    return true;
                 }
-                return true;
             }
+
+            if (key == Qt::Key_Plus || key == Qt::Key_Equal || (key == Qt::Key_Up && ke->modifiers() == Qt::ShiftModifier))
+                ui->scrollAreaZoom->zoomBy(ZOOMING_KB_VALUE);
+
+            if (key == Qt::Key_Minus || (key == Qt::Key_Down && ke->modifiers() == Qt::ShiftModifier))
+                ui->scrollAreaZoom->zoomBy(-ZOOMING_KB_VALUE);
         }
-
-        if (key == Qt::Key_Plus || key == Qt::Key_Equal || (key == Qt::Key_Up && ke->modifiers() == Qt::ShiftModifier))
-            ui->scrollAreaZoom->zoomBy(ZOOMING_KB_VALUE);
-
-        if (key == Qt::Key_Minus || (key == Qt::Key_Down && ke->modifiers() == Qt::ShiftModifier))
-            ui->scrollAreaZoom->zoomBy(-ZOOMING_KB_VALUE);
     }
     return false;
 }
@@ -508,26 +515,60 @@ void MainWindow::setupZoomGui()
 {
     ui->scrollAreaZoom->installEventFilter(this);
     auto zoomToolbar = addToolbarToLayout(ui->tabZoomed->layout());
+
+    const static auto add_action = [](QActionGroup* group, QAction* a, const QKeySequence& shortc = QKeySequence())->QAction*
+    {
+        if (!shortc.isEmpty())
+        {
+            a->setShortcut(shortc);
+            a->setToolTip(QString("%1 (%2)").arg(a->text()).arg(shortc.toString()));
+        }
+        else
+            a->setToolTip(a->text());
+        if (group)
+        {
+            a->setCheckable(true);
+            group->addAction(a);
+        }
+        return a;
+    };
+
     if (zoomToolbar)
     {
         zoomToolbar->setToolButtonStyle(Qt::ToolButtonIconOnly);
-        zoomToolbar->addAction(ui->actionSave_As);
-        zoomToolbar->addAction(ui->actionCopyCurrentImage);
+
+        QAction *tmp;
+        auto ag_mode = new QActionGroup(this);
+        ag_mode->setExclusive(true);
+        add_action(ag_mode, tmp = zoomToolbar->addAction(QIcon(":/icons/icons/Cursor-Move-icon.png"), tr("Move")), QKeySequence("1"));
+        tmp->setChecked(true);
+        connect(tmp, &QAction::triggered, ui->scrollAreaZoom, std::bind(&ScrollAreaPannable::setMouseMode, ui->scrollAreaZoom, ScrollAreaPannable::MouseMode::mmMove));
+
+        add_action(ag_mode, tmp = zoomToolbar->addAction(QIcon(":/icons/icons/Cursor-Select-icon.png"), tr("Select")), QKeySequence("2"));
+        connect(tmp, &QAction::triggered, ui->scrollAreaZoom, std::bind(&ScrollAreaPannable::setMouseMode, ui->scrollAreaZoom, ScrollAreaPannable::MouseMode::mmSelect));
+
+        zoomToolbar->addSeparator();
+        zoomToolbar->addAction(add_action(nullptr,  ui->actionSave_As, QKeySequence("ctrl+S")));
+        zoomToolbar->addAction(add_action(nullptr, ui->actionCopyCurrentImage, QKeySequence("ctrl+C")));
+
         zoomToolbar->addSeparator();
         zoomPicModeActions = {
-            zoomToolbar->addAction(QIcon(":/icons/icons/Science-Minus2-Math-icon.png"), "Ignored"),
-            zoomToolbar->addAction(QIcon(":/icons/icons/Science-Plus2-Math-icon.png"), "Source"),
-            zoomToolbar->addAction(QIcon(":/icons/icons/Cloud-app-icon.png"), "Dark")
+            zoomToolbar->addAction(QIcon(":/icons/icons/Science-Minus2-Math-icon.png"), tr("Ignored")),
+            zoomToolbar->addAction(QIcon(":/icons/icons/Science-Plus2-Math-icon.png"), tr("Source")),
+            zoomToolbar->addAction(QIcon(":/icons/icons/Cloud-app-icon.png"), tr("Dark")),
+        };
+        const QKeySequence ks[]= {
+            QKeySequence("-"),
+            QKeySequence("="),
+            QKeySequence("0"),
         };
         zoomPicModeActionsGroup = new QActionGroup(this); //have to use class-member because will need to block signals, so will not fall into recursion model->group->model->group
         zoomPicModeActionsGroup->setExclusive(true);
         for (size_t i = 0, sz = zoomPicModeActions.size(); i < sz; ++i)
         {
             const auto& a = zoomPicModeActions.at(i);
-            a->setCheckable(true);
-            a->setToolTip(a->text());
             a->setProperty("model_role", static_cast<int>(i));
-            zoomPicModeActionsGroup->addAction(a);
+            add_action(zoomPicModeActionsGroup, a, ks[i]);
         }
 
         connect(zoomPicModeActionsGroup, &QActionGroup::triggered, this, [this](QAction *a)

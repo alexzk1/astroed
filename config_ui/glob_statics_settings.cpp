@@ -19,6 +19,9 @@ const StaticSettingsMap &StaticSettingsMap::getGlobalSetts()
                                             "It is really slow on HDD (not SSD)."
                                             )),
 
+                                            DECL_SETT(GlobalStorableBool, "Bool_black_preview", true, tr("Make GUI of zoomer dark."),
+                                            tr("If enabled will switch all controls like buttons, windows borders to be dark on \"big picture\" tab.")),
+
                                             DECL_SETT(GlobalComboBoxStorable, "Raw_format_video", 0, tr("Color format of the RAW Video File"),
                                             tr("Set color format which will be assumed when RAW video file is loaded.\nChanges will take effect when you will press \"Reload\"."),
                                             [] (QStringList& toshow, QVariantList &)
