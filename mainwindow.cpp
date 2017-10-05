@@ -132,7 +132,7 @@ MainWindow::MainWindow(QWidget *parent) :
         if (p)
         {
             const static auto mb = 1024 * 1024;
-            p->setText(QString("Total: %1 MB; Previews: %2 MB").arg((IMAGE_LOADER.getMemoryUsed() + PREVIEW_LOADER.getMemoryUsed()) /mb).arg(PREVIEW_LOADER.getMemoryUsed() / mb));
+            p->setText(QString(tr("RAM: %1 MB")).arg((IMAGE_LOADER.getMemoryUsed()) /mb));
         }
     };
 

@@ -228,7 +228,6 @@ namespace imaging
             meta_t meta;
 #ifdef USING_VIDEO_FS
             //we want to keep same loader for all frames in same file
-            VideoCapturePtr framesLoader;
             std::shared_ptr<QTemporaryFile> tempFile;
 #endif
             operator bool() const
@@ -246,9 +245,6 @@ namespace imaging
             {
                 meta = c.meta;
                 data = c.data.lock();
-#ifdef USING_VIDEO_FS
-                framesLoader = c.framesLoader;
-#endif
                 return *this;
             }
             explicit operator image_t_w() const
@@ -256,9 +252,6 @@ namespace imaging
                 image_t_w tmp;
                 tmp.data = data;
                 tmp.meta = meta;
-#ifdef USING_VIDEO_FS
-                tmp.framesLoader = framesLoader;
-#endif
                 return tmp;
             }
         };
@@ -269,13 +262,12 @@ namespace imaging
         using ptrs_t     = std::map<QString,  time_ptr_t>;
 
 
-        using size_wptr_t = std::pair<size_t, image_t_w>;
+        using size_wptr_t = image_t_w;
         using weaks_t = std::map<QString, size_wptr_t>;
 
 
         ptrs_t  cache;
         weaks_t wcache;
-        std::atomic<size_t> lastSize;
         bool assumeMirrored;
 
     protected:
@@ -293,7 +285,7 @@ namespace imaging
 
         virtual void gc(bool no_wait = false);
         virtual void wipe();
-        size_t getMemoryUsed() const;
+        static size_t getMemoryUsed();
         //ok, maybe mirroring on loading is not really good idea for scripting, but .. at least images in ram are already properly loaded = time
         void setNewtoneTelescope(bool isNewtone); //if true, applies mirror transformation to all images on load
         bool isNewtoneTelescope() const;
@@ -306,8 +298,8 @@ namespace imaging
     {
     protected:
 #ifdef USING_VIDEO_FS
-        using loaders_t = std::map<QString, VideoCapturePtrW>;
-        mutable loaders_t frameLoaders;
+        using VideoPair = std::pair<QString, VideoCapturePtr>;
+        mutable VideoPair frameLoaders; //now we have video = folder, so should not keep many videos loaded at once
         std::atomic<bool> dctor;
         VideoCapturePtr getVideoCapturer(const QString &filePath) const;
 #endif
@@ -315,7 +307,6 @@ namespace imaging
 
     public:
         image_loader() = default;
-        virtual void gc(bool no_wait = false)override;
         virtual void wipe()override;
 
         //can be used to generate list of all possible frames inside video

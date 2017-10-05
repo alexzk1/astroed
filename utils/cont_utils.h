@@ -46,8 +46,10 @@ namespace utility
     {
         for( auto it = items.begin(); it != items.end(); )
         {
-              if( predicate(*it) ) it = items.erase(it);
-              else ++it;
+              if( predicate(*it) )
+                  it = items.erase(it);
+              else
+                  ++it;
         }
     }
 }

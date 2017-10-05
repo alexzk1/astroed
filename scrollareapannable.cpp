@@ -80,18 +80,15 @@ void ScrollAreaPannable::setMouseMode(int mode)
 void ScrollAreaPannable::mousePressEvent(QMouseEvent *e)
 {
     pressedAtMode = currentMode; //user can switch mode using keyboard while holding mouse, avoiding crap
-    if (currentMode == MouseMode::mmMove)
-    {
-        if (e->button() == Qt::LeftButton)
-        {
-            mousePosPan = e->pos();
-            setCursor(Qt::OpenHandCursor);
-        }
 
-        if (e->button() == Qt::RightButton)
+    if (e->button() == Qt::LeftButton)
+    {
+        mousePosPan = e->pos();
+        if (currentMode == MouseMode::mmMove)
+            setCursor(Qt::OpenHandCursor);
+
+        if (currentMode == MouseMode::mmSelect)
         {
-            //todo: button will be used to make selection
-            //possibly will need option to fit content to viewport, so user can draw selection easier
             setCursor(Qt::CrossCursor);
         }
     }
@@ -102,9 +99,9 @@ void ScrollAreaPannable::mousePressEvent(QMouseEvent *e)
 void ScrollAreaPannable::mouseMoveEvent(QMouseEvent *e)
 {
     //use QRubberBand Class, Luke!
-    if (pressedAtMode == MouseMode::mmMove)
+    if (e->buttons() == Qt::LeftButton)
     {
-        if (e->buttons() == Qt::LeftButton)
+        if (pressedAtMode == MouseMode::mmMove)
         {
             setCursor(Qt::ClosedHandCursor);
             QPoint diff = mousePosPan - e->pos();
@@ -118,10 +115,10 @@ void ScrollAreaPannable::mouseMoveEvent(QMouseEvent *e)
 void ScrollAreaPannable::mouseReleaseEvent(QMouseEvent *e)
 {
     Q_UNUSED(e);
+    mousePosPan = QPoint(0, 0);
     if (pressedAtMode == MouseMode::mmMove)
     {
         setCursor(Qt::ArrowCursor);
-        mousePosPan = QPoint(0, 0);
     }
 }
 

@@ -1,4 +1,5 @@
 #include <QImage>
+#include <iostream>
 
 #include "utils/palgorithm.h"
 #include "opencv_utils.h"
@@ -29,6 +30,10 @@ algos::contours_t utility::opencv::algos::detectExternContours(const QImage &src
     hierarchy_t hierarchy;
     // Find contours
     findContours( canny_output, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+
+    src_gray.release();
+    canny_output.release();
+
     return contours;
 }
 
@@ -36,22 +41,39 @@ MatPtr utility::opencv::createMat(const QImage &src, bool grey)
 {
     //assuming src is RGB888 ...
     if (src.format() != QImage::Format_RGB888)
+    {
+        std::cerr << "Wrong pixel format: " << src.format() <<std::endl;
+        std::cerr.flush();
         FATAL_RISE("Unexpected QImage pixel format");
+    }
     using namespace utility::bgrrgb;
     cv::Mat tmp = wrapQImage(src);
-    auto res = MatPtr(new cv::Mat(tmp.clone()));
+    auto res = MatPtr(new cv::Mat(), [](auto p){
+        if (p)
+        {
+            p->release();
+            delete p;
+        }
+    });
 
+    auto t(tmp.clone());
     if (grey)
-        cvtColor(*res, *res, cv::COLOR_RGB2GRAY);
+    {
+        cvtColor(t, *res, cv::COLOR_RGB2GRAY);
+    }
     else
+    {
+        *res = t;
         rgbConvert(*res);
-
+    }
+    t.release();
     forEachChannel(*res, [](cv::Mat& c)
     {
         c.convertTo(c, CV_64F);// convert to double
         normalize(c, c, 0, 1, cv::NORM_MINMAX);
     });
 
+    tmp.release();
     return res;
 }
 
@@ -81,16 +103,14 @@ void utility::opencv::algos::lucy_richardson_deconv_grayscale(cv::Mat &img, int 
     int winSize = static_cast<decltype(winSize)>(8 * sigmaG + 1);
 
     // Initializations
-    Mat Y = img.clone();
-    Mat J1 = img.clone();
-    Mat J2 = img.clone();
-    Mat wI = img.clone();
-    Mat imR = img.clone();
-    Mat reBlurred = img.clone();
+    Mat Y(img.clone());
+    Mat J1(img.clone());
+    Mat J2(img.clone());
+    Mat wI(img.clone());
+    Mat imR(img.clone());
+    Mat reBlurred(img.clone());
 
-    Mat T1, T2, tmpMat1, tmpMat2;
-    T1 = Mat(img.rows,img.cols, CV_64F, 0.0);
-    T2 = Mat(img.rows,img.cols, CV_64F, 0.0);
+    Mat T1(img.rows,img.cols, CV_64F, 0.0), T2(img.rows,img.cols, CV_64F, 0.0), tmpMat1, tmpMat2;
 
     // Lucy-Rich. Deconvolution CORE
 
@@ -105,7 +125,7 @@ void utility::opencv::algos::lucy_richardson_deconv_grayscale(cv::Mat &img, int 
             lambda=sum(tmpMat1)[0] / (sum( tmpMat2)[0]+EPSILON);
             // calculation of lambda
         }
-
+        Y.release();
         Y = J1 + lambda * (J1-J2);
         Y.setTo(0, Y < 0);
         // 1)
@@ -120,9 +140,11 @@ void utility::opencv::algos::lucy_richardson_deconv_grayscale(cv::Mat &img, int 
         GaussianBlur( imR, imR, Size(winSize,winSize), sigmaG, sigmaG );//applying Gaussian filter
 
         // 4)
+        J2.release();
         J2 = J1.clone();
         multiply(Y, imR, J1);
 
+        T2.release();
         T2 = T1.clone();
         T1 = J1 - Y;
     }
@@ -131,6 +153,16 @@ void utility::opencv::algos::lucy_richardson_deconv_grayscale(cv::Mat &img, int 
     img = J1;
 //    normalize(J1.clone(), img, 0, 1, NORM_MINMAX);
 //    convertScaleAbs(img, img, 256);
+    T1.release();
+    T2.release();
+    tmpMat1.release();
+    tmpMat2.release();
+    Y.release();
+    J1.release();
+    J2.release();
+    wI.release();
+    imR.release();
+    reBlurred.release();
 }
 
 void utility::opencv::algos::lucy_richardson_deconv(cv::Mat& img, int num_iterations, double sigmaG)
@@ -159,6 +191,8 @@ void utility::opencv::algos::ForwardFFT(const cv::Mat &Src, fft_planes_t &FImg)
     planes[1] = planes[1](Rect(0, 0, Src.cols, Src.rows));
     FImg[0] = planes[0].clone();
     FImg[1] = planes[1].clone();
+    padded.release();
+    complexImg.release();
 }
 
 //from https://stackoverflow.com/questions/40713929/weiner-deconvolution-using-opencv
@@ -171,6 +205,7 @@ void utility::opencv::algos::InverseFFT(const fft_planes_t &FImg, cv::Mat &Dst)
     fft_planes_t tmp;
     split(complexImg, tmp.data());
     Dst = tmp[0];
+    complexImg.release();
 }
 
 cv::Mat utility::opencv::algos::get_FWHM(const cv::Mat &src_greyscale)
@@ -186,7 +221,7 @@ cv::Mat utility::opencv::algos::get_FWHM(const cv::Mat &src_greyscale)
     {
        v = 2 * sqrt(v / M_PI);
     });
-
+    mean.release();
     return stddev;
 }
 

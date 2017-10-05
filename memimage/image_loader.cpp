@@ -25,12 +25,14 @@
 using namespace imaging;
 
 extern size_t getMemorySize();
+extern size_t getCurrentRSS();
+
 const static size_t sysMemory     = getMemorySize();
 constexpr static size_t lowMemory = 2ll * 1024 * 1024 * 1024;
 //mem pressure until it will start "gc" loops (with systems <2Gb ram we will have to use most of ram I think)
 const static auto& dumb           = IMAGE_LOADER; //ensuring single instance is created on program init
 
-const static int64_t longestDelay = 600; //how long at most image will remain cached since last access
+const static int64_t longestDelay = 300; //how long at most image will remain cached since last access
 const static int     previewSize  = 300; //recommended size
 
 const static QString vfs_scheme(VFS_PREFIX);
@@ -46,7 +48,6 @@ static int64_t nows()
 image_cacher::image_cacher():
     cache(),
     wcache(),
-    lastSize(0),
     assumeMirrored(false),
     mutex()
 {
@@ -73,29 +74,29 @@ bool image_cacher::isLoaded(const QString &fileName) const
     std::lock_guard<std::recursive_mutex> guard(mutex);
     if (!wcache.count(fileName))
         return false;
-    return !wcache.at(fileName).second.data.expired();
+    return !wcache.at(fileName).data.expired();
 }
 
 void image_cacher::findImage(const QString& key, image_t_s& res)
 {
     std::lock_guard<std::recursive_mutex> guard(mutex);
 
-    if (wcache.count(key))
+    if (cache.count(key))
+        res = cache.at(key).second;
+
+    if (!res && wcache.count(key))
     {
         //trying to restore pointer to somewhere existing image (it is possible somebody else holds shared_ptr copy)
-        res = wcache.at(key).second; //overloaded operator =, it does lock()
+        res = wcache.at(key); //overloaded operator =, it does lock()
     }
 
     if (!res)
     {
         //the image is no longer exists in memory. Loading from disk.
         res = createImage(key);
-        auto sz = static_cast<size_t>(res.data->byteCount());
         //idea is to keep images hard locked in RAM until we have sufficient memory, then we unlock it
         //but it will still be in RAM until processing algorithms use it
-
-        wcache[key] = std::make_pair(sz, static_cast<image_t_w>(res));
-        lastSize += sz;
+        wcache[key] = static_cast<image_t_w>(res);
     }
 
     cache[key] = std::make_pair(nows(), res); //even if object exists in cache, just updating time
@@ -108,26 +109,24 @@ void image_cacher::gc(bool no_wait)
     //kinda "gc" loop - removing weak pointers which were deleted already
     //const static size_t maxMemUsage   = (sysMemory > lowMemory)?(sysMemory / 2): (sysMemory * 3/ 4);
     size_t maxMemUsage = sysMemory * static_cast<size_t>(StaticSettingsMap::getGlobalSetts().readInt("Int_mem_pressure")) / 100;
-    if (lastSize > maxMemUsage)
+    if (getMemoryUsed() > maxMemUsage || no_wait)
     {
         std::lock_guard<std::recursive_mutex> guard(mutex);
         //1 step, removing too old hard links to images (pretty dumb if here)
         auto t = nows();
-        utility::erase_if(cache, [this, t, no_wait](const auto& sp)
+        utility::erase_if(cache, [t, no_wait, maxMemUsage](const auto& sp)
         {
             auto delay = t - sp.second.first;
-            return (sp.second.second.data.unique() && (no_wait || delay > 60)) || delay > longestDelay;
-        });
-
-        //2 step, if no hard links left anywhere - clearing weaks too, meaning memory is freed already
-        utility::erase_if(wcache, [this](const auto& sp)
-        {
-            bool r = sp.second.second.data.expired();
-            if (r)
-                lastSize -= sp.second.first;
-            return r;
+            return (getMemoryUsed() > maxMemUsage && sp.second.second.data.unique() && (no_wait || delay > 15)) || delay > longestDelay;
         });
     }
+
+    //2 step, if no hard links left anywhere - clearing weaks too, meaning memory is freed already
+    utility::erase_if(wcache, [](const auto& sp)
+    {
+        bool r = sp.second.data.expired();
+        return r;
+    });
 }
 
 void image_cacher::wipe()
@@ -135,12 +134,11 @@ void image_cacher::wipe()
     std::lock_guard<std::recursive_mutex> guard(mutex);
     cache.clear();
     wcache.clear();
-    lastSize = 0;
 }
 
-size_t image_cacher::getMemoryUsed() const
+size_t image_cacher::getMemoryUsed()
 {
-    return lastSize;
+    return getCurrentRSS();
 }
 
 void image_cacher::setNewtoneTelescope(bool isNewtone)
@@ -201,19 +199,27 @@ VideoCapturePtr image_loader::getVideoCapturer(const QString& filePath) const
 {
     //function must be called in locked state
     //std::lock_guard<std::recursive_mutex> guard(mutex);
-    VideoCapturePtr ptr(nullptr);
-    if (frameLoaders.count(filePath))
-        ptr = frameLoaders.at(filePath).lock();
-
-    if (!ptr)
+    if (!frameLoaders.second || filePath != frameLoaders.first)
     {
+        frameLoaders.first = filePath;
         const static auto backend = cv::VideoCaptureAPIs::CAP_ANY;
-        ptr.reset(new cv::VideoCapture(filePath.toStdString(), backend));
-        frameLoaders[filePath] = ptr;
-        ptr->set(CV_CAP_PROP_CONVERT_RGB, !isRawVideo(ptr));
-        ptr->set(CV_CAP_PROP_POS_FRAMES, 0);
+        frameLoaders.second.reset(new cv::VideoCapture(filePath.toStdString(), backend), [](cv::VideoCapture* p)
+        {
+            if (p)
+            {
+                p->release();
+                delete p;
+            }
+        });
+
+        if (!frameLoaders.second->isOpened())
+            frameLoaders.second->open(frameLoaders.first.toStdString());
+
+        //frameLoaders.second->set(CV_CAP_PROP_CONVERT_RGB, !isRawVideo(frameLoaders.second));
+        //frameLoaders.second->set(CV_CAP_PROP_CONVERT_RGB, 0);
+        //frameLoaders.second->set(CV_CAP_PROP_POS_FRAMES, 0);
     }
-    return ptr;
+    return frameLoaders.second;
 }
 #endif
 
@@ -244,6 +250,7 @@ QString image_cacher::cachedFileName(const QUrl &url) const
 
 image_cacher::image_t_s image_loader::createImage(const QString &key) const
 {
+    //must be called in locked state
     QUrl url(key);
 
     const bool is_url = isProperVfs(url);
@@ -271,8 +278,6 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
             {
                 const auto path = url.path();
                 VideoCapturePtr ptr = getVideoCapturer(path);
-
-                tmp.framesLoader = ptr;
                 const bool is_raw = isRawVideo(ptr);
 
                 bool ok_num;
@@ -326,6 +331,7 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
                                 cv::Mat res;
                                 cvtColor(rgb, res, t.codec, 3);
                                 *tmp.data = utility::bgrrgb::createFrom(res);
+                                res.release();
                             }
                             else
                                 *tmp.data = utility::bgrrgb::createFrom(rgb);
@@ -333,11 +339,16 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
                     }
                 }
             }
+            else
+                frameLoaders.second.reset();
 #endif
             //todo: more schemes maybe added here (dont forget to fix initial condition is_url)
         }
         else
         {
+#ifdef USING_VIDEO_FS
+            frameLoaders.second.reset();
+#endif
             load_from_disk(key);
         }
 
@@ -355,26 +366,12 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
     return tmp;
 }
 
-void image_loader::gc(bool no_wait)
-{
-    std::lock_guard<std::recursive_mutex> guard(mutex);
-    image_cacher::gc(no_wait);
-#ifdef USING_VIDEO_FS
-    //Nth step erase expired video frame loaders
-    utility::erase_if(frameLoaders, [](const auto& sp)
-    {
-        return sp.second.expired();
-    });
-#endif
-
-}
-
 void image_loader::wipe()
 {
     std::lock_guard<std::recursive_mutex> guard(mutex);
     image_cacher::wipe();
 #ifdef USING_VIDEO_FS
-    frameLoaders.clear();
+    frameLoaders.second.reset();
 #endif
 }
 
@@ -567,7 +564,9 @@ void meta_t::precalculate(const image_buffer_ptr &img)
 #if defined(USING_VIDEO_FS) || defined (USING_OPENCV)
     using namespace utility::opencv;
     auto mat = createMat(*img, true);
-    precalcs.blureness = algos::get_Blureness(*mat).at<decltype (precalcs.blureness)>(0);
+    auto res = algos::get_Blureness(*mat);
+    precalcs.blureness = res.at<decltype (precalcs.blureness)>(0);
+    res.release();
 #else
 #warning opencv is disabled, precalculations will be too as well.
 #endif

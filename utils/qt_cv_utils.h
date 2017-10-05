@@ -5,7 +5,13 @@
 
 #ifdef USING_VIDEO_FS
 #include <opencv2/opencv.hpp>
+#include <opencv2/core/version.hpp>
 #include <QImage>
+
+#if CV_MAJOR_VERSION == 2
+#error It seems we have wrong opencv version. Source was developped on 3.x
+#endif
+
 #endif
 
 #include "cont_utils.h"
@@ -23,7 +29,11 @@ namespace utility
             std::vector<cv::Mat> channels(static_cast<size_t>(std::max(1, src.channels())));
             cv::split(src, channels);
             ALG_NS::for_each(channels.begin(), channels.end(), functor);
+            src.release();
             cv::merge(channels.data(), channels.size(), src);
+            ALG_NS::for_each(channels.begin(), channels.end(), [](auto& c){
+                c.release();
+            });
         }
     };
 #endif
@@ -256,13 +266,14 @@ namespace utility
 
             if (rgb_p.type() == CV_64FC1 || rgb_p.type() == CV_64FC3)
             {
-                cv::Mat tm = rgb_p.clone();
+                cv::Mat tm(rgb_p.clone());
                 utility::opencv::forEachChannel(tm, [](cv::Mat& c)
                 {
                     cv::normalize(c, c, 0, 1, cv::NORM_MINMAX);
                     cv::convertScaleAbs(c, c, 256);
                 });
                 make_it(tm);
+                tm.release();
             }
             else
                 make_it(rgb_p);
