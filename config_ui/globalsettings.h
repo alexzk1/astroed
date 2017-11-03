@@ -612,8 +612,6 @@ STORABLE_ATOMIC_CLASS(GlobalComboBoxStorable, int)
 };
 
 
-
-
 #undef STORABLE_ATOMIC_CLASS
 #undef STORABLE_CLASS
 #undef STORABLE_CONSTRUCTOR

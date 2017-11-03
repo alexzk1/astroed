@@ -116,10 +116,7 @@ void ScrollAreaPannable::mouseReleaseEvent(QMouseEvent *e)
 {
     Q_UNUSED(e);
     mousePosPan = QPoint(0, 0);
-    if (pressedAtMode == MouseMode::mmMove)
-    {
-        setCursor(Qt::ArrowCursor);
-    }
+    setCursor(Qt::ArrowCursor);
 }
 
 void ScrollAreaPannable::wheelEvent(QWheelEvent *event)

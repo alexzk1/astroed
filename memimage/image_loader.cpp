@@ -336,6 +336,7 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
                             else
                                 *tmp.data = utility::bgrrgb::createFrom(rgb);
                         }
+                        rgb.release();
                     }
                 }
             }
