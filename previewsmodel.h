@@ -33,7 +33,7 @@ class PreviewsModel : public QAbstractTableModel, public luavm::ProjectSaver, pu
 {
     Q_OBJECT
 public:
-    explicit PreviewsModel(QObject *parent = 0);
+    explicit PreviewsModel(QObject *parent = nullptr);
     // Header:
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
     bool setHeaderData(int section, Qt::Orientation orientation, const QVariant &value, int role = Qt::EditRole) override;
@@ -104,7 +104,7 @@ signals:
 class PreviewsDelegate : public QStyledItemDelegate
 {
 public:
-    PreviewsDelegate(QWidget *parent = 0) : QStyledItemDelegate(parent) {}
+    PreviewsDelegate(QWidget *parent = nullptr) : QStyledItemDelegate(parent) {}
 
     bool showLastClickedPreview(int shift, const QSize &lastSize);
 protected:

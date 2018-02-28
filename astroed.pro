@@ -14,7 +14,7 @@ TEMPLATE = app
 #lets optimize for CPU on linux
 unix:!macx:QMAKE_CXXFLAGS +=  -march=native
 
-QMAKE_CXXFLAGS +=  -std=c++14 -Wall -march=native -frtti -fexceptions -Werror=return-type -Werror=overloaded-virtual
+QMAKE_CXXFLAGS +=  -std=c++14 -Wall -frtti -fexceptions -Werror=return-type -Werror=overloaded-virtual
 QMAKE_CXXFLAGS +=  -Wctor-dtor-privacy -Werror=delete-non-virtual-dtor -fstrict-aliasing
 QMAKE_CXXFLAGS +=  -Werror=strict-aliasing -Wstrict-aliasing=2
 

@@ -27,6 +27,7 @@
 #include <QFileDialog>
 #include <QLabel>
 #include <atomic>
+#include <QCoreApplication>
 #include "lua/variant_convert.h"
 #include "utils/inst_once.h"
 #include "dndwidget.h"
@@ -102,7 +103,7 @@ public:
         reload();
     }
 
-    virtual ~GlobSaveableTempl()
+    virtual ~GlobSaveableTempl() override
     {
         flush();
     }
@@ -234,14 +235,14 @@ public:
 //this class just a holder of user visible description and hint bound to controls
 class UserHintHolderForSettings
 {
-
+     Q_DECLARE_TR_FUNCTIONS(UserHintHolderForSettings)
 public:
     QString getUserText() const;
     void setMovable(bool value);
 
 protected:
     const QString userText;
-    const QString userHint;
+    QString userHint;
     bool  movable;
 protected:
     UserHintHolderForSettings() = delete;
@@ -253,11 +254,15 @@ protected:
     }
     virtual ~UserHintHolderForSettings();
 
-
+    QString translateStatic(const QString& text) const
+    {
+        //translations are put into StaticSettingsMap class ...so must use it as name
+        return QCoreApplication::translate("StaticSettingsMap", text.toStdString().c_str());
+    }
 
     void setHint(QWidget *w) const
     {
-        w->setToolTip(userHint);
+        w->setToolTip(translateStatic(userHint));
     }
 
     QWidget* createLabeledField(QWidget *field, int fieldStretch = 3, int labelStretch = 92, int defBtnStrech = 5, QWidget* lbl = nullptr, const bool no_def_btn = false)
@@ -268,16 +273,16 @@ protected:
         else
             hoster = new QWidget(nullptr);
 
-        hoster->setWindowTitle(userText); //will be used to save position
+        hoster->setWindowTitle(translateStatic(userText)); //will be used to save position
         auto hlayout = new QHBoxLayout();
         if (!lbl)
-            lbl = new QLabel(userText);
+            lbl = new QLabel(translateStatic(userText));
 
         if (!no_def_btn)
         {
             auto button = new QPushButton(nullptr);
-            button->setText(QObject::tr("Def"));
-            button->setToolTip(QObject::tr("Reset this field to default value."));
+            button->setText(tr("Def"));
+            button->setToolTip(tr("Reset this field to default value."));
             hlayout->addWidget(button, defBtnStrech);
             QObject::connect(button, &QPushButton::pressed, [this]()
             {
@@ -381,7 +386,7 @@ signals:
 #define STORABLE_CONSTRUCTOR2(NAME) NAME() = delete; NAME(const QString& key, const ValueType& def, const QString& text, const QString& hint): \
     UserHintHolderForSettings(text, hint) ,SaveableWidgetTempl(key, def)
 
-#define DECL_DESTRUCTOR(NAME) virtual ~NAME()
+#define DECL_DESTRUCTOR(NAME) virtual ~NAME() override
 
 #define DEF_BTN_IMPL virtual void resetToDefButtonPressed() override final{setDefault();}
 
@@ -426,11 +431,13 @@ STORABLE_ATOMIC_CLASS(GlobalStorableBool, bool)
 
 STORABLE_ATOMIC_CLASS(GlobalStorableInt, int)
 {
-    private:
+    Q_DECLARE_TR_FUNCTIONS(GlobalStorableInt)
+private:
     QPointer<QSpinBox> field;
     const ValueType min;
     const ValueType max;
     const ValueType step;
+    bool  hintOnce;
     virtual QWidget* createWidget2() override
     {
         field = new QSpinBox();
@@ -442,6 +449,13 @@ STORABLE_ATOMIC_CLASS(GlobalStorableInt, int)
         {
             set(i * step); //...storing real value of multiplies of the step
         }, Qt::QueuedConnection);
+
+        if (hintOnce)
+        {
+            //in constructor we need original text, so it will be translated
+            hintOnce = false;
+            userHint = updateHint(translateStatic(userHint), min, max);
+        }
         return createLabeledField(field);
     }
     static QString updateHint(const QString& hint, ValueType min, ValueType max)
@@ -461,8 +475,8 @@ STORABLE_ATOMIC_CLASS(GlobalStorableInt, int)
     }
     GlobalStorableInt() = delete;
     GlobalStorableInt(const QString& key, const ValueType& def, const QString& text, const QString& hint, ValueType min, ValueType max, ValueType step = 1):
-        UserHintHolderForSettings(text, updateHint(hint, min, max)) ,SaveableWidgetTempl(key, def / step),
-        min(min), max(max), step(step)
+        UserHintHolderForSettings(text, hint) ,SaveableWidgetTempl(key, def / step),
+        min(min), max(max), step(step), hintOnce(true)
     {
         field = nullptr;
     }
