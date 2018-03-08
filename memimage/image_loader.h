@@ -298,10 +298,10 @@ namespace imaging
     {
     protected:
 #ifdef USING_VIDEO_FS
-        using VideoPair = std::pair<QString, VideoCapturePtr>;
+        using VideoPair = std::pair<QString, VideoFileReadPtr>;
         mutable VideoPair frameLoaders; //now we have video = folder, so should not keep many videos loaded at once
         std::atomic<bool> dctor;
-        VideoCapturePtr getVideoCapturer(const QString &filePath) const;
+        VideoFileReadPtr getVideoCapturer(const QString &filePath) const;
 #endif
         virtual image_t_s createImage(const QString& key) const override;
 

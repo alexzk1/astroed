@@ -187,37 +187,14 @@ static const auto& getUserSelectedRawFormat()
     return rawVideosCodes.at(static_cast<size_t>(index));
 }
 
-bool static isRawVideo(const VideoCapturePtr& ptr)
-{
-    uint32_t val = static_cast<decltype (val)>(ptr->get(CV_CAP_PROP_FOURCC));
-    //qDebug() << "Codec: " << std::string(prop_format.codec, 4).c_str() << prop_format.val;
-
-    return val == 0; //fixme: it returns 0 for my raw sample, BUT it is possible that some more fouriercc can be returned
-}
-
-VideoCapturePtr image_loader::getVideoCapturer(const QString& filePath) const
+VideoFileReadPtr image_loader::getVideoCapturer(const QString& filePath) const
 {
     //function must be called in locked state
     //std::lock_guard<std::recursive_mutex> guard(mutex);
     if (!frameLoaders.second || filePath != frameLoaders.first)
     {
         frameLoaders.first = filePath;
-        const static auto backend = cv::VideoCaptureAPIs::CAP_ANY;
-        frameLoaders.second.reset(new cv::VideoCapture(filePath.toStdString(), backend), [](cv::VideoCapture* p)
-        {
-            if (p)
-            {
-                p->release();
-                delete p;
-            }
-        });
-
-        if (!frameLoaders.second->isOpened())
-            frameLoaders.second->open(frameLoaders.first.toStdString());
-
-        //frameLoaders.second->set(CV_CAP_PROP_CONVERT_RGB, !isRawVideo(frameLoaders.second));
-        //frameLoaders.second->set(CV_CAP_PROP_CONVERT_RGB, 0);
-        //frameLoaders.second->set(CV_CAP_PROP_POS_FRAMES, 0);
+        frameLoaders.second.reset(new VideoFileRead(filePath.toStdString()));
     }
     return frameLoaders.second;
 }
@@ -226,7 +203,7 @@ VideoCapturePtr image_loader::getVideoCapturer(const QString& filePath) const
 bool image_cacher::isProperVfs(const QUrl &url)
 {
     //such a condition for now, isValid == true for simple file-names too
-    return url.isValid() && url.scheme() == vfs_scheme;;
+    return url.isValid() && url.scheme() == vfs_scheme;
 }
 
 bool image_cacher::isUsingCached() const
@@ -277,13 +254,13 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
             if (url.scheme() == vfs_scheme)
             {
                 const auto path = url.path();
-                VideoCapturePtr ptr = getVideoCapturer(path);
-                const bool is_raw = isRawVideo(ptr);
+                auto ptr = getVideoCapturer(path);
+                const bool is_raw = ptr->isRawVideo();
 
                 bool ok_num;
                 auto frame_num = std::max<long>(0, url.fragment().toLong(&ok_num, base_frames_to_string_numbering));
 
-                if (ok_num && frame_num < static_cast<decltype(frame_num)>(ptr->get(CV_CAP_PROP_FRAME_COUNT)))
+                if (ok_num && frame_num < ptr->count())
                 {
                     bool uc = isUsingCached();
                     QString cfn;
@@ -298,9 +275,7 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
 
                     if (!uc)
                     {
-                        if (static_cast<decltype(frame_num)>(ptr->get(CV_CAP_PROP_POS_FRAMES)) != frame_num)
-                            ptr->set(CV_CAP_PROP_POS_FRAMES, frame_num);
-
+                        ptr->rewindIf(frame_num);
                         cv::Mat rgb;
                         if (ptr->read(rgb))
                         {
@@ -336,7 +311,6 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
                             else
                                 *tmp.data = utility::bgrrgb::createFrom(rgb);
                         }
-                        rgb.release();
                     }
                 }
             }
@@ -370,10 +344,10 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
 void image_loader::wipe()
 {
     std::lock_guard<std::recursive_mutex> guard(mutex);
-    image_cacher::wipe();
 #ifdef USING_VIDEO_FS
     frameLoaders.second.reset();
 #endif
+    image_cacher::wipe();
 }
 
 QStringList image_loader::getVideoFramesLinks(const QString &videoFileName)
@@ -381,13 +355,13 @@ QStringList image_loader::getVideoFramesLinks(const QString &videoFileName)
     const static QChar filler('0');
     QStringList res;
 #ifdef USING_VIDEO_FS
-    VideoCapturePtr ptr;
+    VideoFileReadPtr ptr;
     int64_t fcount = 0;
     {
         std::lock_guard<std::recursive_mutex> guard(mutex);
         ptr = getVideoCapturer(videoFileName);
         if (ptr)
-            fcount = static_cast<decltype(fcount)>(ptr->get(CV_CAP_PROP_FRAME_COUNT));
+            fcount = ptr->count();
     }
     for (auto i = 0; i < fcount; ++i)
         res << QString("%1://%2#%3").arg(vfs_scheme).arg(videoFileName).arg(i, 8, base_frames_to_string_numbering, filler);
