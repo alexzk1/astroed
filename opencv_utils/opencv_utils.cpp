@@ -56,17 +56,16 @@ MatPtr utility::opencv::createMat(const QImage &src, bool grey)
         }
     });
 
-    auto t(tmp.clone());
     if (grey)
     {
-        cvtColor(t, *res, cv::COLOR_RGB2GRAY);
+        cvtColor(tmp, *res, cv::COLOR_RGB2GRAY);
     }
     else
     {
-        *res = t;
+        tmp.copyTo(*res);
         rgbConvert(*res);
     }
-    t.release();
+
     forEachChannel(*res, [](cv::Mat& c)
     {
         c.convertTo(c, CV_64F);// convert to double

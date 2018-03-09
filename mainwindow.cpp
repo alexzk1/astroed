@@ -466,7 +466,7 @@ void MainWindow::setupFsBrowsingAndToolbars()
         //building filter button
         const static auto& roles = PreviewsModel::getFileRoles();
 
-        fact = new QAction(); //so complex with action because otherwise button is incorrect shown
+        fact = new QAction(this); //so complex with action because otherwise button is incorrect shown
         fact->setCheckable(true);
         fact->setText(btnFilterText);//however, action itself is never triggered
         fact->setIcon(QIcon(":/icons/icons/Filter-2-icon.png"));

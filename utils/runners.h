@@ -34,5 +34,10 @@ namespace utility {
         static ctpl::thread_pool pool(8);
         return pool;
     }
+
+    inline size_t currentThreadId()
+    {
+        return std::hash<std::thread::id>{}(std::this_thread::get_id());
+    }
 }
 

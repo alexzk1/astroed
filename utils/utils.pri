@@ -10,7 +10,8 @@ HEADERS += \
     $$PWD/cont_utils.h \
     $$PWD/qt_cv_utils.h \
     $$PWD/palgorithm.h \
-    $$PWD/ctpl_stl.h
+    $$PWD/ctpl_stl.h \
+    $$PWD/conditional_wait.h
 
 SOURCES += \
     $$PWD/memsize.cpp

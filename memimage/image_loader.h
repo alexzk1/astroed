@@ -302,6 +302,7 @@ namespace imaging
         mutable VideoPair frameLoaders; //now we have video = folder, so should not keep many videos loaded at once
         std::atomic<bool> dctor;
         VideoFileReadPtr getVideoCapturer(const QString &filePath) const;
+        void closeVideoCapturer() const;
 #endif
         virtual image_t_s createImage(const QString& key) const override;
 

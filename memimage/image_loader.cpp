@@ -191,12 +191,19 @@ VideoFileReadPtr image_loader::getVideoCapturer(const QString& filePath) const
 {
     //function must be called in locked state
     //std::lock_guard<std::recursive_mutex> guard(mutex);
+
     if (!frameLoaders.second || filePath != frameLoaders.first)
     {
-        frameLoaders.first = filePath;
         frameLoaders.second.reset(new VideoFileRead(filePath.toStdString()));
+        frameLoaders.first = filePath;
     }
     return frameLoaders.second;
+}
+
+void image_loader::closeVideoCapturer() const
+{
+    std::lock_guard<std::recursive_mutex> guard(mutex);
+    frameLoaders.second.reset();
 }
 #endif
 
@@ -254,6 +261,8 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
             if (url.scheme() == vfs_scheme)
             {
                 const auto path = url.path();
+                //qDebug() << "Thread ID: " << utility::currentThreadId();
+
                 auto ptr = getVideoCapturer(path);
                 const bool is_raw = ptr->isRawVideo();
 
@@ -275,9 +284,8 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
 
                     if (!uc)
                     {
-                        ptr->rewindIf(frame_num);
                         cv::Mat rgb;
-                        if (ptr->read(rgb))
+                        if (ptr->read(frame_num, rgb))
                         {
                             if (isUsingCached() && !cfn.isEmpty())
                             {
@@ -315,14 +323,14 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
                 }
             }
             else
-                frameLoaders.second.reset();
+                closeVideoCapturer();
 #endif
             //todo: more schemes maybe added here (dont forget to fix initial condition is_url)
         }
         else
         {
 #ifdef USING_VIDEO_FS
-            frameLoaders.second.reset();
+            closeVideoCapturer();
 #endif
             load_from_disk(key);
         }
@@ -337,7 +345,8 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
     {
         tmp.meta.loadExif(key);
     }
-    tmp.meta.precalculate(tmp.data);
+    if (!tmp.data->isNull())
+        tmp.meta.precalculate(tmp.data);
     return tmp;
 }
 
@@ -345,7 +354,7 @@ void image_loader::wipe()
 {
     std::lock_guard<std::recursive_mutex> guard(mutex);
 #ifdef USING_VIDEO_FS
-    frameLoaders.second.reset();
+    closeVideoCapturer();
 #endif
     image_cacher::wipe();
 }
