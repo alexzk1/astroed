@@ -14,13 +14,13 @@ class LabeledSlider : public QWidget
     Q_OBJECT
 public:
     explicit LabeledSlider(QWidget *parent = nullptr);
-    ~LabeledSlider();
+    virtual ~LabeledSlider() override;
 
     //i'm too lazy to make delegates etc ... just don't delete those pointers
     QSlider* getSlider() const;
     QLabel*  getText() const;
 protected:
-    void changeEvent(QEvent *e);
+    virtual void changeEvent(QEvent *e) override;
 
 private:
     Ui::LabeledSlider *ui;

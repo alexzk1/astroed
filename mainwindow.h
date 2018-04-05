@@ -30,8 +30,8 @@ class MainWindow : public QMainWindow, public utility::ItCanBeOnlyOne<MainWindow
 public:
     QString styler;
 
-    explicit MainWindow(QWidget *parent = 0);
-    ~MainWindow();
+    explicit MainWindow(QWidget *parent = nullptr);
+    virtual ~MainWindow() override;
     QString getSelectedFolder();
     void loadProjectFromFile(const QString& name);
 public slots:
@@ -39,6 +39,7 @@ public slots:
     void resetPreview(bool resetRoles = true);
     void selectPath(const QString &path, bool collapse = true);
     void showTempNotify(const QString& text, int delay = 10000);
+    void enableZoomTab(bool enable);
 protected:
     virtual void changeEvent(QEvent *e) override;
     virtual bool eventFilter(QObject *src, QEvent *e) override;
@@ -47,6 +48,7 @@ protected:
     virtual void recurseRead(QSettings& settings, QObject* object) override;
 
     void currentDirChanged(const QString& dir);
+    void showPreview(int shift = 0);
 
 signals:
     void prettyEnded();

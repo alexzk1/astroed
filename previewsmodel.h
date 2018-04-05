@@ -68,7 +68,7 @@ public:
     virtual void loadProjectCode(const std::string& src) override;
 
     int  static getFileRoleColumnId(); //this column may have automatic changes in loop
-    virtual ~PreviewsModel();
+    virtual ~PreviewsModel() override;
     const static FileRolesList& getFileRoles();
 private slots:
     void onTimerDelayedLoader();
@@ -106,7 +106,7 @@ class PreviewsDelegate : public QStyledItemDelegate
 public:
     PreviewsDelegate(QWidget *parent = nullptr) : QStyledItemDelegate(parent) {}
 
-    bool showLastClickedPreview(int shift, const QSize &lastSize);
+    bool showLastClickedPreview(int shift, const QSize &lastSize, QAbstractItemModel *model = nullptr);
 protected:
     virtual void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
     virtual QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override;

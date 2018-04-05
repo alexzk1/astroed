@@ -873,7 +873,7 @@ void PreviewsModel::loadCurrentInterval()
 //----------------------DELEGATE----------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
 
-bool PreviewsDelegate::showLastClickedPreview(int shift, const QSize& lastSize)
+bool PreviewsDelegate::showLastClickedPreview(int shift, const QSize& lastSize, QAbstractItemModel *model)
 {
     bool res = false;
     if (lastClickedPreview.isValid())
@@ -900,6 +900,14 @@ bool PreviewsDelegate::showLastClickedPreview(int shift, const QSize& lastSize)
                         MainWindow::instance()->resetPreview(false);//fixme: maybe do some signal/ slot for that
                 }
             }
+        }
+    }
+    else
+    {
+        if (model)
+        {
+            lastClickedPreview = model->index(0, 0);
+            res = showLastClickedPreview(shift, lastSize, nullptr);
         }
     }
     return res;

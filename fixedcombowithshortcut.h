@@ -12,7 +12,7 @@ public:
     void addItemWithShortcut(const QString& text, const QKeySequence& shortcut, QVariant userData = QVariant());
 private:
     std::map<QKeySequence, QString> sequences;
-    bool eventFilter(QObject *t, QEvent *e);
+    virtual bool eventFilter(QObject *t, QEvent *e) override;
 };
 
 #endif // FIXEDCOMBOWITHSHORTCUT_H

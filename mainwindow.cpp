@@ -60,9 +60,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     //ui->previewsTable->setModel(previewsModel);
     ui->previewsTable->setItemDelegate(previewsDelegate);
-
     ui->tabsWidget->setCurrentWidget(ui->tabFiles);
-
 
     QFile style(":/styles/darkorange");
     style.open(QIODevice::ReadOnly | QFile::Text);
@@ -183,6 +181,9 @@ void MainWindow::openPreviewTab(const imaging::image_buffer_ptr& image, const QS
 {
     lastPreviewFileName = fileName;
     const auto txt = (fileName.isEmpty())? "":QString(tr("File: %1")).arg(QFileInfo(fileName).fileName());
+
+    enableZoomTab(true);
+
     ui->tabsWidget->setCurrentWidget(ui->tabZoomed);
     ui->scrollAreaZoom->setMaxZoom(lastPreviewSize = image->size());
     fileNameLabel->setText(txt);
@@ -293,16 +294,8 @@ bool MainWindow::eventFilter(QObject *src, QEvent *e)
             if ((ke->modifiers() == Qt::ControlModifier) && (key == Qt::Key_Left || key == Qt::Key_Right))
             {
                 auto s = previewShift + ((key == Qt::Key_Left)?-1:((key == Qt::Key_Right)?1 : 0));
-                auto dele = dynamic_cast<PreviewsDelegate*>(ui->previewsTable->itemDelegate());
-                if (dele)
-                {
-                    if (dele->showLastClickedPreview(s, lastPreviewSize))
-                    {
-                        previewShift = s;
-                        //qDebug() << "set shift "<<s;
-                    }
-                    return true;
-                }
+                showPreview(s);
+                return true;
             }
 
             if (key == Qt::Key_Plus || key == Qt::Key_Equal || (key == Qt::Key_Up && ke->modifiers() == Qt::ShiftModifier))
@@ -346,8 +339,27 @@ void MainWindow::recurseRead(QSettings &settings, QObject *object)
 void MainWindow::currentDirChanged(const QString &dir)
 {
     //qDebug() << "currentDirChanged: " << dir;
+    enableZoomTab(false);
     resetFiltering(); //we do not support selecting file roles in different folders ...
     previewsModel->setCurrentFolder(dir, ui->actionRecursive_Listing->isChecked());
+}
+
+void MainWindow::showPreview(int shift)
+{
+    auto dele = dynamic_cast<PreviewsDelegate*>(ui->previewsTable->itemDelegate());
+    if (dele)
+    {
+        if (dele->showLastClickedPreview(shift, lastPreviewSize))
+        {
+            previewShift = shift;
+            //qDebug() << "set shift "<<s;
+        }
+    }
+}
+
+void MainWindow::enableZoomTab(bool enable)
+{
+    ui->tabsWidget->setTabEnabled(1, enable);
 }
 
 QString MainWindow::getSelectedFolder()
