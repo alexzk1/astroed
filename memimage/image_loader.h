@@ -24,7 +24,8 @@
 
 namespace imaging
 {
-    using image_buffer_ptr = std::shared_ptr<QImage>;
+    using image_buffer_ptr  = std::shared_ptr<QImage>;
+    using image_buffer_wptr = std::weak_ptr<QImage>;
 
     //helpers to work with libexiv2
     namespace exiv2_helpers

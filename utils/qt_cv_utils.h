@@ -269,8 +269,7 @@ namespace utility
                 cv::Mat tm(rgb_p.clone());
                 utility::opencv::forEachChannel(tm, [](cv::Mat& c)
                 {
-                    cv::normalize(c, c, 0, 1, cv::NORM_MINMAX);
-                    cv::convertScaleAbs(c, c, 256);
+                    cv::convertScaleAbs(c, c, 255);
                 });
                 make_it(tm);
                 tm.release();

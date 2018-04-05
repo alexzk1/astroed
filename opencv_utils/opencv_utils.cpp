@@ -7,7 +7,6 @@
 #ifdef USING_OPENCV_GUI
 #include <opencv/highgui.h>
 #endif
-
 const static auto   laplasianBlurKernelSize = 3;//odd, bigger value = slower, but less noise counting
 
 using namespace utility::opencv;
@@ -48,7 +47,8 @@ MatPtr utility::opencv::createMat(const QImage &src, bool grey)
     }
     using namespace utility::bgrrgb;
     cv::Mat tmp = wrapQImage(src);
-    auto res = MatPtr(new cv::Mat(), [](auto p){
+    MatPtr res = MatPtr(new cv::Mat(), [](auto p)
+    {
         if (p)
         {
             p->release();
@@ -58,7 +58,7 @@ MatPtr utility::opencv::createMat(const QImage &src, bool grey)
 
     if (grey)
     {
-        cvtColor(tmp, *res, cv::COLOR_RGB2GRAY);
+        cvtColor(tmp, *res, cv::COLOR_RGB2GRAY, 1);
     }
     else
     {
@@ -68,8 +68,7 @@ MatPtr utility::opencv::createMat(const QImage &src, bool grey)
 
     forEachChannel(*res, [](cv::Mat& c)
     {
-        c.convertTo(c, CV_64F);// convert to double
-        normalize(c, c, 0, 1, cv::NORM_MINMAX);
+        c.convertTo(c, CV_64F, 1/255.);// convert to double
     });
 
     tmp.release();

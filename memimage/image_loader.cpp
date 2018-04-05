@@ -263,26 +263,24 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
                 const auto path = url.path();
                 //qDebug() << "Thread ID: " << utility::currentThreadId();
 
-                auto ptr = getVideoCapturer(path);
-                const bool is_raw = ptr->isRawVideo();
-
-                bool ok_num;
-                auto frame_num = std::max<long>(0, url.fragment().toLong(&ok_num, base_frames_to_string_numbering));
-
-                if (ok_num && frame_num < ptr->count())
+                bool uc = isUsingCached();
+                QString cfn;
+                if (uc)
                 {
-                    bool uc = isUsingCached();
-                    QString cfn;
-                    if (uc)
-                    {
-                        cfn = cachedFileName(url);
-                        if (QFile::exists(cfn))
-                            load_from_disk(cfn);
+                    cfn = cachedFileName(url);
+                    if (QFile::exists(cfn))
+                        load_from_disk(cfn);
+                    uc = !tmp.data->isNull();
+                }
+                if (!uc)
+                {
+                    auto ptr = getVideoCapturer(path);
+                    const bool is_raw = ptr->isRawVideo();
 
-                        uc = !tmp.data->isNull();
-                    }
+                    bool ok_num;
+                    auto frame_num = std::max<long>(0, url.fragment().toLong(&ok_num, base_frames_to_string_numbering));
 
-                    if (!uc)
+                    if (ok_num && frame_num < ptr->count())
                     {
                         cv::Mat rgb;
                         if (ptr->read(frame_num, rgb))
@@ -551,6 +549,7 @@ void meta_t::precalculate(const image_buffer_ptr &img)
     auto res = algos::get_Blureness(*mat);
     precalcs.blureness = res.at<decltype (precalcs.blureness)>(0);
     res.release();
+
 #else
 #warning opencv is disabled, precalculations will be too as well.
 #endif

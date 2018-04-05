@@ -478,13 +478,12 @@ void MainWindow::setupFsBrowsingAndToolbars()
 
         QMenu *fmenu = new QMenu(fbtn);
         fbtn->setMenu(fmenu);
-        QAction *aclr = new QAction(tr("No Filter"));
+        QAction *aclr = fmenu->addAction(tr("No Filter"));
         connect(aclr, &QAction::triggered, this, &MainWindow::resetFiltering, Qt::QueuedConnection);
 
-        fmenu->addAction(aclr);
         for (size_t i = 0, sz = roles.size(); i < sz; ++i)
         {
-            QAction *a = new QAction(roles.at(i).humanRole);
+            QAction *a = fmenu->addAction(roles.at(i).humanRole);
             connect(a, &QAction::triggered, this, [i, this]()
             {
                 if (sortModel)
@@ -499,7 +498,6 @@ void MainWindow::setupFsBrowsingAndToolbars()
                     }
                 }
             }, Qt::QueuedConnection);
-            fmenu->addAction(a);
         }
     }
 }

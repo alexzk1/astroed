@@ -18,9 +18,6 @@ using VideoCapturePtr  = std::shared_ptr<cv::VideoCapture>;
 using VideoCapturePtrW = std::weak_ptr<cv::VideoCapture>;
 
 class VideoFileRead
-#ifdef _DEBUG
-        : public utility::ItCanBeOnlyOne<VideoFileRead>
-#endif
 {
 private:
     const std::string fileName;
@@ -50,6 +47,9 @@ public:
     ~VideoFileRead()
     {
         thr.reset();
+#ifdef _DEBUG
+        qDebug() << "VideFileRead thread ended";
+#endif
     }
 
     //ensuring VideoCapture will be created and accessed in the same fixed thread (otherwise it leaks memory)
@@ -69,6 +69,7 @@ public:
                 framesCount = static_cast<long>(vid.get(CV_CAP_PROP_FRAME_COUNT));
                 uint32_t val = static_cast<decltype (val)>(vid.get(CV_CAP_PROP_FOURCC));
                 isRaw = (val == 0); //fixme: it returns 0 for my raw sample, BUT it is possible that some more fouriercc can be returned
+                vid.set(CV_CAP_PROP_BUFFERSIZE, 1);
 
                 while (!(*should_stop))
                 {
@@ -85,15 +86,17 @@ public:
                     }
                     cw_ready_buf.confirm();
                 }
+                vid.release();
                 cw_ready_buf.confirm(); //ensuring main waiter will go on
             });
         }
 
         pFrame = frame;
         rOk = false;
-        cw_ready_params.confirm();
 
+        cw_ready_params.confirm();
         cw_ready_buf.waitConfirm();
+
         if (rOk)
             rBuf.copyTo(res);
 
