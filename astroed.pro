@@ -72,7 +72,8 @@ SOURCES += main.cpp\
     scrollareapannable.cpp \
     fixedcombowithshortcut.cpp \
     sliderdrop.cpp \
-    labeledslider.cpp
+    labeledslider.cpp \
+    previewwidget.cpp
 
 HEADERS  += mainwindow.h \
     previewsmodel.h \
@@ -83,11 +84,13 @@ HEADERS  += mainwindow.h \
     fixedcombowithshortcut.h \
     clickablelabel.h \
     sliderdrop.h \
-    labeledslider.h
+    labeledslider.h \
+    previewwidget.h
 
 
 FORMS    += mainwindow.ui \
-    labeledslider.ui
+    labeledslider.ui \
+    previewwidget.ui
 
 RESOURCES += \
     resources.qrc

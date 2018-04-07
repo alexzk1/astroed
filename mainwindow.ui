@@ -25,7 +25,7 @@
        <enum>QTabWidget::West</enum>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <property name="documentMode">
        <bool>true</bool>
@@ -123,7 +123,7 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="tabZoomed">
+      <widget class="PreviewWidget" name="tabZoomed">
        <attribute name="title">
         <string>&amp;2. View</string>
        </attribute>
@@ -143,47 +143,6 @@
         <property name="bottomMargin">
          <number>0</number>
         </property>
-        <item>
-         <widget class="ScrollAreaPannable" name="scrollAreaZoom">
-          <property name="frameShape">
-           <enum>QFrame::NoFrame</enum>
-          </property>
-          <property name="frameShadow">
-           <enum>QFrame::Plain</enum>
-          </property>
-          <property name="widgetResizable">
-           <bool>true</bool>
-          </property>
-          <widget class="QWidget" name="scrollAreaWidgetContents">
-           <property name="geometry">
-            <rect>
-             <x>0</x>
-             <y>0</y>
-             <width>864</width>
-             <height>529</height>
-            </rect>
-           </property>
-           <layout class="QVBoxLayout" name="verticalLayout_4">
-            <item>
-             <widget class="QLabel" name="lblZoomPix">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-              <property name="scaledContents">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-         </widget>
-        </item>
        </layout>
       </widget>
       <widget class="QWidget" name="tabScript">
@@ -447,9 +406,9 @@
    <header location="global">customtableview.h</header>
   </customwidget>
   <customwidget>
-   <class>ScrollAreaPannable</class>
-   <extends>QScrollArea</extends>
-   <header location="global">scrollareapannable.h</header>
+   <class>PreviewWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">previewwidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

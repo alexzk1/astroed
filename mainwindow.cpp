@@ -8,6 +8,7 @@
 #include <QToolButton>
 #include <QPushButton>
 #include <QStatusBar>
+#include <QMenu>
 #include <QTimer>
 #include <QFileInfo>
 #include <QHeaderView>
@@ -27,7 +28,6 @@
 #include "opencv_utils/opencv_utils.h"
 #endif
 
-const static auto ZOOMING_KB_VALUE = 2 * ScrollAreaPannable::WheelStep;
 
 const static QString defaultProjFile = "/ae_project.luap";
 const static QString btnFilterText = QObject::tr("Filter by Role");
@@ -66,9 +66,8 @@ MainWindow::MainWindow(QWidget *parent) :
     style.open(QIODevice::ReadOnly | QFile::Text);
     styler = style.readAll();
 
-
     //ok, i dont like that style for the whole app, but need some good visible scrollbars with huge black space picture
-    ui->scrollAreaZoom->setStyleSheet(styler);
+    ui->tabZoomed->getScrollArea()->setStyleSheet(styler);
 
     auto hdr = ui->previewsTable->horizontalHeader();
     if (hdr)
@@ -185,18 +184,20 @@ void MainWindow::openPreviewTab(const imaging::image_buffer_ptr& image, const QS
     enableZoomTab(true);
 
     ui->tabsWidget->setCurrentWidget(ui->tabZoomed);
-    ui->scrollAreaZoom->setMaxZoom(lastPreviewSize = image->size());
+    lastPreviewSize = image->size();
     fileNameLabel->setText(txt);
+    QString tip;
     if (!fileName.isEmpty())
     {
         auto meta = IMAGE_LOADER.getMeta(fileName);
         auto txt  = meta.getStringValue();
-        ui->lblZoomPix->setStatusTip(meta.getStringValue());
+        tip = meta.getStringValue();
         if (statusBar())
             statusBar()->showMessage(txt);
 
     }
-    ui->lblZoomPix->setPixmap(QPixmap::fromImage(*image));
+    ui->tabZoomed->setImage(*image, tip);
+
     if (zoomPicModeActions.size() > pictureRole && zoomPicModeActions.at(pictureRole))
     {
         if (zoomPicModeActionsGroup)
@@ -215,8 +216,7 @@ void MainWindow::showTempNotify(const QString &text, int delay)
 void MainWindow::resetPreview(bool resetRoles)
 {
     previewShift = 0;
-    ui->scrollAreaZoom->zoomFitWindow();
-    ui->scrollAreaZoom->ensureVisible(0,0);
+    ui->tabZoomed->resetZoom();
 
     if (resetRoles && zoomPicModeActions.size() && zoomPicModeActions.at(0))
     {
@@ -281,32 +281,6 @@ void MainWindow::on_tabsWidget_currentChanged(int index)
     }
 }
 
-bool MainWindow::eventFilter(QObject *src, QEvent *e)
-{
-    //mouse events for scrollzoom are overloaded in ScrollAreaPannable, do it there
-    //if you change shortcuts here, please fix hint string into on_tabsWidget_currentChanged(int index)
-    if (src == ui->scrollAreaZoom)
-    {
-        if (e->type() == QEvent::KeyPress)
-        {
-            const QKeyEvent *ke = static_cast<decltype (ke)>(e);
-            auto key = ke->key();
-            if ((ke->modifiers() == Qt::ControlModifier) && (key == Qt::Key_Left || key == Qt::Key_Right))
-            {
-                auto s = previewShift + ((key == Qt::Key_Left)?-1:((key == Qt::Key_Right)?1 : 0));
-                showPreview(s);
-                return true;
-            }
-
-            if (key == Qt::Key_Plus || key == Qt::Key_Equal || (key == Qt::Key_Up && ke->modifiers() == Qt::ShiftModifier))
-                ui->scrollAreaZoom->zoomBy(ZOOMING_KB_VALUE);
-
-            if (key == Qt::Key_Minus || (key == Qt::Key_Down && ke->modifiers() == Qt::ShiftModifier))
-                ui->scrollAreaZoom->zoomBy(-ZOOMING_KB_VALUE);
-        }
-    }
-    return false;
-}
 
 void MainWindow::recurseWrite(QSettings &settings, QObject *object)
 {
@@ -516,9 +490,10 @@ void MainWindow::setupFsBrowsingAndToolbars()
 
 void MainWindow::setupZoomGui()
 {
-    ui->scrollAreaZoom->installEventFilter(this);
-    auto zoomToolbar = addToolbarToLayout(ui->tabZoomed->layout());
+    connect(ui->tabZoomed, &PreviewWidget::prevImageRequested, this, [this](){showPreview(previewShift - 1);}, Qt::QueuedConnection);
+    connect(ui->tabZoomed, &PreviewWidget::nextImageRequested, this, [this](){showPreview(previewShift + 1);}, Qt::QueuedConnection);
 
+    auto zoomToolbar = addToolbarToLayout(ui->tabZoomed->layout());
     const static auto add_action = [](QActionGroup* group, QAction* a, const QKeySequence& shortc = QKeySequence())->QAction*
     {
         if (!shortc.isEmpty())
@@ -545,10 +520,10 @@ void MainWindow::setupZoomGui()
         ag_mode->setExclusive(true);
         add_action(ag_mode, tmp = zoomToolbar->addAction(QIcon(":/icons/icons/Cursor-Move-icon.png"), tr("Move")), QKeySequence("1"));
         tmp->setChecked(true);
-        connect(tmp, &QAction::triggered, ui->scrollAreaZoom, std::bind(&ScrollAreaPannable::setMouseMode, ui->scrollAreaZoom, ScrollAreaPannable::MouseMode::mmMove));
+        connect(tmp, &QAction::triggered, ui->tabZoomed->getScrollArea(), std::bind(&ScrollAreaPannable::setMouseMode, ui->tabZoomed->getScrollArea(), ScrollAreaPannable::MouseMode::mmMove));
 
         add_action(ag_mode, tmp = zoomToolbar->addAction(QIcon(":/icons/icons/Cursor-Select-icon.png"), tr("Select")), QKeySequence("2"));
-        connect(tmp, &QAction::triggered, ui->scrollAreaZoom, std::bind(&ScrollAreaPannable::setMouseMode, ui->scrollAreaZoom, ScrollAreaPannable::MouseMode::mmSelect));
+        connect(tmp, &QAction::triggered, ui->tabZoomed->getScrollArea(), std::bind(&ScrollAreaPannable::setMouseMode, ui->tabZoomed->getScrollArea(), ScrollAreaPannable::MouseMode::mmSelect));
 
         zoomToolbar->addSeparator();
         zoomToolbar->addAction(add_action(nullptr,  ui->actionSave_As, QKeySequence("ctrl+S")));
@@ -591,7 +566,7 @@ void MainWindow::setupZoomGui()
             {
                 auto mat = createMat(*IMAGE_LOADER.getImage(lastPreviewFileName), true);
                 algos::lucy_richardson_deconv(*mat, 5);
-                ui->lblZoomPix->setPixmap(QPixmap::fromImage(utility::bgrrgb::createFrom(*mat)));
+                ui->tabZoomed->setImage(utility::bgrrgb::createFrom(*mat));
             });
         }
 #endif

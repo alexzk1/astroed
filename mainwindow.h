@@ -42,8 +42,6 @@ public slots:
     void enableZoomTab(bool enable);
 protected:
     virtual void changeEvent(QEvent *e) override;
-    virtual bool eventFilter(QObject *src, QEvent *e) override;
-
     virtual void recurseWrite(QSettings& settings, QObject* object) override;
     virtual void recurseRead(QSettings& settings, QObject* object) override;
 
