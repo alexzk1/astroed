@@ -46,6 +46,12 @@ QPointer<ScrollAreaPannable> PreviewWidget::getScrollArea() const
     return QPointer<ScrollAreaPannable>(ui->scrollAreaZoom);
 }
 
+const QString& PreviewWidget::getKeyboardUsage()
+{
+    const static QString zoomKbHintText = tr("LBM /arrows - pan, RBM - select, LBM + wheel(shift + wheel, +-, shift+up/down) - zoom. ctrl + L/R arrows to list files.");
+    return zoomKbHintText;
+}
+
 void PreviewWidget::changeEvent(QEvent *e)
 {
     QWidget::changeEvent(e);

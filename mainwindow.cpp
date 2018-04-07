@@ -243,7 +243,6 @@ void MainWindow::changeEvent(QEvent *e)
     QMainWindow::changeEvent(e);
 }
 
-const QString MainWindow::zoomKbHintText = MainWindow::tr("LBM /arrows - pan, RBM - select, LBM + wheel(shift + wheel, +-, shift+up/down) - zoom. ctrl + L/R arrows to list files.");
 void MainWindow::on_tabsWidget_currentChanged(int index)
 {
     //active tab changed slot
@@ -257,9 +256,9 @@ void MainWindow::on_tabsWidget_currentChanged(int index)
         static bool session_once = true;
         if (session_once)
         {
-            showTempNotify(zoomKbHintText, 15000);
+            showTempNotify(PreviewWidget::getKeyboardUsage(), 15000);
             session_once = false;
-            statusBar()->setToolTip(zoomKbHintText);
+            statusBar()->setToolTip(PreviewWidget::getKeyboardUsage());
         }
     }
     else

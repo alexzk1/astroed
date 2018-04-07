@@ -103,8 +103,6 @@ private:
     QPointer<QActionGroup> zoomPicModeActionsGroup;
     void setupFsBrowsingAndToolbars();
     void setupZoomGui();
-
-    const static QString zoomKbHintText;
     QToolBar* addToolbarToLayout(QLayout* src, int pos = 0);
 };
 

@@ -18,6 +18,7 @@ public:
     virtual ~PreviewWidget() override;
 
     QPointer<ScrollAreaPannable> getScrollArea() const;
+    const static QString &getKeyboardUsage();
 public slots:
     void setImage(const QImage& image, const QString& tooltip = "");
     void resetZoom() const;
