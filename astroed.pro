@@ -11,9 +11,6 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = astroed
 TEMPLATE = app
 
-#lets optimize for CPU on linux
-unix:!macx:QMAKE_CXXFLAGS +=  -march=native
-
 QMAKE_CXXFLAGS +=  -std=c++14 -Wall -frtti -fexceptions -Werror=return-type -Werror=overloaded-virtual
 QMAKE_CXXFLAGS +=  -Wctor-dtor-privacy -Werror=delete-non-virtual-dtor -fstrict-aliasing
 QMAKE_CXXFLAGS +=  -Werror=strict-aliasing -Wstrict-aliasing=2
@@ -41,6 +38,8 @@ QMAKE_LFLAGS   *= -fopenmp
 
 CONFIG(debug) {
      message( "Building the DEBUG Version" )
+     #lets optimize for CPU on debug, for release - packager should do
+     QMAKE_CXXFLAGS +=  -march=native
      QMAKE_CXXFLAGS += -O0 -g
      DEFINES += _DEBUG
      QMAKE_CXXFLAGS += -fsanitize=undefined -fsanitize=vptr
