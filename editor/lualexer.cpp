@@ -60,55 +60,55 @@ const char *LuaLexer::keywords(int set) const
     if (set == 1)
         // Keywords.
         return
-                "and break do else elseif end for function if "
-                "in local not or repeat return then until "
-                "while";
+            "and break do else elseif end for function if "
+            "in local not or repeat return then until "
+            "while";
 
     if (set == 2)
         // Basic functions.
         return
-                "_ALERT _ERRORMESSAGE _INPUT _PROMPT _OUTPUT _STDERR "
-                "_STDIN _STDOUT call dostring getn "
-                "globals newtype rawget rawset require sort "
+            "_ALERT _ERRORMESSAGE _INPUT _PROMPT _OUTPUT _STDERR "
+            "_STDIN _STDOUT call dostring getn "
+            "globals newtype rawget rawset require sort "
 
-                "G getfenv getmetatable ipairs loadlib next pairs "
-                "pcall rawegal rawget rawset require setfenv "
-                "setmetatable xpcall string table math coroutine io "
-                "os print tostring tonumber";
+            "G getfenv getmetatable ipairs loadlib next pairs "
+            "pcall rawegal rawget rawset require setfenv "
+            "setmetatable xpcall string table math coroutine io "
+            "os print tostring tonumber";
 
     if (set == 3)
         // String, table and maths functions.
         return
-                "abs acos asin atan atan2 ceil cos deg exp floor "
-                "format frexp gsub ldexp log log10 max min mod rad "
-                "random randomseed sin sqrt strbyte strchar strfind "
-                "strlen strlower strrep strsub strupper tan "
+            "abs acos asin atan atan2 ceil cos deg exp floor "
+            "format frexp gsub ldexp log log10 max min mod rad "
+            "random randomseed sin sqrt strbyte strchar strfind "
+            "strlen strlower strrep strsub strupper tan "
 
-                "string.byte string.char string.dump string.find "
-                "string.len string.lower string.rep string.sub "
-                "string.upper string.format string.gfind string.gsub "
-                "table.concat table.foreach table.foreachi table.getn "
-                "table.sort table.insert table.remove table.setn "
-                "math.abs math.acos math.asin math.atan math.atan2 "
-                "math.ceil math.cos math.deg math.exp math.floor "
-                "math.frexp math.ldexp math.log math.log10 math.max "
-                "math.min math.mod math.pi math.rad math.random "
-                "math.randomseed math.sin math.sqrt math.tan";
+            "string.byte string.char string.dump string.find "
+            "string.len string.lower string.rep string.sub "
+            "string.upper string.format string.gfind string.gsub "
+            "table.concat table.foreach table.foreachi table.getn "
+            "table.sort table.insert table.remove table.setn "
+            "math.abs math.acos math.asin math.atan math.atan2 "
+            "math.ceil math.cos math.deg math.exp math.floor "
+            "math.frexp math.ldexp math.log math.log10 math.max "
+            "math.min math.mod math.pi math.rad math.random "
+            "math.randomseed math.sin math.sqrt math.tan";
 
     if (set == 4)
         // Coroutine, I/O and system facilities.
         return
-                "openfile closefile readfrom writeto appendto remove "
-                "rename flush seek tmpfile tmpname read write clock "
-                "date difftime execute exit getenv setlocale time "
+            "openfile closefile readfrom writeto appendto remove "
+            "rename flush seek tmpfile tmpname read write clock "
+            "date difftime execute exit getenv setlocale time "
 
-                "coroutine.create coroutine.resume coroutine.status "
-                "coroutine.wrap coroutine.yield io.close io.flush "
-                "io.input io.lines io.open io.output io.read "
-                "io.tmpfile io.type io.write io.stdin io.stdout "
-                "io.stderr os.clock os.date os.difftime os.execute "
-                "os.exit os.getenv os.remove os.rename os.setlocale "
-                "os.time os.tmpname";
+            "coroutine.create coroutine.resume coroutine.status "
+            "coroutine.wrap coroutine.yield io.close io.flush "
+            "io.input io.lines io.open io.output io.read "
+            "io.tmpfile io.type io.write io.stdin io.stdout "
+            "io.stderr os.clock os.date os.difftime os.execute "
+            "os.exit os.getenv os.remove os.rename os.setlocale "
+            "os.time os.tmpname";
     if (set == 5)
         return "self true false nil";
 
@@ -185,35 +185,35 @@ QColor LuaLexer::defaultColor(int style) const
     switch (style)
     {
         case Default:
-            return QColor(0x00,0x00,0x00);
+            return {0x00, 0x00, 0x00};
 
         case Comment:
         case LineComment:
-            return QColor(0x00,0x7f,0x00);
+            return {0x00, 0x7f, 0x00};
 
         case Number:
-            return QColor(0x00,0x7f,0x7f);
+            return {0x00, 0x7f, 0x7f};
 
         case KeywordSet5:
-            return QColor(0x4b,0x00,0x82);
+            return {0x4b, 0x00, 0x82};
 
         case KeywordSet6: //this is reserved set for C++ exported API
-            return QColor(0x30,0xD5,0xC8);
+            return {0x30, 0xD5, 0xC8};
 
         case Keyword:
         case BasicFunctions:
         case StringTableMathsFunctions:
         case CoroutinesIOSystemFacilities:
-            return QColor(0x00,0x00,0x7f);
+            return {0x00, 0x00, 0x7f};
 
         case String:
         case Character:
         case LiteralString:
-            return QColor(0x7f,0x00,0x7f);
+            return {0x7f, 0x00, 0x7f};
 
         case Preprocessor:
         case Label:
-            return QColor(0x7f,0x7f,0x00);
+            return {0x7f, 0x7f, 0x00};
         case Identifier:
         case Operator:
             break;
