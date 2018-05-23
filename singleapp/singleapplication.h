@@ -27,7 +27,7 @@
 #include <QtNetwork/QLocalSocket>
 
 #ifndef QAPPLICATION_CLASS
-  #define QAPPLICATION_CLASS QCoreApplication
+    #define QAPPLICATION_CLASS QCoreApplication
 #endif
 
 #include QT_STRINGIFY(QAPPLICATION_CLASS)
@@ -43,7 +43,7 @@ class SingleApplication : public QAPPLICATION_CLASS
 {
     Q_OBJECT
 
-    typedef QAPPLICATION_CLASS app_t;
+    using app_t = QAPPLICATION_CLASS;
 
 public:
     /**
@@ -56,7 +56,8 @@ public:
      * block will be user wide.
      * @enum
      */
-    enum Mode {
+    enum Mode
+    {
         User                    = 1 << 0,
         System                  = 1 << 1,
         SecondaryNotification   = 1 << 2,
@@ -86,7 +87,7 @@ public:
      * @see See the corresponding QAPPLICATION_CLASS constructor for reference
      */
     explicit SingleApplication( int &argc, char *argv[], bool allowSecondary = false, Options options = Mode::User, int timeout = 100 );
-    ~SingleApplication();
+    ~SingleApplication() override;
 
     /**
      * @brief Returns if the instance is the primary instance
@@ -113,7 +114,7 @@ public:
      * @note sendMessage() will return false if invoked from the primary
      * instance.
      */
-    bool sendMessage( QByteArray message, int timeout = 100 );
+    bool sendMessage( const QByteArray& message, int timeout = 100 );
 
 Q_SIGNALS:
     void instanceStarted();

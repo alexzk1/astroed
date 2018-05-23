@@ -38,18 +38,20 @@
 #include <QtNetwork/QLocalSocket>
 #include "singleapplication.h"
 
-struct InstancesInfo {
+struct InstancesInfo
+{
     bool primary;
     quint32 secondary;
 };
 
-class SingleApplicationPrivate : public QObject {
-Q_OBJECT
+class SingleApplicationPrivate : public QObject
+{
+    Q_OBJECT
 public:
     Q_DECLARE_PUBLIC(SingleApplication)
 
     SingleApplicationPrivate( SingleApplication *q_ptr );
-     ~SingleApplicationPrivate();
+    ~SingleApplicationPrivate() override;
 
     void genBlockServerName( int msecs );
     void startPrimary( bool resetMemory );

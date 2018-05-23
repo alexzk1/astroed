@@ -17,13 +17,16 @@ public:
     bool save();
     bool saveAs();
     bool saveFile(const QString &name);
-    QString currentFileP() { return currentFile; }
+    QString currentFileP()
+    {
+        return currentFile;
+    }
     bool loadWordsFromFile(const QString &fileName);
     void addCppApiFunc(const QStringList& func);
 
 protected:
-    void closeEvent(QCloseEvent *event);
-    void keyPressEvent(QKeyEvent *event);
+    void closeEvent(QCloseEvent *event) override;
+    void keyPressEvent(QKeyEvent *event) override;
 
 private:
     LuaLexerPtr lexer;
