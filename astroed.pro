@@ -36,7 +36,7 @@ QMAKE_LFLAGS   *= -fopenmp
 #DEFINES *= _GLIBCXX_PARALLEL
 }
 
-CONFIG(debug) {
+CONFIG(debug, debug|release) {
      message( "Building the DEBUG Version" )
      #lets optimize for CPU on debug, for release - packager should do
      QMAKE_CXXFLAGS +=  -march=native
@@ -53,6 +53,8 @@ else {
 
 !macx: LIBS +=  -lrt
 
+DEFINES += QAPPLICATION_CLASS=QApplication
+
 include($$PWD/config_ui/config_ui.pri)
 include($$PWD/lua/lua_vm.pri)
 include($$PWD/utils/utils.pri)
@@ -62,7 +64,6 @@ include($$PWD/editor/codeeditor.pri)
 
 opencv: include($$PWD/opencv_utils/opencv_utils.pri)
 
-DEFINES += QAPPLICATION_CLASS=QApplication
 
 SOURCES += main.cpp\
         mainwindow.cpp \
