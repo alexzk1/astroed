@@ -46,6 +46,7 @@ class SingleApplication : public QAPPLICATION_CLASS
     using app_t = QAPPLICATION_CLASS;
 
 public:
+    SingleApplication() = default;
     /**
      * @brief Mode of operation of SingleApplication.
      * Whether the block should be user-wide or system-wide and whether the

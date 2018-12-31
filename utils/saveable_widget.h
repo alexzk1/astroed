@@ -104,7 +104,7 @@ namespace utility
         virtual ~SaveableWidget() = default;
 
     public:
-        void resetSizePos()
+        void resetSizePos() const
         {
             for (const auto& p : lastSett)
             {

@@ -25,7 +25,7 @@
 #include "config_ui/globalsettings.h"
 
 #ifdef USING_OPENCV
-#include "opencv_utils/opencv_utils.h"
+    #include "opencv_utils/opencv_utils.h"
 #endif
 
 
@@ -77,7 +77,8 @@ MainWindow::MainWindow(QWidget *parent) :
         hdr->setStretchLastSection(true);
     }
 
-    connect(previewsModel, &PreviewsModel::startedPreviewsLoad, this, [this](bool scroll){
+    connect(previewsModel, &PreviewsModel::startedPreviewsLoad, this, [this](bool scroll)
+    {
         if (ui->previewsTable && scroll)
             ui->previewsTable->scrollToTop();
         if (loadingProgress)
@@ -88,12 +89,14 @@ MainWindow::MainWindow(QWidget *parent) :
         }
     }, Qt::QueuedConnection);
 
-    connect(previewsModel, &PreviewsModel::loadProgress, this, [this](int pr){
+    connect(previewsModel, &PreviewsModel::loadProgress, this, [this](int pr)
+    {
         if (loadingProgress)
             loadingProgress->setValue(pr);
     }, Qt::QueuedConnection);
 
-    connect(previewsModel, &PreviewsModel::finishedPreviewsLoad, this, [this](){
+    connect(previewsModel, &PreviewsModel::finishedPreviewsLoad, this, [this]()
+    {
         if (loadingProgress)
             loadingProgress->setVisible(false);
         //qDebug() << ((PreviewsModel*)ui->previewsTable->model())->generateLuaString().c_str();
@@ -129,7 +132,7 @@ MainWindow::MainWindow(QWidget *parent) :
         if (p)
         {
             const static auto mb = 1024 * 1024;
-            p->setText(QString(tr("RAM: %1 MB")).arg((IMAGE_LOADER.getMemoryUsed()) /mb));
+            p->setText(QString(tr("RAM: %1 MB")).arg((IMAGE_LOADER.getMemoryUsed()) / mb));
         }
     };
 
@@ -179,7 +182,7 @@ void MainWindow::selectPath(const QString &path, bool collapse)
 void MainWindow::openPreviewTab(const imaging::image_buffer_ptr& image, const QString& fileName, size_t pictureRole)
 {
     lastPreviewFileName = fileName;
-    const auto txt = (fileName.isEmpty())? "":QString(tr("File: %1")).arg(QFileInfo(fileName).fileName());
+    const auto txt = (fileName.isEmpty()) ? "" : QString(tr("File: %1")).arg(QFileInfo(fileName).fileName());
 
     enableZoomTab(true);
 
@@ -190,10 +193,10 @@ void MainWindow::openPreviewTab(const imaging::image_buffer_ptr& image, const QS
     if (!fileName.isEmpty())
     {
         auto meta = IMAGE_LOADER.getMeta(fileName);
-        auto txt  = meta.getStringValue();
+        auto tmp  = meta.getStringValue();
         tip = meta.getStringValue();
         if (statusBar())
-            statusBar()->showMessage(txt);
+            statusBar()->showMessage(tmp);
 
     }
     ui->tabZoomed->setImage(*image, tip);
@@ -304,7 +307,8 @@ void MainWindow::recurseRead(QSettings &settings, QObject *object)
     auto s = settings.value("LastDirSelection", QDir::homePath()).toString();
 
 
-    QTimer::singleShot(500, [this, s](){
+    QTimer::singleShot(500, [this, s]()
+    {
         selectPath(s);
     });
 }
@@ -354,8 +358,8 @@ void MainWindow::setupFsBrowsingAndToolbars()
         QStringList filter;
         for (const auto& s : supportedVids)
         {
-            filter << "*."+s.toLower();
-            filter << "*."+s.toUpper();
+            filter << "*." + s.toLower();
+            filter << "*." + s.toUpper();
         }
         dirsModel->setNameFilters(filter);
         dirsModel->setNameFilterDisables(false);
@@ -390,13 +394,13 @@ void MainWindow::setupFsBrowsingAndToolbars()
         }
     }, Qt::QueuedConnection);
 
-    connect(previewsModel, &PreviewsModel::loadedProject, this, [this, lastFolder](const QString& root, bool rec)
+    connect(previewsModel, &PreviewsModel::loadedProject, this, [this, lastFolder](const QString & root, bool rec)
     {
         if (ui->dirsTree && ui->dirsTree->selectionModel())
         {
             ui->dirsTree->selectionModel()->blockSignals(true);
             ui->dirsTree->blockSignals(true);
-            selectPath(root,true);
+            selectPath(root, true);
             ui->dirsTree->blockSignals(false);
             ui->dirsTree->selectionModel()->blockSignals(false);
 
@@ -431,7 +435,7 @@ void MainWindow::setupFsBrowsingAndToolbars()
         //guessing bests button
         toolBox->addAction(ui->actionGuess_Bests);
         connect(this, &MainWindow::prettyEnded, this, &MainWindow:: actionGuess_Bests_Ended, Qt::QueuedConnection);
-        QToolButton *btn=dynamic_cast<QToolButton*>(toolBox->widgetForAction(ui->actionGuess_Bests));
+        QToolButton *btn = dynamic_cast<QToolButton*>(toolBox->widgetForAction(ui->actionGuess_Bests));
         btn->setPopupMode(QToolButton::MenuButtonPopup);
         bestPickDrop = new SliderDrop(btn);
         btn->addAction(bestPickDrop);
@@ -458,7 +462,7 @@ void MainWindow::setupFsBrowsingAndToolbars()
         fact->setToolTip(tr("Enables filter by file role."));
         toolBox->addAction(fact);
 
-        QToolButton *fbtn=dynamic_cast<QToolButton*>(toolBox->widgetForAction(fact));
+        QToolButton *fbtn = dynamic_cast<QToolButton*>(toolBox->widgetForAction(fact));
         fbtn->setPopupMode(QToolButton::InstantPopup);
 
         QMenu *fmenu = new QMenu(fbtn);
@@ -489,11 +493,17 @@ void MainWindow::setupFsBrowsingAndToolbars()
 
 void MainWindow::setupZoomGui()
 {
-    connect(ui->tabZoomed, &PreviewWidget::prevImageRequested, this, [this](){showPreview(previewShift - 1);}, Qt::QueuedConnection);
-    connect(ui->tabZoomed, &PreviewWidget::nextImageRequested, this, [this](){showPreview(previewShift + 1);}, Qt::QueuedConnection);
+    connect(ui->tabZoomed, &PreviewWidget::prevImageRequested, this, [this]()
+    {
+        showPreview(previewShift - 1);
+    }, Qt::QueuedConnection);
+    connect(ui->tabZoomed, &PreviewWidget::nextImageRequested, this, [this]()
+    {
+        showPreview(previewShift + 1);
+    }, Qt::QueuedConnection);
 
     auto zoomToolbar = addToolbarToLayout(ui->tabZoomed->layout());
-    const static auto add_action = [](QActionGroup* group, QAction* a, const QKeySequence& shortc = QKeySequence())->QAction*
+    const static auto add_action = [](QActionGroup * group, QAction * a, const QKeySequence& shortc = QKeySequence())->QAction *
     {
         if (!shortc.isEmpty())
         {
@@ -529,12 +539,14 @@ void MainWindow::setupZoomGui()
         zoomToolbar->addAction(add_action(nullptr, ui->actionCopyCurrentImage, QKeySequence("ctrl+C")));
 
         zoomToolbar->addSeparator();
-        zoomPicModeActions = {
+        zoomPicModeActions =
+        {
             zoomToolbar->addAction(QIcon(":/icons/icons/Science-Minus2-Math-icon.png"), tr("Ignored")),
             zoomToolbar->addAction(QIcon(":/icons/icons/Science-Plus2-Math-icon.png"), tr("Source")),
             zoomToolbar->addAction(QIcon(":/icons/icons/Cloud-app-icon.png"), tr("Dark")),
         };
-        const QKeySequence ks[]= {
+        const QKeySequence ks[] =
+        {
             QKeySequence("-"),
             QKeySequence("="),
             QKeySequence("0"),
@@ -548,7 +560,7 @@ void MainWindow::setupZoomGui()
             add_action(zoomPicModeActionsGroup, a, ks[i]);
         }
 
-        connect(zoomPicModeActionsGroup, &QActionGroup::triggered, this, [this](QAction *a)
+        connect(zoomPicModeActionsGroup, &QActionGroup::triggered, this, [this](QAction * a)
         {
             if (previewsModel && a)
                 previewsModel->setRoleFor(lastPreviewFileName, a->property("model_role").toInt());
@@ -596,9 +608,9 @@ QToolBar *MainWindow::addToolbarToLayout(QLayout *src, int pos)
 
     if (result)
     {
-        auto st = (ui->mainToolBar)?ui->mainToolBar->toolButtonStyle():Qt::ToolButtonFollowStyle;
+        auto st = (ui->mainToolBar) ? ui->mainToolBar->toolButtonStyle() : Qt::ToolButtonFollowStyle;
         result->setToolButtonStyle(st);
-        result->setIconSize((ui->mainToolBar)?ui->mainToolBar->iconSize():QSize(20, 20));
+        result->setIconSize((ui->mainToolBar) ? ui->mainToolBar->iconSize() : QSize(20, 20));
     }
 
     return result;
@@ -612,9 +624,7 @@ void MainWindow::resetFiltering()
         fact->setText(btnFilterText);
     }
     if (sortModel)
-    {
         sortModel->setFilterRegExp("");
-    }
     resizeColumns();
 }
 
@@ -635,9 +645,7 @@ void MainWindow::resizeColumns()
 {
     auto hdrv = ui->previewsTable->verticalHeader();
     if (hdrv)
-    {
         hdrv->resizeSections(QHeaderView::ResizeToContents);
-    }
 }
 
 void MainWindow::on_actionNewtone_toggled(bool checked)
@@ -676,7 +684,7 @@ void MainWindow::on_actionSave_As_triggered()
         if (IMAGE_LOADER.isProperVfs(tmpu))
         {
             //if we have movie frame, lets name it so as original
-            lastFolder = QString("%3/%1_%2.png").arg(tmpu.fileName().replace('.','_')).arg(tmpu.fragment()).arg(lastFolder);
+            lastFolder = QString("%3/%1_%2.png").arg(tmpu.fileName().replace('.', '_')).arg(tmpu.fragment()).arg(lastFolder);
         }
 
         auto name = QFileDialog::getSaveFileName(this, tr("Export Image"), lastFolder, "png (*.png)");
@@ -685,7 +693,7 @@ void MainWindow::on_actionSave_As_triggered()
             QFileInfo tmp(name);
             sett.setValue("LastExportFolder", tmp.absolutePath());
             if (tmp.suffix().isEmpty())
-                name = name +".png";
+                name = name + ".png";
             img->save(name);
             sett.sync();
         }
@@ -733,7 +741,7 @@ void MainWindow::on_actionSaveProject_triggered()
         QFileInfo tmp(name);
         sett.setValue("LastSaveProjectFolder", tmp.absolutePath());
         if (tmp.suffix().isEmpty())
-            name = name +".luap";
+            name = name + ".luap";
         sett.sync();
 
         std::fstream fs(name.toStdString(), std::ios_base::out);
@@ -812,9 +820,7 @@ void MainWindow::on_actionCopyCurrentImage_triggered()
 {
     auto ptr = IMAGE_LOADER.getImage(lastPreviewFileName);
     if (ptr)
-    {
         QApplication::clipboard()->setImage(*ptr);
-    }
 }
 
 void MainWindow::on_actionWipe_Cache_triggered()

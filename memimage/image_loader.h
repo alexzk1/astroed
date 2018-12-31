@@ -33,17 +33,16 @@ namespace imaging
         using RationalArray  = std::vector<Exiv2::Rational>;
         using URationalArray = std::vector<Exiv2::URational>;
 
-        template <typename T>       struct isvector:std::false_type{};
-        template <typename... Args> struct isvector<std::vector<Args...>>:std::true_type{};
+        template <typename T>       struct isvector: std::false_type {};
+        template <typename... Args> struct isvector<std::vector<Args...>>: std::true_type {};
 
-        template <typename T>       struct ispair:std::false_type{};
-        template <typename... Args> struct ispair<std::pair<Args...>>:std::true_type{};
+        template <typename T>       struct ispair: std::false_type {};
+        template <typename... Args> struct ispair<std::pair<Args...>>: std::true_type {};
 
         namespace exiv_rationals
         {
             template <class T>
-            typename std::enable_if<ispair<T>::value, double>::type
-            toDouble(const T& v)
+            typename std::enable_if<ispair<T>::value, double>::type toDouble(const T& v)
             {
                 if (v.second == 0)
                     return 0; //resolving x/0 as 0
@@ -52,8 +51,7 @@ namespace imaging
             }
 
             template <class T>
-            typename std::enable_if<ispair<T>::value, T>::type
-            div(const T& up, const T& down) // = up/down
+            typename std::enable_if<ispair<T>::value, T>::type div(const T& up, const T& down) // = up/down
             {
                 T res;
                 res.first  = up.first * down.second;
@@ -69,16 +67,14 @@ namespace imaging
 
 
             template <class T>
-            typename std::enable_if<ispair<T>::value, const T&>::type
-            varInit()
+            typename std::enable_if<ispair<T>::value, const T&>::type varInit()
             {
                 const static T def(0, 1); //rationals default init
                 return def;
             }
 
             template <class T>
-            typename std::enable_if<std::is_integral<T>::value || std::is_floating_point<T>::value, T>::type
-            varInit()
+            typename std::enable_if < std::is_integral<T>::value || std::is_floating_point<T>::value, T >::type varInit()
             {
                 return 0;
             }
@@ -138,8 +134,7 @@ namespace imaging
         }
 
         template <class T>
-        typename std::enable_if<std::is_fundamental<T>::value, size_t>::type
-        getTypeSize()
+        typename std::enable_if<std::is_fundamental<T>::value, size_t>::type getTypeSize()
         {
             return sizeof (T);
         }
@@ -171,7 +166,7 @@ namespace imaging
         template<class T, class R>
         bool getValue(const T& src, const std::string& key, R& result)
         {
-            auto r = std::find_if(src.begin(), src.end(), [&key](const auto& val)
+            auto r = std::find_if(src.begin(), src.end(), [&key](const auto & val)
             {
                 return val.key() == key;
             });
@@ -271,6 +266,7 @@ namespace imaging
         weaks_t wcache;
         bool assumeMirrored;
 
+        void clear_cacher();
     protected:
         mutable std::recursive_mutex mutex;
         virtual image_t_s createImage(const QString& key) const = 0;
@@ -306,7 +302,7 @@ namespace imaging
         void closeVideoCapturer() const;
 #endif
         virtual image_t_s createImage(const QString& key) const override;
-
+        void clear_loader();
     public:
         image_loader() = default;
         virtual void wipe()override;
@@ -325,14 +321,14 @@ namespace imaging
         virtual image_t_s createImage(const QString& key) const override;
     public:
         image_preview_loader() = default;
-        virtual ~image_preview_loader() final;
+        virtual ~image_preview_loader() final = default;
     };
 }
 
 #ifndef IMAGE_LOADER
-#define IMAGE_LOADER utility::globalInstance<imaging::image_loader>()
+    #define IMAGE_LOADER utility::globalInstance<imaging::image_loader>()
 #endif
 
 #ifndef PREVIEW_LOADER
-#define PREVIEW_LOADER utility::globalInstance<imaging::image_preview_loader>()
+    #define PREVIEW_LOADER utility::globalInstance<imaging::image_preview_loader>()
 #endif

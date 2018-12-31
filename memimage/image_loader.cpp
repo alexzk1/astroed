@@ -77,6 +77,13 @@ bool image_cacher::isLoaded(const QString &fileName) const
     return !wcache.at(fileName).data.expired();
 }
 
+void image_cacher::clear_cacher()
+{
+    std::lock_guard<std::recursive_mutex> guard(mutex);
+    cache.clear();
+    wcache.clear();
+}
+
 void image_cacher::findImage(const QString& key, image_t_s& res)
 {
     std::lock_guard<std::recursive_mutex> guard(mutex);
@@ -131,9 +138,7 @@ void image_cacher::gc(bool no_wait)
 
 void image_cacher::wipe()
 {
-    std::lock_guard<std::recursive_mutex> guard(mutex);
-    cache.clear();
-    wcache.clear();
+    clear_cacher();
 }
 
 size_t image_cacher::getMemoryUsed()
@@ -156,7 +161,10 @@ bool image_cacher::isNewtoneTelescope() const
     return assumeMirrored;
 }
 
-image_cacher::~image_cacher() = default;
+image_cacher::~image_cacher()
+{
+    clear_cacher();
+}
 
 #ifdef USING_VIDEO_FS
 
@@ -348,9 +356,7 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
 void image_loader::wipe()
 {
     std::lock_guard<std::recursive_mutex> guard(mutex);
-#ifdef USING_VIDEO_FS
-    closeVideoCapturer();
-#endif
+    clear_loader();
     image_cacher::wipe();
 }
 
@@ -418,7 +424,15 @@ QString image_loader::getFileLinkForExternalTools(const QString &originalLink) c
 image_loader::~image_loader()
 {
     dctor = true;
-    wipe();
+    clear_loader();
+}
+
+void image_loader::clear_loader()
+{
+    std::lock_guard<std::recursive_mutex> guard(mutex);
+#ifdef USING_VIDEO_FS
+    closeVideoCapturer();
+#endif
 }
 
 image_cacher::image_t_s image_preview_loader::createImage(const QString &key) const
@@ -430,11 +444,6 @@ image_cacher::image_t_s image_preview_loader::createImage(const QString &key) co
     auto width = static_cast<int>(static_cast<int64_t>(previewSize * src.data->width() / static_cast<double>(src.data->height())));
     src.data  = decltype (src.data)(new QImage(src.data->scaled(width, previewSize, Qt::KeepAspectRatio)));
     return src;
-}
-
-image_preview_loader::~image_preview_loader()
-{
-    wipe();
 }
 
 #define INIT(VAR) exiv2_helpers::exiv_rationals::varInit<decltype (VAR)>()

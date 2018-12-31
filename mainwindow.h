@@ -16,7 +16,7 @@
 
 namespace Ui
 {
-class MainWindow;
+    class MainWindow;
 }
 
 class ClickableLabel;
@@ -29,6 +29,13 @@ class MainWindow : public QMainWindow, public utility::ItCanBeOnlyOne<MainWindow
     Q_OBJECT
 public:
     QString styler;
+
+    MainWindow(const MainWindow&) = delete;
+    MainWindow& operator=(const MainWindow&) = delete;
+
+
+    MainWindow(MainWindow&&) = delete;
+    MainWindow& operator=(MainWindow&&) = delete;
 
     explicit MainWindow(QWidget *parent = nullptr);
     virtual ~MainWindow() override;

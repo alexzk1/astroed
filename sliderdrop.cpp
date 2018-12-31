@@ -3,9 +3,8 @@
 
 SliderDrop::SliderDrop(QWidget *p):
     QWidgetAction (p),
-    m_slider(nullptr)
+    m_slider(new LabeledSlider(p))
 {
-    m_slider = new LabeledSlider(p);
     setDefaultWidget(m_slider);
 }
 

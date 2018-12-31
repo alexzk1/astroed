@@ -47,7 +47,10 @@ enum class DelegateMode {IMAGE_PREVIEW, IMAGE_META, CHECKBOX, FILE_HYPERLINK, FI
 
 
 using create_widget_t = std::function<QWidget*(QWidget* parent, const QStyleOptionViewItem &option, const QModelIndex& index)>;
-const static create_widget_t create_widget_t_defimpl = [](auto, const auto&, const auto&)noexcept{return nullptr;};
+const static create_widget_t create_widget_t_defimpl = [](auto, const auto&, const auto&)noexcept
+{
+    return nullptr;
+};
 
 static bool isEditable(DelegateMode mode)
 {
@@ -81,16 +84,18 @@ const static std::vector<sectiondescr_t> captions =
 {
     {QObject::tr("Preview"),   DelegateMode::IMAGE_PREVIEW,  QObject::tr("Click to zoom"),                   create_widget_t_defimpl, QVariant()},
     {QObject::tr("Info"),      DelegateMode::IMAGE_META,     QObject::tr("EXIF if present in image"),        create_widget_t_defimpl, QVariant()},
-    {QObject::tr("Role"),      DelegateMode::FIXED_COMBO_BOX,QObject::tr("Select usage for this image."), //dont forget update keepInList() method
-     [](QWidget* parent, const QStyleOptionViewItem &option, const QModelIndex& index){
-         Q_UNUSED(option);
-         Q_UNUSED(index);
-         FixedComboWithShortcut *editor = new FixedComboWithShortcut(parent);
-         editor->setEditable(false);
-         for (const auto& i : fileRoles) editor->addItemWithShortcut(i.humanRole, i.seq);
+    {
+        QObject::tr("Role"),      DelegateMode::FIXED_COMBO_BOX, QObject::tr("Select usage for this image."), //dont forget update keepInList() method
+        [](QWidget * parent, const QStyleOptionViewItem & option, const QModelIndex & index)
+        {
+            Q_UNUSED(option);
+            Q_UNUSED(index);
+            FixedComboWithShortcut *editor = new FixedComboWithShortcut(parent);
+            editor->setEditable(false);
+            for (const auto& i : fileRoles) editor->addItemWithShortcut(i.humanRole, i.seq);
 
-         return editor;
-     }, 0 //FIXED_COMBO_BOX stores indexes in model
+            return editor;
+        }, 0 //FIXED_COMBO_BOX stores indexes in model
     },
     {QObject::tr("File Name"), DelegateMode::FILE_HYPERLINK, QObject::tr("Click to start external viewer."), create_widget_t_defimpl, QVariant()},
 };
@@ -123,7 +128,8 @@ template <class T>
 bool isDark(const T& path)
 {
     //words filter to guess darks
-    const static std::vector<QString> termsDark = {
+    const static std::vector<QString> termsDark =
+    {
         //use lowercase here
         "dark",
     };
@@ -143,8 +149,8 @@ void PreviewsModel::generateProjectCode(std::ostream &out) const
     //generating lua code from internal state, hardly bound to arrays above (to their indexes, values, etc)
 
     const auto spid = static_cast<size_t>(getFileRoleColumnId());
-    QString path = (currentFolder.isDir())?currentFolder.canonicalFilePath():currentFolder.canonicalPath();
-    out << "guiSelectedFilesBase = '" << currentFolder.canonicalFilePath().toStdString()<<"'"<<std::endl;
+    QString path = (currentFolder.isDir()) ? currentFolder.canonicalFilePath() : currentFolder.canonicalPath();
+    out << "guiSelectedFilesBase = '" << currentFolder.canonicalFilePath().toStdString() << "'" << std::endl;
     QDir dir(path);
 
     out << "guiSelectedFilesList = {";
@@ -159,7 +165,7 @@ void PreviewsModel::generateProjectCode(std::ostream &out) const
         fpr.remove(QString("%1://").arg(VFS_PREFIX));
         fpr.remove(QString("%1:/").arg(VFS_PREFIX));
         fpr = "/" + fpr;
-        out << "\n\t{\n\t\tfileName = '"<<dir.relativeFilePath(fpr).toStdString()<<"',\n\t\tfileMode = "<<role.luaRole<< ", --" << role.humanRole.toStdString() << "\n\t},";
+        out << "\n\t{\n\t\tfileName = '" << dir.relativeFilePath(fpr).toStdString() << "',\n\t\tfileMode = " << role.luaRole << ", --" << role.humanRole.toStdString() << "\n\t},";
     }
     out << "\n}" << std::endl;
 }
@@ -184,7 +190,7 @@ void PreviewsModel::loadProjectCode(const std::string &src)
     vm->doString(src);
     auto root = testGetGlobal<QString>(*vm, "guiSelectedFilesBase");
 
-    *conn = connect(this, &PreviewsModel::filesAreListed, this, [this, conn, vm, root](const QString& dir)
+    *conn = connect(this, &PreviewsModel::filesAreListed, this, [this, conn, vm, root](const QString & dir)
     {
         //here is 3rd stage: gui starts list -> thread does list -> gui need update list from lua
         std::lock_guard<decltype (listMut)> grd(listMut);
@@ -197,13 +203,13 @@ void PreviewsModel::loadProjectCode(const std::string &src)
             {
                 auto fn = itm.at("fileName");
                 const static QString pref = QString("%1://").arg(VFS_PREFIX);
-                auto fp   = QString("%3%1/%2").arg(dir).arg(fn).arg((fn.contains("#")?pref:""));
+                auto fp   = QString("%3%1/%2").arg(dir).arg(fn).arg((fn.contains("#") ? pref : ""));
                 int  mode = itm.at("fileMode").toInt();
                 if (lua2index_map.count(mode))
                     setRoleForPriv(fp, lua2index_map.at(mode));
             }
         }
-        if (stack!=lua_gettop(L))
+        if (stack != lua_gettop(L))
             FATAL_RISE("Broken stack on project loading.");
 
         disconnect(*conn); //self-deleting, releasing captures
@@ -236,7 +242,7 @@ PreviewsModel::PreviewsModel(QObject *parent)
 {
     /*
      * QObject::connect: Cannot queue arguments of type 'Qt::Orientation'
-(Make sure 'Qt::Orientation' is registered using qRegisterMetaType().)
+    (Make sure 'Qt::Orientation' is registered using qRegisterMetaType().)
      * */
     qRegisterMetaType<Qt::Orientation>("Qt::Orientation");
 
@@ -332,13 +338,11 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
         }
 
         if (role == Qt::ToolTipRole)
-        {
             return captions.at(col).tooltip;
-        }
         PreviewsModelData itm;
         {
             std::lock_guard<decltype (listMut)> grd(listMut);
-            if (row >=modelFiles.size())
+            if (row >= modelFiles.size())
                 return res;
             itm = modelFiles.at(row);
         }
@@ -382,10 +386,10 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
                     }
                     const auto& sli = fixedCombosLists.at(col);
                     int index = itm.getValue(col, captions.at(col).initialValue).toInt();
-                    if (index >-1 && index < sli.size())
+                    if (index > -1 && index < sli.size())
                         res =  sli.at(index);
                 }
-                    break;
+                break;
                 default:
                     res = itm.getValue(col, captions.at(col).initialValue);
                     break;
@@ -394,16 +398,12 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
         }
 
         if (role == Qt::EditRole && isEditable(col_mode))
-        {
             res = itm.getValue(col, captions.at(col).initialValue);
-        }
 
         if (role == Qt::CheckStateRole)
         {
             if (col_mode == DelegateMode::CHECKBOX)
-            {
-                res = (itm.getValue(col, false))?Qt::Checked:Qt::Unchecked;
-            }
+                res = (itm.getValue(col, false)) ? Qt::Checked : Qt::Unchecked;
         }
 
     }
@@ -412,7 +412,7 @@ QVariant PreviewsModel::data(const QModelIndex &index, int role) const
 
 bool PreviewsModel::setData(const QModelIndex &index, const QVariant &value, int role)
 {
-    std::lock_guard<decltype (this->listMut)> grd(this->listMut);
+    std::lock_guard < decltype (this->listMut) > grd(this->listMut);
     bool changed = setDataPriv(index, value, role);
     if (changed)
         emit dataChanged(index, index, QVector<int>() << role);
@@ -427,7 +427,7 @@ bool PreviewsModel::setDataPriv(const QModelIndex &index, const QVariant &value,
     {
         const int col    = index.column();
         const auto mode = captions.at(col).mode;
-        auto set = [&col, &index, &changed, this](const QVariant& v)
+        auto set = [&col, &index, &changed, this](const QVariant & v)
         {
             size_t row = static_cast<decltype (row)>(index.row());
             auto& itm = modelFiles.at(row);
@@ -436,14 +436,10 @@ bool PreviewsModel::setDataPriv(const QModelIndex &index, const QVariant &value,
         };
 
         if (role == Qt::CheckStateRole && mode == DelegateMode::CHECKBOX)
-        {
             set(value == Qt::Checked);
-        }
 
         if (role == Qt::EditRole && isEditable(mode))
-        {
             set(value);
-        }
     }
     return changed;
 }
@@ -475,7 +471,7 @@ void PreviewsModel::setAllRole(int role_id)
     if (role_id > -1 && static_cast<size_t>(role_id) < fileRoles.size())
     {
         const QVariant val(role_id);
-        std::lock_guard<decltype (this->listMut)> grd(this->listMut);
+        std::lock_guard < decltype (this->listMut) > grd(this->listMut);
         for (int row = 0, size = rowCount(); row < size; ++row)
             setDataPriv(index(row, getFileRoleColumnId()), val, Qt::EditRole);
 
@@ -508,8 +504,10 @@ void PreviewsModel::pickBests(const utility::runner_f_t& end_func, const double 
 
 void PreviewsModel::pickBests(const utility::runner_f_t &end_func, int from, int to, const double min_quality) //zero based indexes of the range
 {
-    from = std::max(0, from); from = std::min(from, static_cast<decltype(from)>(modelFiles.size()) - 1);
-    to   = std::max(0, to);   to   = std::min(to,   static_cast<decltype(to)>(modelFiles.size()) - 1);
+    from = std::max(0, from);
+    from = std::min(from, static_cast<decltype(from)>(modelFiles.size()) - 1);
+    to   = std::max(0, to);
+    to   = std::min(to,   static_cast<decltype(to)>(modelFiles.size()) - 1);
 
     const static auto spid = static_cast<size_t>(getFileRoleColumnId());
 
@@ -542,15 +540,15 @@ void PreviewsModel::pickBests(const utility::runner_f_t &end_func, int from, int
 
         if (source.size() && !*stop)
         {
-             //using previews because that cache lasts longer, so meta has chance to live in RAM long
+            //using previews because that cache lasts longer, so meta has chance to live in RAM long
             std::atomic<double> min(PREVIEW_LOADER.getMeta(source.at(0).file).precalcs.blureness);
             std::atomic<double> max(min.load());
             std::atomic<size_t> cntr(0);
 
             //it seems better to use 1 thread here (std::) in terms of HDD pressure. However let em be atomics
-            std::find_if(source.begin(), source.end(), [&min, &max, &stop, &cntr](auto& s)->bool
+            std::find_if(source.begin(), source.end(), [&min, &max, &stop, &cntr](auto & s)->bool
             {
-                auto w = s.weight =PREVIEW_LOADER.getMeta(s.file).precalcs.blureness;
+                auto w = s.weight = PREVIEW_LOADER.getMeta(s.file).precalcs.blureness;
                 update_maximum(max, w);
                 update_minimum(min, w);
                 auto v = ++cntr;
@@ -563,13 +561,13 @@ void PreviewsModel::pickBests(const utility::runner_f_t &end_func, int from, int
             if (!*stop)
             {
                 std::lock_guard<decltype (listMut)> grd(listMut);
-                ALG_NS::find_if(source.cbegin(), source.cend(), [this, &accept, &stop](const auto& it)->bool
+                ALG_NS::find_if(source.cbegin(), source.cend(), [this, &accept, &stop](const auto & it)->bool
                 {
                     //using that fact, that modelFiles and source are in same string order
                     //if we do some other sort of modelFiles later - that may break
 
                     auto its = modelFiles.begin();
-                    its = ALG_NS::find_if(its, modelFiles.end(),[&it, &stop](auto& s)->bool
+                    its = ALG_NS::find_if(its, modelFiles.end(), [&it, &stop](auto & s)->bool
                     {
                         return *stop || s.getFilePath() == it.file;
                     });
@@ -617,20 +615,20 @@ void PreviewsModel::setCurrentFolder(const QString &path, bool recursive)
 
     listFiles = utility::startNewRunner([this, recursive, inf](auto stop)
     {
-        QString absPath = (inf.isDir())?inf.canonicalFilePath():inf.canonicalPath();
+        QString absPath = (inf.isDir()) ? inf.canonicalFilePath() : inf.canonicalPath();
 
         QStringList filter;
         for (const auto& s : supportedExt)
         {
-            filter << "*."+s.toLower();
-            filter << "*."+s.toUpper();
+            filter << "*." + s.toLower();
+            filter << "*." + s.toUpper();
         }
 #ifdef USING_VIDEO_FS
         if (recursive)
             for (const auto& s : supportedVids)
             {
-                filter << "*."+s.toLower();
-                filter << "*."+s.toUpper();
+                filter << "*." + s.toLower();
+                filter << "*." + s.toUpper();
             }
 #endif
         using namespace utility;
@@ -643,7 +641,7 @@ void PreviewsModel::setCurrentFolder(const QString &path, bool recursive)
         if (!recursive)
         {
             QDirIterator directories(absPath, QDir::Dirs | QDir::NoSymLinks | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
-            while(directories.hasNext())
+            while (directories.hasNext())
             {
                 directories.next();
                 const auto fp = directories.filePath();
@@ -714,7 +712,7 @@ void PreviewsModel::resetModel()
 
 void PreviewsModel::scrolledTo(int64_t row)
 {
-    if (std::abs(row - urgentRowScrolled) > static_cast<decltype(previews_half_range)>(0.9 * previews_half_range))
+    if (std::abs(row - urgentRowScrolled) > static_cast<std::decay<decltype(previews_half_range)>::type>(0.9 * previews_half_range))
     {
         urgentRowScrolled = row;
 
@@ -749,7 +747,7 @@ void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list, const util
         collator.setNumericMode(true);
         collator.setCaseSensitivity(Qt::CaseInsensitive);
 
-        std::sort(modelFiles.begin(), modelFiles.end(), [&collator](const auto& i1, const auto& i2)
+        std::sort(modelFiles.begin(), modelFiles.end(), [&collator](const auto & i1, const auto & i2)
         {
             return collator.compare(i1.filePath, i2.filePath) < 0;
         });
@@ -790,7 +788,7 @@ void PreviewsModel::haveFilesList(const PreviewsModel::files_t &list, const util
         modelFiles.clear();
     modelFilesAmount = static_cast<int64_t>(modelFiles.size());
     emit headerDataChanged(Qt::Horizontal, 0, 0);
-    qDebug() << "Files listed "<<modelFiles.size();
+    qDebug() << "Files listed " << modelFiles.size();
 }
 
 void PreviewsModel::loadCurrentInterval()
@@ -806,7 +804,10 @@ void PreviewsModel::loadCurrentInterval()
 
         //qDebug() << "Previews started load";
         emit this->startedPreviewsLoad(false);
-        const auto work = [&stop](){return !(*stop);}; //operations may take significant time during it thread could be stopped, so want to check latest always
+        const auto work = [&stop]()
+        {
+            return !(*stop);
+        }; //operations may take significant time during it thread could be stopped, so want to check latest always
 
         if (sz) //don't div by zero!
         {
@@ -846,9 +847,7 @@ void PreviewsModel::loadCurrentInterval()
             {
                 bool c1 = loaded_indexes.at(i) - loaded_indexes.at(start) == i - start;
                 if (c1)
-                {
                     end = i;
-                }
 
                 if (!c1 || i + 1 >= tot)
                 {
@@ -916,7 +915,7 @@ bool PreviewsDelegate::showLastClickedPreview(int shift, const QSize& lastSize, 
 void PreviewsDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
     QLabel label;
-    auto draw = [&label, painter, &option](const QRect& g)
+    auto draw = [&label, painter, &option](const QRect & g)
     {
         label.setGeometry(g);
         painter->translate(option.rect.topLeft());
@@ -948,7 +947,7 @@ void PreviewsDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
                 label.setStyleSheet("QLabel { background-color : transparent; }");
                 draw(option.rect);
             }
-                break;
+            break;
             default:
                 QStyledItemDelegate::paint(painter, option, index);
                 break;
@@ -1042,7 +1041,7 @@ void PreviewsDelegate::setEditorData(QWidget *editor, const QModelIndex &index) 
             QComboBox *p = qobject_cast<QComboBox*>(editor);
             if (p)
             {
-                int ind= index.data(Qt::EditRole).toInt();
+                int ind = index.data(Qt::EditRole).toInt();
                 p->blockSignals(true);
                 p->setCurrentIndex(ind);
                 p->blockSignals(false);
@@ -1059,9 +1058,7 @@ void PreviewsDelegate::setModelData(QWidget *editor, QAbstractItemModel *model, 
         {
             QComboBox *p = qobject_cast<QComboBox*>(editor);
             if (p && model)
-            {
                 model->setData(index, p->currentIndex());
-            }
         }
     }
 }
