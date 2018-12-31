@@ -192,7 +192,6 @@ namespace imaging
 
     struct meta_t
     {
-
         meta_t();
         bool wasLoaded;
         long  iso;
@@ -240,6 +239,14 @@ namespace imaging
                 data = c.data.lock();
                 return *this;
             }
+
+            image_t_s& operator = (image_t_w&& c)
+            {
+                meta = std::move(c.meta);
+                data = c.data.lock();
+                return *this;
+            }
+
             explicit operator image_t_w() const
             {
                 image_t_w tmp;
