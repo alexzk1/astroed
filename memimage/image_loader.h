@@ -203,10 +203,7 @@ namespace imaging
 
         struct precalcs_t
         {
-            double blureness;
-            precalcs_t():
-                blureness(-1)
-            {}
+            double blureness{-1};
         } precalcs;
 
         void loadExif(const QString& fileName);
