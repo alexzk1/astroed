@@ -62,7 +62,7 @@ include($$PWD/memimage/memimage.pri)
 include($$PWD/singleapp/singleapplication.pri)
 include($$PWD/editor/codeeditor.pri)
 
-opencv: include($$PWD/opencv_utils/opencv_utils.pri)
+opencv:include($$PWD/opencv_utils/opencv_utils.pri)
 
 
 SOURCES += main.cpp\

@@ -157,7 +157,7 @@ public:
         return lastWidget = createWidget2();
     }
     virtual void switchSubgroup(int id) = 0;
-    virtual void exec(){} //maybe called by the program elsewhere, for example for folder selector it must pop folder selector dialog
+    virtual void exec() {} //maybe called by the program elsewhere, for example for folder selector it must pop folder selector dialog
     virtual void needUpdateWidget() = 0; //should update GUI, called when value was modified outside user interaction by direct setter
     virtual void setNewGroup(const QString& group) = 0; //sets new settings' group
     virtual void reload() = 0; //should be called if group changed (and nothing to save yet), because real loading is done by ctor before group change happened
@@ -235,7 +235,7 @@ public:
 //this class just a holder of user visible description and hint bound to controls
 class UserHintHolderForSettings
 {
-     Q_DECLARE_TR_FUNCTIONS(UserHintHolderForSettings)
+    Q_DECLARE_TR_FUNCTIONS(UserHintHolderForSettings)
 public:
     QString getUserText() const;
     void setMovable(bool value);
@@ -302,7 +302,7 @@ protected:
 };
 
 //list to make global static set of controls (like for global settings)
-class StaticSettingsMap :public QObject
+class StaticSettingsMap : public QObject
 {
     Q_OBJECT
 private:
@@ -335,9 +335,7 @@ public:
             auto p = sets.at(name).get();
             auto p2 = dynamic_cast<SaveableWidgetTempl<T, isatomic>*>(p);
             if (p2)
-            {
                 p2->set(value);
-            }
             emit settingHaveBeenChanged(name);
         }
     }
@@ -392,8 +390,8 @@ signals:
 
 STORABLE_ATOMIC_CLASS(GlobalStorableBool, bool)
 {
-    private:
-    QPointer<QCheckBox> cb;
+private:
+    QPointer<QCheckBox> cb{nullptr};
 
     virtual QWidget* createWidget2() override
     {
@@ -409,7 +407,7 @@ STORABLE_ATOMIC_CLASS(GlobalStorableBool, bool)
 
         return createLabeledField(cb);
     }
-    public:
+public:
     virtual void needUpdateWidget() override
     {
         if (cb)
@@ -421,7 +419,6 @@ STORABLE_ATOMIC_CLASS(GlobalStorableBool, bool)
     }
     STORABLE_CONSTRUCTOR2(GlobalStorableBool)
     {
-        cb = nullptr;
     }
 
     //need to put ANY virtual function to CPP file, so vtable will not be copied for each object
@@ -433,7 +430,7 @@ STORABLE_ATOMIC_CLASS(GlobalStorableInt, int)
 {
     Q_DECLARE_TR_FUNCTIONS(GlobalStorableInt)
 private:
-    QPointer<QSpinBox> field;
+    QPointer<QSpinBox> field{nullptr};
     const ValueType min;
     const ValueType max;
     const ValueType step;
@@ -458,12 +455,12 @@ private:
         }
         return createLabeledField(field);
     }
-    static QString updateHint(const QString& hint, ValueType min, ValueType max)
+    static QString updateHint(const QString & hint, ValueType min, ValueType max)
     {
         return QString(tr("%1\nRange: %2-%3")).arg(hint).arg(min).arg(max);
     }
 
-    public:
+public:
     virtual void needUpdateWidget() override
     {
         if (field)
@@ -474,11 +471,10 @@ private:
         }
     }
     GlobalStorableInt() = delete;
-    GlobalStorableInt(const QString& key, const ValueType& def, const QString& text, const QString& hint, ValueType min, ValueType max, ValueType step = 1):
-        UserHintHolderForSettings(text, hint) ,SaveableWidgetTempl(key, def / step),
-        min(min), max(max), step(step), hintOnce(true)
+    GlobalStorableInt(const QString & key, const ValueType & def, const QString & text, const QString & hint, ValueType min, ValueType max, ValueType step = 1):
+        UserHintHolderForSettings(text, hint), SaveableWidgetTempl(key, def / step),
+        min(std::move(min)), max(std::move(max)), step(std::move(step)), hintOnce(true)
     {
-        field = nullptr;
     }
     DECL_DESTRUCTOR(GlobalStorableInt);
     DEF_BTN_IMPL
@@ -486,8 +482,8 @@ private:
 
 STORABLE_CLASS(GlobalFileStorable, QString)
 {
-    private:
-    QPointer<QLineEdit> txt;
+private:
+    QPointer<QLineEdit> txt{nullptr};
     const QString execText;
 
     virtual QWidget* createWidget2() override
@@ -507,7 +503,7 @@ STORABLE_CLASS(GlobalFileStorable, QString)
 
         return createLabeledField(f, 80, 20);
     }
-    public:
+public:
     virtual void needUpdateWidget() override
     {
         if (txt)
@@ -517,7 +513,7 @@ STORABLE_CLASS(GlobalFileStorable, QString)
     virtual void exec() override
     {
         QString dir = QFileDialog::getExistingDirectory(nullptr, execText, static_cast<QString>(state),
-                                                        QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+                      QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
         bool ret = !dir.isEmpty();
         if (ret)
         {
@@ -528,12 +524,11 @@ STORABLE_CLASS(GlobalFileStorable, QString)
 
     //okey..copy-paste, because I need "execText" to be set elsewhere, not directly in class to be reusable
     GlobalFileStorable() = delete;
-    GlobalFileStorable(const QString& key, const ValueType& def, const QString& text, const QString& hint, const QString& execText):
+    GlobalFileStorable(const QString & key, const ValueType & def, const QString & text, const QString & hint, const QString & execText):
         UserHintHolderForSettings(text, hint),
         SaveableWidgetTempl(key, def),
         execText(execText)
     {
-        txt = nullptr;
     }
 
     //need to put ANY virtual function to CPP file, so vtable will not be copied for each object
@@ -547,11 +542,11 @@ STORABLE_CLASS(GlobalFileStorable, QString)
 //trivial case it will return static list of choices
 STORABLE_ATOMIC_CLASS(GlobalComboBoxStorable, int)
 {
-    public:
+public:
     using items_supplier_t  = std::function<void (QStringList&, QVariantList &)>;
-    private:
+private:
     const items_supplier_t itemsf;
-    QPointer<QComboBox> cb;
+    QPointer<QComboBox> cb{nullptr};
 
     int getStoredSelection() const
     {
@@ -564,7 +559,7 @@ STORABLE_ATOMIC_CLASS(GlobalComboBoxStorable, int)
         return val;
     }
 
-    protected:
+protected:
     virtual QWidget* createWidget2() override
     {
         cb = new QComboBox();
@@ -573,9 +568,7 @@ STORABLE_ATOMIC_CLASS(GlobalComboBoxStorable, int)
         QVariantList vl;
         itemsf(sl, vl);
         for (int i = 0, sz = sl.size(); i < sz; ++i)
-        {
-            cb->addItem(sl.at(i), (vl.size() > i)?vl.at(i):QVariant());
-        }
+            cb->addItem(sl.at(i), (vl.size() > i) ? vl.at(i) : QVariant());
 
 
         cb->setCurrentIndex(getStoredSelection());
@@ -599,15 +592,14 @@ STORABLE_ATOMIC_CLASS(GlobalComboBoxStorable, int)
             cb->blockSignals(false);
         }
     }
-    public:
+public:
 
     GlobalComboBoxStorable() = delete;
-    GlobalComboBoxStorable(const QString& key, const ValueType& def, const QString& text, const QString& hint, const items_supplier_t& itemsf):
+    GlobalComboBoxStorable(const QString & key, const ValueType & def, const QString & text, const QString & hint, const items_supplier_t& itemsf):
         UserHintHolderForSettings(text, hint),
         SaveableWidgetTempl(key, def),
         itemsf(itemsf)
     {
-        cb = nullptr;
     }
 
     QVariant getUserData() const

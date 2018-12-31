@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>52</height>
+    <height>61</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -33,7 +33,7 @@
       <enum>Qt::Horizontal</enum>
      </property>
      <property name="tickPosition">
-      <enum>QSlider::TicksAbove</enum>
+      <enum>QSlider::TicksBothSides</enum>
      </property>
      <property name="tickInterval">
       <number>10</number>

@@ -2,6 +2,7 @@
 #define OPENCV_UTILS_H
 
 #include <opencv2/opencv.hpp>
+
 #include <vector>
 #include <array>
 #include <stdint.h>

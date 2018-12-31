@@ -4,13 +4,13 @@
 #include "palgorithm.h"
 
 #ifdef USING_VIDEO_FS
-#include <opencv2/opencv.hpp>
-#include <opencv2/core/version.hpp>
-#include <QImage>
+    #include <opencv2/opencv.hpp>
+    #include <opencv2/core/version.hpp>
+    #include <QImage>
 
-#if CV_MAJOR_VERSION == 2
-#error It seems we have wrong opencv version. Source was developped on 3.x
-#endif
+    #if CV_MAJOR_VERSION == 2
+        #error It seems we have wrong opencv version. Source was developped on 3.x
+    #endif
 
 #endif
 
@@ -31,7 +31,8 @@ namespace utility
             ALG_NS::for_each(channels.begin(), channels.end(), functor);
             src.release();
             cv::merge(channels.data(), channels.size(), src);
-            ALG_NS::for_each(channels.begin(), channels.end(), [](auto& c){
+            ALG_NS::for_each(channels.begin(), channels.end(), [](auto & c)
+            {
                 c.release();
             });
         }
@@ -145,7 +146,7 @@ namespace utility
 
             PixelIterator& operator-=(size_t val)
             {
-                if (current - val >0)
+                if (current - val > 0)
                     current -= val;
                 else
                     current = 0;
@@ -251,7 +252,7 @@ namespace utility
         inline QImage createFrom(const cv::Mat& rgb_p)
         {
             QImage tmp;
-            auto make_it = [&tmp](const cv::Mat& rgb)
+            auto make_it = [&tmp](const cv::Mat & rgb)
             {
                 if (rgb.type() == CV_8UC3)
                 {
@@ -259,15 +260,13 @@ namespace utility
                     rgbConvert(tmp);
                 }
                 if (rgb.type() == CV_8UC1)
-                {
                     tmp = QImage(static_cast<uint8_t*>(rgb.data), rgb.cols, rgb.rows, QImage::Format_Grayscale8).copy();
-                }
             };
 
             if (rgb_p.type() == CV_64FC1 || rgb_p.type() == CV_64FC3)
             {
                 cv::Mat tm(rgb_p.clone());
-                utility::opencv::forEachChannel(tm, [](cv::Mat& c)
+                utility::opencv::forEachChannel(tm, [](cv::Mat & c)
                 {
                     cv::convertScaleAbs(c, c, 255);
                 });

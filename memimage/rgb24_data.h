@@ -1,16 +1,14 @@
 #ifndef RGB24_DATA_H
 #define RGB24_DATA_H
 #include <valarray>
-#include <stdint.h>
+#include <cstdint>
 namespace imaging
 {
-
-
     struct dims_t
     {
         uint32_t width;
         uint32_t height;
-        dims_t(uint32_t w, uint32_t h): width(w), height(h){}
+        dims_t(uint32_t w, uint32_t h): width(w), height(h) {}
     };
 
     struct rgb24_data : public std::valarray<uint8_t>

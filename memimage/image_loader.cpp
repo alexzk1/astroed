@@ -19,7 +19,7 @@
 #include "utils/runners.h"
 
 #if defined(USING_VIDEO_FS) || defined (USING_OPENCV)
-#include "opencv_utils/opencv_utils.h"
+    #include "opencv_utils/opencv_utils.h"
 #endif
 
 using namespace imaging;
@@ -114,7 +114,7 @@ void image_cacher::gc(bool no_wait)
         std::lock_guard<std::recursive_mutex> guard(mutex);
         //1 step, removing too old hard links to images (pretty dumb if here)
         auto t = nows();
-        utility::erase_if(cache, [t, no_wait, maxMemUsage](const auto& sp)
+        utility::erase_if(cache, [t, no_wait, maxMemUsage](const auto & sp)
         {
             auto delay = t - sp.second.first;
             return (getMemoryUsed() > maxMemUsage && sp.second.second.data.unique() && (no_wait || delay > 15)) || delay > longestDelay;
@@ -122,7 +122,7 @@ void image_cacher::gc(bool no_wait)
     }
 
     //2 step, if no hard links left anywhere - clearing weaks too, meaning memory is freed already
-    utility::erase_if(wcache, [](const auto& sp)
+    utility::erase_if(wcache, [](const auto & sp)
     {
         bool r = sp.second.data.expired();
         return r;
@@ -156,9 +156,7 @@ bool image_cacher::isNewtoneTelescope() const
     return assumeMirrored;
 }
 
-image_cacher::~image_cacher()
-{
-}
+image_cacher::~image_cacher() = default;
 
 #ifdef USING_VIDEO_FS
 
@@ -166,20 +164,20 @@ static const auto& getUserSelectedRawFormat()
 {
     struct conv_def_t
     {
-        decltype (CV_RGB2BGR)  codec;
+        decltype (cv::COLOR_RGB2BGR)  codec;
         uint32_t               src_channels;
     };
 
     const static std::vector<conv_def_t> rawVideosCodes =
     {
-        {CV_RGB2BGR,      3},
-        {CV_GRAY2BGR,     1},
+        {cv::COLOR_RGB2BGR,      3},
+        {cv::COLOR_GRAY2BGR,     1},
 
         //fixme: other 3 (except 1) must be checked with real cameras and maybe swapped to match colors (i was guessing their positions)
-        {CV_BayerRG2BGR,  1},
-        {CV_BayerGB2BGR,  1}, //GRBG (only this one seems proper by test video)
-        {CV_BayerGR2BGR,  1},
-        {CV_BayerBG2BGR,  1},
+        {cv::COLOR_BayerRG2BGR,  1},
+        {cv::COLOR_BayerGB2BGR,  1}, //GRBG (only this one seems proper by test video)
+        {cv::COLOR_BayerGR2BGR,  1},
+        {cv::COLOR_BayerBG2BGR,  1},
 
     };
 
@@ -221,7 +219,7 @@ bool image_cacher::isUsingCached() const
 QString image_cacher::cachedFileName(const QUrl &url) const
 {
     QStringList pathlst = url.path().split("/", QString::SplitBehavior::KeepEmptyParts);
-    pathlst.insert(pathlst.size() -1, VFS_CACHED_FOLDER);
+    pathlst.insert(pathlst.size() - 1, VFS_CACHED_FOLDER);
     auto dirp = pathlst.join("/");
     QDir tmp;
     if (tmp.mkpath(dirp))
@@ -243,11 +241,12 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
     //weak_ptr will keep make_shared result live forever!
     tmp.data  = decltype(tmp.data)(new QImage());
 
-    { //ensuring img will close file "key"
+    {
+        //ensuring img will close file "key"
 
         QImage img;
 
-        const auto load_from_disk = [&img, &tmp](const QString& fn)
+        const auto load_from_disk = [&img, &tmp](const QString & fn)
         {
             img = QImage(fn);
             *tmp.data = img.convertToFormat(QImage::Format_RGB888);
@@ -340,9 +339,7 @@ image_cacher::image_t_s image_loader::createImage(const QString &key) const
 
     //done: this should load exif too
     if (!is_url) //loading exif only from files
-    {
         tmp.meta.loadExif(key);
-    }
     if (!tmp.data->isNull())
         tmp.meta.precalculate(tmp.data);
     return tmp;
@@ -410,7 +407,7 @@ QString image_loader::getFileLinkForExternalTools(const QString &originalLink) c
 
         //ensuring temp file will not be deleted for some time, even if cached image is cleared out by heavy GC (happens when user clicks during loading of movie)
         auto fcopy = img.tempFile;
-        QTimer::singleShot(60000, [fcopy](){;});
+        QTimer::singleShot(60000, [fcopy]() {;});
 
         result = img.tempFile->fileName();
     }
@@ -430,7 +427,7 @@ image_cacher::image_t_s image_preview_loader::createImage(const QString &key) co
     image_t_s src;
     IMAGE_LOADER.findImage(key, src);
     //keeping aspect ratio
-    int width = static_cast<decltype(width)>(static_cast<int64_t>(previewSize * src.data->width() / static_cast<double>(src.data->height())));
+    auto width = static_cast<int>(static_cast<int64_t>(previewSize * src.data->width() / static_cast<double>(src.data->height())));
     src.data  = decltype (src.data)(new QImage(src.data->scaled(width, previewSize, Qt::KeepAspectRatio)));
     return src;
 }
@@ -463,12 +460,12 @@ QString meta_t::getStringValue() const //should prepare human readable value
 
     using namespace exiv2_helpers::exiv_rationals;
     return QString(QObject::tr("%0\nISO: %1\nExposure: %2 s\nAperture: %3 mm\nOptical Zoom: x%4"))
-            .arg(extra)
-            .arg(iso)
-            .arg(toDouble(exposure), 0, 'f', 4)
-            .arg(toDouble(aperture), 0, 'f', 2)
-            .arg(optZoom, 0, 'f', 2)
-            ;
+           .arg(extra)
+           .arg(iso)
+           .arg(toDouble(exposure), 0, 'f', 4)
+           .arg(toDouble(aperture), 0, 'f', 2)
+           .arg(optZoom, 0, 'f', 2)
+           ;
 }
 
 void meta_t::loadExif(const QString &fileName)
@@ -480,7 +477,7 @@ void meta_t::loadExif(const QString &fileName)
         if (image.get() != nullptr)
         {
             image->readMetadata();
-            const auto test_all_metas = [&image](const std::vector<keys_t>& e_x_i, auto& result)
+            const auto test_all_metas = [&image](const std::vector<keys_t>& e_x_i, auto & result)
             {
                 if (!getValueOneOf(image->exifData(),    e_x_i.at(0), result))
                     if (!getValueOneOf(image->xmpData(), e_x_i.at(1), result))
@@ -488,46 +485,52 @@ void meta_t::loadExif(const QString &fileName)
             };
 
             //todo: add keys to read values from xmp/iptc http://www.exiv2.org/tags.html
-            test_all_metas({
-                               {"Exif.Photo.ISOSpeedRatings", "Exif.Image.ISOSpeedRatings"}, //exif keys
-                               {}, //xmp keys
-                               {}, //iptc keys
-                           }, iso);
+            test_all_metas(
+            {
+                {"Exif.Photo.ISOSpeedRatings", "Exif.Image.ISOSpeedRatings"}, //exif keys
+                {}, //xmp keys
+                {}, //iptc keys
+            }, iso);
 
             //fixme: not really sure, if it is rational or double, from my camera it comes as double in .Photo. field
             //possibly .Image. field will be rational
-            test_all_metas({
-                               {"Exif.Photo.ExposureTime", "Exif.Image.ExposureTime"}, //exif keys
-                               {}, //xmp keys
-                               {}, //iptc keys
-                           }, exposure);
+            test_all_metas(
+            {
+                {"Exif.Photo.ExposureTime", "Exif.Image.ExposureTime"}, //exif keys
+                {}, //xmp keys
+                {}, //iptc keys
+            }, exposure);
 
-            test_all_metas({
-                               {"Exif.Photo.ApertureValue", "Exif.Image.ApertureValue", "Exif.Image.FNumber"}, //exif keys
-                               {"Xmp.exif.ApertureValue", "Xmp.exif.FNumber"}, //xmp keys
-                               {}, //iptc keys
-                           }, aperture);
+            test_all_metas(
+            {
+                {"Exif.Photo.ApertureValue", "Exif.Image.ApertureValue", "Exif.Image.FNumber"}, //exif keys
+                {"Xmp.exif.ApertureValue", "Xmp.exif.FNumber"}, //xmp keys
+                {}, //iptc keys
+            }, aperture);
             Exiv2::Rational actualFocus;
-            test_all_metas({
-                               {"Exif.Photo.FocalLength", "Exif.Image.FocalLength"}, //exif keys
-                               {"Xmp.exif.FocalLength"}, //xmp keys
-                               {}, //iptc keys
-                           }, actualFocus);
+            test_all_metas(
+            {
+                {"Exif.Photo.FocalLength", "Exif.Image.FocalLength"}, //exif keys
+                {"Xmp.exif.FocalLength"}, //xmp keys
+                {}, //iptc keys
+            }, actualFocus);
             RationalArray lensSpec;
-            test_all_metas({
-                               {"Exif.Photo.LensSpecification", "Exif.Image.LensSpecification"}, //exif keys
-                               {}, //xmp keys
-                               {}, //iptc keys
-                           }, lensSpec);
+            test_all_metas(
+            {
+                {"Exif.Photo.LensSpecification", "Exif.Image.LensSpecification"}, //exif keys
+                {}, //xmp keys
+                {}, //iptc keys
+            }, lensSpec);
 
             if (!lensSpec.size())
             {
                 std::vector<uint16_t> sf;
-                test_all_metas({
-                                   {"Exif.CanonCs.Lens"}, //exif keys
-                                   {}, //xmp keys
-                                   {}, //iptc keys
-                               }, sf);
+                test_all_metas(
+                {
+                    {"Exif.CanonCs.Lens"}, //exif keys
+                    {}, //xmp keys
+                    {}, //iptc keys
+                }, sf);
                 if (sf.size() == 3)
                 {
                     lensSpec.push_back({sf.at(1), sf.at(2)});
