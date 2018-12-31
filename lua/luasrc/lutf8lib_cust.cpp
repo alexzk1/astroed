@@ -1166,7 +1166,7 @@ dflt:    /* pattern class plus optional suffix */
                             }
                             case '+':  /* 1 or more repetitions */
                                 s = next_s;  /* 1 match already done */
-                                [[fallthrough]]
+                                [[fallthrough]];
                             /* go through */
                             case '*':  /* 0 or more repetitions */
                                 s = max_expand(ms, s, p, ep);

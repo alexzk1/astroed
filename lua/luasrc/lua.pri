@@ -77,7 +77,7 @@ lua_compiler.input = LUA_SOURCES
 lua_compiler.dependency_type = TYPE_C
 lua_compiler.variable_out = OBJECTS
 lua_compiler.output = ${QMAKE_VAR_OBJECTS_DIR}${QMAKE_FILE_IN_BASE}$${first(QMAKE_EXT_OBJ)}
-lua_compiler.commands = $${QMAKE_CXX} $(CXXFLAGS) -fno-strict-aliasing -Wno-error=strict-aliasing $(INCPATH) -c ${QMAKE_FILE_IN} -o ${QMAKE_FILE_OUT}
+lua_compiler.commands = $${QMAKE_CXX} $(CXXFLAGS) -DLUA_USE_POSIX -fno-strict-aliasing -Wno-error=strict-aliasing $(INCPATH) -c ${QMAKE_FILE_IN} -o ${QMAKE_FILE_OUT}
 QMAKE_EXTRA_COMPILERS += lua_compiler
 
 #CONFIG(debug) {
